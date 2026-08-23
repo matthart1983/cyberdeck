@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Cyberpunk statusline for Claude Code.
+# Reads the session JSON on stdin; prints one truecolor line.
+input=$(cat)
+
+MAGENTA=$'\033[38;2;234;0;217m'
+CYAN=$'\033[38;2;10;189;198m'
+DIM=$'\033[38;2;15;125;132m'
+PURPLE=$'\033[38;2;113;28;145m'
+GREEN=$'\033[38;2;0;255;159m'
+YELLOW=$'\033[38;2;243;230;0m'
+RED=$'\033[38;2;255;0;85m'
+RESET=$'\033[0m'
+
+model=$(printf '%s' "$input" | jq -r '.model.display_name // "claude"')
+cwd=$(printf '%s' "$input"  | jq -r '.workspace.current_dir // .cwd // ""')
+dir=${cwd/#$HOME/\~}
+dir=${dir##*/}
+[[ -z $dir ]] && dir="~"
+
+sep="${PURPLE}▸${RESET}"
+out="${MAGENTA}◆ ${model}${RESET} ${sep} ${CYAN}${dir}${RESET}"
+
+# Git branch + dirty marker, when inside a work tree.
+if branch=$(git -C "$cwd" rev-parse --abbrev-ref HEAD 2>/dev/null); then
+  if [[ -n $(git -C "$cwd" status --porcelain 2>/dev/null) ]]; then
+    out+=" ${sep} ${YELLOW}  ${branch}*${RESET}"
+  else
+    out+=" ${sep} ${GREEN}  ${branch}${RESET}"
+  fi
+fi
+
+# Context pressure, when the harness reports it.
+pct=$(printf '%s' "$input" | jq -r '.context.used_pct // empty')
+if [[ -n $pct ]]; then
+  p=${pct%.*}
+  if   (( p >= 85 )); then c=$RED
+  elif (( p >= 60 )); then c=$YELLOW
+  else                     c=$DIM
+  fi
+  out+=" ${sep} ${c}${p}%%${RESET}"
+fi
+
+printf '%b' "$out"

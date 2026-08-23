@@ -73,6 +73,28 @@ done
   && pass "cli layer" "all tools present" \
   || fail "cli layer" "missing:$missing"
 
+# --- app layer -------------------------------------------------------------
+if [ -L "$HOME/.config/zed/themes/cyberpunk-neon.json" ] \
+   && grep -q '"dark": "Cyberpunk Neon"' "$HOME/.config/zed/settings.json" 2>/dev/null; then
+  pass "zed" "theme linked and selected"
+else
+  fail "zed" "theme missing or not selected in settings.json"
+fi
+
+cc_theme=$(/opt/homebrew/bin/jq -r '.theme // empty' "$HOME/.claude/settings.json" 2>/dev/null)
+cc_sl=$(/opt/homebrew/bin/jq -r '.statusLine.command // empty' "$HOME/.claude/settings.json" 2>/dev/null)
+if [ "$cc_theme" = "dark-ansi" ] && [ -x "$cc_sl" ]; then
+  pass "claude code" "dark-ansi + neon statusline"
+else
+  fail "claude code" "theme=${cc_theme:-unset} statusline=${cc_sl:-unset}"
+fi
+
+if grep -q 'name = "cyberpunk-neon"' "$HOME/.config/atuin/config.toml" 2>/dev/null; then
+  pass "atuin" "theme enabled"
+else
+  fail "atuin" "theme not enabled in config.toml"
+fi
+
 # --- secret hygiene --------------------------------------------------------
 if grep -qE 'API_KEY|SECRET|TOKEN' "$HOME/.zshrc" 2>/dev/null; then
   fail "secrets" "a key looks inlined in ~/.zshrc"

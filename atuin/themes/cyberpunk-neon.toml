@@ -1,0 +1,12 @@
+[theme]
+name = "cyberpunk-neon"
+
+[colors]
+AlertInfo   = "#00ff9f"
+AlertWarn   = "#f57800"
+AlertError  = "#ff0055"
+Annotation  = "#0f7d84"
+Base        = "#0abdc6"
+Guidance    = "#711c91"
+Important   = "#ea00d9"
+Title       = "#ea00d9"
