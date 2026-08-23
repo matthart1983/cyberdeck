@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>name</key><string>cyberpunk-neon</string>
+  <key>settings</key>
+  <array>
+    <dict><key>settings</key><dict>
+      <key>background</key><string>#000b1e</string>
+      <key>foreground</key><string>#d7d7d7</string>
+      <key>caret</key><string>#ea00d9</string>
+      <key>lineHighlight</key><string>#091833</string>
+      <key>selection</key><string>#133e7c</string>
+      <key>invisibles</key><string>#1c2541</string>
+      <key>gutterForeground</key><string>#0f7d84</string>
+    </dict></dict>
+
+    <dict><key>name</key><string>Comment</string>
+      <key>scope</key><string>comment, punctuation.definition.comment</string>
+      <key>settings</key><dict>
+        <key>foreground</key><string>#0f7d84</string>
+        <key>fontStyle</key><string>italic</string></dict></dict>
+
+    <dict><key>name</key><string>String</string>
+      <key>scope</key><string>string, string.quoted, constant.character</string>
+      <key>settings</key><dict><key>foreground</key><string>#00ff9f</string></dict></dict>
+
+    <dict><key>name</key><string>Number</string>
+      <key>scope</key><string>constant.numeric, constant.language</string>
+      <key>settings</key><dict><key>foreground</key><string>#f57800</string></dict></dict>
+
+    <dict><key>name</key><string>Keyword</string>
+      <key>scope</key><string>keyword, keyword.control, storage.modifier</string>
+      <key>settings</key><dict>
+        <key>foreground</key><string>#ea00d9</string>
+        <key>fontStyle</key><string>bold</string></dict></dict>
+
+    <dict><key>name</key><string>Operator</string>
+      <key>scope</key><string>keyword.operator, punctuation.separator</string>
+      <key>settings</key><dict><key>foreground</key><string>#ff0055</string></dict></dict>
+
+    <dict><key>name</key><string>Storage type</string>
+      <key>scope</key><string>storage.type, support.type, entity.name.type</string>
+      <key>settings</key><dict><key>foreground</key><string>#0abdc6</string></dict></dict>
+
+    <dict><key>name</key><string>Function</string>
+      <key>scope</key><string>entity.name.function, support.function, meta.function-call</string>
+      <key>settings</key><dict><key>foreground</key><string>#f3e600</string></dict></dict>
+
+    <dict><key>name</key><string>Variable</string>
+      <key>scope</key><string>variable, variable.parameter, meta.definition.variable</string>
+      <key>settings</key><dict><key>foreground</key><string>#d7d7d7</string></dict></dict>
+
+    <dict><key>name</key><string>Class / constant</string>
+      <key>scope</key><string>entity.name.class, support.class, constant.other</string>
+      <key>settings</key><dict><key>foreground</key><string>#4dd9e0</string></dict></dict>
+
+    <dict><key>name</key><string>Tag</string>
+      <key>scope</key><string>entity.name.tag, meta.tag</string>
+      <key>settings</key><dict><key>foreground</key><string>#ea00d9</string></dict></dict>
+
+    <dict><key>name</key><string>Attribute</string>
+      <key>scope</key><string>entity.other.attribute-name</string>
+      <key>settings</key><dict><key>foreground</key><string>#f3e600</string></dict></dict>
+
+    <dict><key>name</key><string>Invalid</string>
+      <key>scope</key><string>invalid, invalid.illegal</string>
+      <key>settings</key><dict>
+        <key>foreground</key><string>#ffffff</string>
+        <key>background</key><string>#ff0055</string></dict></dict>
+
+    <dict><key>name</key><string>Diff inserted</string>
+      <key>scope</key><string>markup.inserted</string>
+      <key>settings</key><dict><key>foreground</key><string>#00ff9f</string></dict></dict>
+
+    <dict><key>name</key><string>Diff deleted</string>
+      <key>scope</key><string>markup.deleted</string>
+      <key>settings</key><dict><key>foreground</key><string>#ff0055</string></dict></dict>
+
+    <dict><key>name</key><string>Diff changed</string>
+      <key>scope</key><string>markup.changed</string>
+      <key>settings</key><dict><key>foreground</key><string>#f57800</string></dict></dict>
+
+    <dict><key>name</key><string>Heading</string>
+      <key>scope</key><string>markup.heading, entity.name.section</string>
+      <key>settings</key><dict>
+        <key>foreground</key><string>#ea00d9</string>
+        <key>fontStyle</key><string>bold</string></dict></dict>
+
+    <dict><key>name</key><string>Link</string>
+      <key>scope</key><string>markup.underline.link, string.other.link</string>
+      <key>settings</key><dict>
+        <key>foreground</key><string>#0abdc6</string>
+        <key>fontStyle</key><string>underline</string></dict></dict>
+  </array>
+  <key>uuid</key><string>7c1e3a90-4f2b-4c8e-9b1d-cyberpunk0001</string>
+</dict>
+</plist>
