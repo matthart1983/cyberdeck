@@ -66,6 +66,25 @@ fi
   && pass "tmux" "config linked" \
   || fail "tmux" "config not linked — run install.sh"
 
+# The HUD's four panes. soundwatch is checked separately below — its
+# failure mode is silence, not a missing binary.
+for t in netwatch syswatch diskwatch; do
+  command -v "$t" >/dev/null || hud_missing="$hud_missing $t"
+done
+[ -z "${hud_missing:-}" ] \
+  && pass "hud panes" "netwatch, syswatch, diskwatch present" \
+  || fail "hud panes" "missing:$hud_missing"
+
+if ! command -v soundwatch >/dev/null; then
+  fail "soundwatch" "not installed — build with 'make build', not cargo"
+elif codesign -dvv "$(command -v soundwatch)" 2>&1 | grep -q "Info.plist entries"; then
+  pass "soundwatch" "signed with a bound Info.plist (meters can prompt)"
+else
+  fail "soundwatch" "Info.plist not bound — cargo-built, so every audio
+                         sample reads zero. Rebuild with 'make build' and
+                         check with 'soundwatch --probe-tap'."
+fi
+
 for t in eza bat fd fzf zoxide atuin delta rg fastfetch btop; do
   command -v "$t" >/dev/null || missing="$missing $t"
 done

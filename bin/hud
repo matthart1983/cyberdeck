@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Cyberpunk HUD — a four-pane tmux grid of the *Watch tools plus btop.
+# Cyberpunk HUD — a four-pane tmux grid of the *Watch tools.
 #   hud          attach (creating the session if needed)
 #   hud -r       tear down and rebuild
 set -euo pipefail
@@ -12,7 +12,7 @@ fi
 if ! tmux has-session -t "$SESSION" 2>/dev/null; then
   # Named pane targets ({left}, {top-right}) rather than numeric ones —
   # this config sets pane-base-index 1, so ".0" does not exist.
-  tmux new-session -d -s "$SESSION" -n grid "btop"
+  tmux new-session -d -s "$SESSION" -n grid "soundwatch"
   tmux split-window -h -t "$SESSION:grid"              "netwatch --lite"
   tmux split-window -v -t "$SESSION:grid.{left}"       "syswatch --lite"
   tmux split-window -v -t "$SESSION:grid.{top-right}"  "diskwatch --lite"

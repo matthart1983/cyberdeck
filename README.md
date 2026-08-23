@@ -20,9 +20,10 @@ key, command and surface in one searchable page.
 
 ## The HUD
 
-`hud` tiles four terminal monitors into one screen — [btop](https://github.com/aristocratos/btop),
+`hud` tiles four terminal monitors into one screen — [soundwatch](https://github.com/matthart1983/soundwatch),
 [netwatch](https://github.com/matthart1983/netwatch), [syswatch](https://github.com/matthart1983/syswatch)
-and [diskwatch](https://github.com/matthart1983/diskwatch), all themed from the same palette.
+and [diskwatch](https://github.com/matthart1983/diskwatch): audio, network, system and disk,
+all themed from the same palette. Four panes, one author.
 
 ![hud](capture/out/hud.gif)
 
@@ -71,6 +72,9 @@ brew install eza bat fd fzf zoxide atuin git-delta ripgrep fastfetch btop tmux j
 
 # the HUD's four panes (optional — hud degrades to whatever is installed)
 cargo install netwatch-tui syswatch diskwatch
+# soundwatch must be built with `make`, not cargo: the binary needs a bound
+# Info.plist for macOS to prompt for audio consent, or every sample is zero.
+git clone https://github.com/matthart1983/soundwatch && cd soundwatch && make build
 ```
 
 `netwatch` is also what feeds the bar's network items. Without it the bar still
@@ -138,7 +142,7 @@ mirrors it by hand, because none of them can read shell variables.
 | `zsh/cyberpunk.zsh` | aliases, tool init, p10k colour overrides |
 | `tmux/tmux.conf` | neon status bar, vim nav, tpm plugins |
 | `bat/` | `cyberpunk-neon.tmTheme` — also drives delta and fzf previews |
-| `btop/themes/` | btop theme |
+| `btop/themes/` | btop theme — btop is still themed, just not in the HUD |
 | `fastfetch/` | config + ASCII logo |
 | `aerospace/` | tiling WM config — workspaces, keybinds, window rules |
 | `sketchybar/` | the bar: `sketchybarrc`, `colors.sh`, `icons.sh`, `plugins/` |
@@ -159,7 +163,7 @@ mirrors it by hand, because none of them can read shell variables.
 
 | Command | Does |
 |---|---|
-| `hud` | btop + netwatch + syswatch + diskwatch in a tiled grid (`hud -r` rebuilds) |
+| `hud` | soundwatch + netwatch + syswatch + diskwatch in a tiled grid (`hud -r` rebuilds) |
 | `fetch` | fastfetch with the CYBERDECK logo |
 | `cmd + \`` | Ghostty quick-terminal dropdown |
 | `prefix` = `C-a` | tmux prefix; `\|` and `-` split, `hjkl` navigate |
