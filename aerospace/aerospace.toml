@@ -3,7 +3,7 @@
 # Palette: see ~/.dotfiles/palette.sh
 
 after-startup-command = [
-  'exec-and-forget /Users/matt/.dotfiles/bin/borders.sh',
+  'exec-and-forget "$HOME/.dotfiles/bin/borders.sh"',
   'exec-and-forget /opt/homebrew/bin/sketchybar',
 ]
 

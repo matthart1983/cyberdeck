@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>io.matt.netwatch-metrics</string>
+  <string>__LABEL__</string>
 
   <!-- Headless netwatch collector. Feeds the SketchyBar net + link items over
        127.0.0.1:9464. No sudo: interface counters and probes only, no capture. -->
   <key>ProgramArguments</key>
   <array>
-    <string>/Users/matt/.cargo/bin/netwatch</string>
+    <string>__NETWATCH__</string>
     <string>daemon</string>
     <string>--metrics</string>
   </array>
@@ -31,8 +31,8 @@
   <true/>
 
   <key>StandardOutPath</key>
-  <string>/tmp/netwatch-metrics.log</string>
+  <string>__LOGDIR__/netwatch-metrics.log</string>
   <key>StandardErrorPath</key>
-  <string>/tmp/netwatch-metrics.err</string>
+  <string>__LOGDIR__/netwatch-metrics.err</string>
 </dict>
 </plist>

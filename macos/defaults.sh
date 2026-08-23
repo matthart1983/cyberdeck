@@ -1,6 +1,17 @@
 #!/usr/bin/env bash
 # Cyberpunk rice — macOS system layer. Idempotent; undo with restore.sh.
 set -euo pipefail
+
+# Refuse to touch anything until this machine's own prior state is recorded.
+SNAP="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/before.txt"
+if [[ ! -f $SNAP ]]; then
+  echo "no snapshot at $SNAP"
+  echo "run macos/snapshot.sh first — it records what this script is about to"
+  echo "overwrite, and restore.sh replays it. Ricing is reversible or it isn't"
+  echo "worth doing."
+  exit 1
+fi
+
 echo "==> applying macOS defaults"
 
 # --- Appearance -------------------------------------------------------------

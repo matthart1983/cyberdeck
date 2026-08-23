@@ -30,20 +30,22 @@ echo "==> bat cache"
 bat cache --build >/dev/null 2>&1 && echo "  rebuilt"
 
 echo "==> netwatch metrics service (feeds the bar)"
-PLIST="$HOME/Library/LaunchAgents/io.matt.netwatch-metrics.plist"
-mkdir -p "$HOME/Library/LaunchAgents"
-ln -sfn "$D/launchd/io.matt.netwatch-metrics.plist" "$PLIST"
-# bootout is asynchronous: bootstrapping straight after it races the teardown
-# and fails. Kickstart an already-loaded service instead of cycling it.
-if launchctl print "gui/$UID/io.matt.netwatch-metrics" >/dev/null 2>&1; then
-  launchctl kickstart -k "gui/$UID/io.matt.netwatch-metrics" 2>/dev/null \
-    && echo "  restarted" || echo "  ERROR: kickstart failed"
+LABEL="io.cyberdeck.netwatch-metrics"
+PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+NETWATCH="$(command -v netwatch || true)"
+if [ -z "$NETWATCH" ]; then
+  echo "  netwatch not on PATH — skipping."
+  echo "  The bar's net/link items will read 'netwatch off' until it is."
+  echo "  Install: cargo install netwatch-tui"
 else
-  if err=$(launchctl bootstrap "gui/$UID" "$PLIST" 2>&1); then
-    echo "  loaded"
-  else
-    echo "  ERROR: bootstrap failed: ${err:-unknown}"
-  fi
+  mkdir -p "$HOME/Library/LaunchAgents"
+  sed -e "s|__LABEL__|$LABEL|g" \
+      -e "s|__NETWATCH__|$NETWATCH|g" \
+      -e "s|__LOGDIR__|${TMPDIR%/}|g" \
+      "$D/launchd/netwatch-metrics.plist.template" > "$PLIST"
+  launchctl bootout "gui/$UID/$LABEL" 2>/dev/null || true
+  launchctl bootstrap "gui/$UID" "$PLIST" 2>/dev/null \
+    && echo "  loaded ($NETWATCH)" || echo "  already loaded"
 fi
 
 echo "==> sketchybar service"

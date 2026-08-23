@@ -40,7 +40,7 @@ else
 fi
 
 # --- the netwatch feed -----------------------------------------------------
-if launchctl print "gui/$UID/io.matt.netwatch-metrics" 2>/dev/null | grep -q 'state = running'; then
+if launchctl print "gui/$UID/io.cyberdeck.netwatch-metrics" 2>/dev/null | grep -q 'state = running'; then
   if body=$(curl -sf --max-time 2 http://127.0.0.1:9464/metrics 2>/dev/null); then
     rtt=$(printf '%s' "$body" | awk '/^netwatch_gateway_rtt_seconds /{printf "%.0fms", $2*1000}')
     conns=$(printf '%s' "$body" | awk '/^netwatch_connections /{print $2}')
@@ -50,7 +50,7 @@ if launchctl print "gui/$UID/io.matt.netwatch-metrics" 2>/dev/null | grep -q 'st
   fi
 else
   fail "netwatch feed" "service down — launchctl bootstrap gui/$UID \\
-                         ~/Library/LaunchAgents/io.matt.netwatch-metrics.plist"
+                         ~/Library/LaunchAgents/io.cyberdeck.netwatch-metrics.plist"
 fi
 
 # --- terminal + shell ------------------------------------------------------
