@@ -52,6 +52,11 @@ mirrors it by hand, because none of them can read shell variables.
 | `bin/borders.sh` | JankyBorders launcher (magenta on focus) |
 | `bin/rice-doctor` | health check for every layer; exits non-zero if one is down |
 | `bin/tmux-battery` | battery glyph for the status bar |
+| `zed/themes/` | Zed theme — neon chrome, desaturated syntax |
+| `atuin/themes/` | atuin (ctrl-R) theme |
+| `bin/cc-statusline` | Claude Code statusline: model, dir, git, context |
+| `bin/rice-capture` | render the demo tapes |
+| `capture/` | VHS tapes; GIFs land in `capture/out/` (gitignored) |
 | `wallpaper/generate.py` | wallpaper generator (PIL, no numpy) |
 | `macos/` | defaults apply + snapshot + restore |
 
@@ -64,6 +69,7 @@ mirrors it by hand, because none of them can read shell variables.
 | `cmd + \`` | Ghostty quick-terminal dropdown |
 | `prefix` = `C-a` | tmux prefix; `\|` and `-` split, `hjkl` navigate |
 | `rice-doctor` | verify aerospace, borders, bar, netwatch feed, configs, secrets |
+| `rice-capture` | render demo GIFs (`rice-capture hud` for just one) |
 
 ## Window management
 
@@ -117,3 +123,23 @@ Cost measured at 0.4% CPU / 15MB RSS.
 - tmux configs use literal hex; tmux has no shell variables.
 - `bin/hud` uses named pane targets (`{left}`, `{top-right}`) because
   `pane-base-index` is 1.
+
+## App layer
+
+Zed keeps the neon UI chrome but uses **desaturated syntax colours** — code is
+read for hours, chrome is glanced at. Both palettes live in `palette.sh`.
+
+Claude Code is set to the `dark-ansi` theme so it inherits the Ghostty ANSI
+palette rather than duplicating it, plus a neon statusline from
+`bin/cc-statusline`.
+
+## Captures
+
+`rice-capture` renders `capture/*.tape` through VHS into `capture/out/`.
+
+Two things the tapes have to work around:
+
+- VHS points `ZDOTDIR` at its own temp rc, so `~/.zshrc` never loads and none
+  of the rice exists. Each tape re-execs into a real interactive shell first.
+- `hud.tape` needs a canvas over 160x50 cells, because all four tools refuse
+  to draw below 80x24 and each gets a quarter of the screen.

@@ -8,3 +8,6 @@ wallpaper/*.png
 
 # Pre-rice backups of the user's own files
 attic/
+
+# Rendered demo GIFs — the tapes that produce them are committed instead.
+capture/out/*.gif

@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Render every rice demo tape to capture/out/.
+#   rice-capture           all tapes
+#   rice-capture hud       just one
+set -euo pipefail
+cd "$HOME/.dotfiles/capture"
+
+tapes=("$@")
+if [ ${#tapes[@]} -eq 0 ]; then
+  tapes=(fetch shell hud)
+fi
+
+for t in "${tapes[@]}"; do
+  t=${t%.tape}
+  [ -f "$t.tape" ] || { echo "no such tape: $t.tape" >&2; exit 1; }
+  printf '\033[38;2;234;0;217m==> %s\033[0m\n' "$t"
+  vhs "$t.tape"
+done
+
+printf '\n\033[38;2;10;189;198mrendered:\033[0m\n'
+ls -lh out/*.gif | awk '{printf "  %-28s %s\n", $9, $5}'
