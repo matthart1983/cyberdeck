@@ -23,9 +23,9 @@ defaults write com.apple.dock show-recents -bool false
 defaults write com.apple.dock mineffect -string "scale"
 defaults write com.apple.dock minimize-to-application -bool true
 
-# --- Menu bar: hide it (SketchyBar replaces it in Phase 5) -----------------
-# Deferred to Phase 5 — hiding this before SketchyBar exists leaves no clock/status.
-# defaults write NSGlobalDomain _HIHideMenuBar -bool true
+# --- Menu bar: hide it — SketchyBar replaces it (Phase 5, shipped) ---------
+# Reversible: macos/restore.sh puts it back from the pre-rice snapshot.
+defaults write NSGlobalDomain _HIHideMenuBar -bool true
 
 # --- Desktop: no icons, wallpaper unobstructed -----------------------------
 defaults write com.apple.finder CreateDesktop -bool false

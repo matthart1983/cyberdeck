@@ -1,0 +1,151 @@
+#!/usr/bin/env bash
+# Cyberpunk Neon bar. Replaces the macOS menu bar.
+# Workspace state comes from AeroSpace; network state comes from netwatch's own
+# daemon (Prometheus endpoint on 127.0.0.1:9464) — not from netstat.
+
+CONFIG_DIR="$HOME/.config/sketchybar"
+PLUGIN_DIR="$CONFIG_DIR/plugins"
+
+source "$CONFIG_DIR/colors.sh"
+source "$CONFIG_DIR/icons.sh"
+
+FONT="JetBrainsMono Nerd Font"
+
+# ---------------------------------------------------------------------------
+# Bar
+# ---------------------------------------------------------------------------
+sketchybar --bar \
+  height=32 \
+  position=top \
+  sticky=on \
+  padding_left=8 \
+  padding_right=8 \
+  margin=8 \
+  y_offset=4 \
+  corner_radius=8 \
+  blur_radius=30 \
+  color="$BAR_BG" \
+  border_width=1 \
+  border_color="$BAR_BORDER" \
+  shadow=on \
+  topmost=window
+
+# ---------------------------------------------------------------------------
+# Defaults
+# ---------------------------------------------------------------------------
+sketchybar --default \
+  updates=when_shown \
+  icon.font="$FONT:Bold:14.0" \
+  icon.color="$FG" \
+  icon.padding_left=8 \
+  icon.padding_right=4 \
+  label.font="$FONT:Medium:13.0" \
+  label.color="$WHITE" \
+  label.padding_left=0 \
+  label.padding_right=8 \
+  background.corner_radius=6 \
+  background.height=24 \
+  background.drawing=off \
+  padding_left=2 \
+  padding_right=2
+
+# ---------------------------------------------------------------------------
+# Left — AeroSpace workspaces
+# ---------------------------------------------------------------------------
+# AeroSpace emits `aerospace_workspace_change` via exec-on-workspace-change.
+sketchybar --add event aerospace_workspace_change
+
+WS_NAMES=(1 2 3 4 5 6 7 8 9)
+WS_LABELS=("term" "code" "web" "chat" "notes" "infra" "7" "8" "9")
+
+for i in "${!WS_NAMES[@]}"; do
+  ws="${WS_NAMES[$i]}"
+  sketchybar --add item "space.$ws" left \
+    --subscribe "space.$ws" aerospace_workspace_change \
+    --set "space.$ws" \
+      background.color="$ITEM_BG" \
+      background.border_color="$TRANSPARENT" \
+      background.border_width=1 \
+      background.corner_radius=6 \
+      background.height=22 \
+      background.drawing=off \
+      icon="$ws" \
+      icon.font="$FONT:Bold:13.0" \
+      icon.color="$FG_DIM" \
+      icon.padding_left=9 \
+      icon.padding_right=9 \
+      label.drawing=off \
+      click_script="aerospace workspace $ws" \
+      script="$PLUGIN_DIR/aerospace.sh $ws"
+done
+
+sketchybar --add item space_sep left \
+  --set space_sep icon="│" icon.color="$PURPLE" label.drawing=off \
+    padding_left=6 padding_right=6
+
+sketchybar --add item front_app left \
+  --subscribe front_app front_app_switched \
+  --set front_app \
+    icon="$ICON_APP" \
+    icon.color="$MAGENTA" \
+    label.color="$FG" \
+    label.font="$FONT:Bold:13.0" \
+    script="$PLUGIN_DIR/front_app.sh"
+
+# ---------------------------------------------------------------------------
+# Right — read right-to-left: clock, battery, disk, mem, cpu, net, link
+# ---------------------------------------------------------------------------
+sketchybar --add item clock right \
+  --set clock \
+    update_freq=10 \
+    icon="$ICON_CLOCK" \
+    icon.color="$MAGENTA" \
+    label.color="$WHITE" \
+    script="$PLUGIN_DIR/clock.sh"
+
+sketchybar --add item battery right \
+  --subscribe battery power_source_change system_woke \
+  --set battery \
+    update_freq=60 \
+    script="$PLUGIN_DIR/battery.sh"
+
+sketchybar --add item disk right \
+  --set disk \
+    update_freq=300 \
+    icon="$ICON_DISK" \
+    icon.color="$BLUE" \
+    script="$PLUGIN_DIR/disk.sh"
+
+sketchybar --add item mem right \
+  --set mem \
+    update_freq=5 \
+    icon="$ICON_MEM" \
+    icon.color="$PURPLE" \
+    script="$PLUGIN_DIR/mem.sh"
+
+sketchybar --add item cpu right \
+  --set cpu \
+    update_freq=3 \
+    icon="$ICON_CPU" \
+    icon.color="$ORANGE" \
+    script="$PLUGIN_DIR/cpu.sh"
+
+# The two netwatch-fed items.
+sketchybar --add item net right \
+  --set net \
+    update_freq=2 \
+    icon.drawing=off \
+    label.font="$FONT:Medium:12.0" \
+    click_script="open -a Ghostty --args -e netwatch" \
+    script="$PLUGIN_DIR/net.sh"
+
+sketchybar --add item link right \
+  --set link \
+    update_freq=5 \
+    icon="$ICON_LINK" \
+    icon.color="$GREEN" \
+    label.font="$FONT:Medium:12.0" \
+    script="$PLUGIN_DIR/link.sh"
+
+# ---------------------------------------------------------------------------
+sketchybar --update

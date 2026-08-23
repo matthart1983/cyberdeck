@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>io.matt.netwatch-metrics</string>
+
+  <!-- Headless netwatch collector. Feeds the SketchyBar net + link items over
+       127.0.0.1:9464. No sudo: interface counters and probes only, no capture. -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/matt/.cargo/bin/netwatch</string>
+    <string>daemon</string>
+    <string>--metrics</string>
+  </array>
+
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+  </dict>
+
+  <key>ThrottleInterval</key>
+  <integer>30</integer>
+
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>LowPriorityIO</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/netwatch-metrics.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/netwatch-metrics.err</string>
+</dict>
+</plist>

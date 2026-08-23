@@ -1,0 +1,198 @@
+# AeroSpace — tiling WM for the Cyberpunk Neon rice.
+# SIP stays enabled; nothing here needs it disabled.
+# Palette: see ~/.dotfiles/palette.sh
+
+after-startup-command = [
+  'exec-and-forget /Users/matt/.dotfiles/bin/borders.sh',
+  'exec-and-forget /opt/homebrew/bin/sketchybar',
+]
+
+# Repaint the bar's workspace indicators on every switch.
+exec-on-workspace-change = [
+  '/bin/bash', '-c',
+  '/opt/homebrew/bin/sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE',
+]
+
+start-at-login = true
+
+# Tiling defaults ------------------------------------------------------------
+enable-normalization-flatten-containers = true
+enable-normalization-opposite-orientation-for-nested-containers = true
+
+# Split direction follows the shape of the space you're splitting.
+default-root-container-layout = 'tiles'
+default-root-container-orientation = 'auto'
+
+# Focus follows the mouse only on click; no accidental focus steals.
+on-focused-monitor-changed = ['move-mouse monitor-lazy']
+
+# Keep macOS from fighting the tiler.
+automatically-unhide-macos-hidden-apps = true
+
+[key-mapping]
+preset = 'qwerty'
+
+# Gaps — sized to let the generated wallpaper read between windows.
+[gaps]
+inner.horizontal = 10
+inner.vertical   = 10
+outer.left       = 10
+outer.right      = 10
+outer.bottom     = 10
+# Top gap leaves room for SketchyBar (height 32 + a little breathing room).
+outer.top        = 42
+
+# ---------------------------------------------------------------------------
+# Main mode
+# ---------------------------------------------------------------------------
+[mode.main.binding]
+
+# Layout
+alt-slash  = 'layout tiles horizontal vertical'
+alt-comma  = 'layout accordion horizontal vertical'
+alt-f      = 'layout floating tiling'      # toggle the focused window out of the tiler
+alt-shift-f = 'fullscreen'
+
+# Focus (vim keys + arrows)
+alt-h = 'focus left'
+alt-j = 'focus down'
+alt-k = 'focus up'
+alt-l = 'focus right'
+alt-left  = 'focus left'
+alt-down  = 'focus down'
+alt-up    = 'focus up'
+alt-right = 'focus right'
+
+# Move
+alt-shift-h = 'move left'
+alt-shift-j = 'move down'
+alt-shift-k = 'move up'
+alt-shift-l = 'move right'
+alt-shift-left  = 'move left'
+alt-shift-down  = 'move down'
+alt-shift-up    = 'move up'
+alt-shift-right = 'move right'
+
+# Resize
+alt-minus  = 'resize smart -50'
+alt-equal  = 'resize smart +50'
+alt-shift-equal = 'balance-sizes'
+
+# Join — pull the focused window into the neighbour's container
+alt-shift-quote = 'join-with right'
+
+# Workspaces
+alt-1 = 'workspace 1'
+alt-2 = 'workspace 2'
+alt-3 = 'workspace 3'
+alt-4 = 'workspace 4'
+alt-5 = 'workspace 5'
+alt-6 = 'workspace 6'
+alt-7 = 'workspace 7'
+alt-8 = 'workspace 8'
+alt-9 = 'workspace 9'
+
+alt-shift-1 = 'move-node-to-workspace 1 --focus-follows-window'
+alt-shift-2 = 'move-node-to-workspace 2 --focus-follows-window'
+alt-shift-3 = 'move-node-to-workspace 3 --focus-follows-window'
+alt-shift-4 = 'move-node-to-workspace 4 --focus-follows-window'
+alt-shift-5 = 'move-node-to-workspace 5 --focus-follows-window'
+alt-shift-6 = 'move-node-to-workspace 6 --focus-follows-window'
+alt-shift-7 = 'move-node-to-workspace 7 --focus-follows-window'
+alt-shift-8 = 'move-node-to-workspace 8 --focus-follows-window'
+alt-shift-9 = 'move-node-to-workspace 9 --focus-follows-window'
+
+alt-tab = 'workspace-back-and-forth'
+alt-shift-tab = 'move-workspace-to-monitor --wrap-around next'
+
+# Modes
+alt-shift-r = 'mode resize'
+alt-shift-semicolon = 'mode service'
+
+# ---------------------------------------------------------------------------
+# Resize mode — hold-free resizing, esc to leave
+# ---------------------------------------------------------------------------
+[mode.resize.binding]
+h = 'resize width -50'
+j = 'resize height +50'
+k = 'resize height -50'
+l = 'resize width +50'
+b = 'balance-sizes'
+enter = 'mode main'
+esc   = 'mode main'
+
+# ---------------------------------------------------------------------------
+# Service mode — the escape hatches
+# ---------------------------------------------------------------------------
+[mode.service.binding]
+r = ['flatten-workspace-tree', 'mode main']       # reset layout
+f = ['layout floating tiling', 'mode main']       # toggle float
+backspace = ['close-all-windows-but-current', 'mode main']
+esc = ['reload-config', 'mode main']
+
+# ---------------------------------------------------------------------------
+# Window rules — where things land
+# ---------------------------------------------------------------------------
+# 1 terminal · 2 code · 3 web · 4 comms · 5 notes · 6 infra
+
+[[on-window-detected]]
+if.app-id = 'com.mitchellh.ghostty'
+run = 'move-node-to-workspace 1'
+
+[[on-window-detected]]
+if.app-id = 'dev.zed.Zed'
+run = 'move-node-to-workspace 2'
+
+[[on-window-detected]]
+if.app-id = 'com.jetbrains.rustrover'
+run = 'move-node-to-workspace 2'
+
+[[on-window-detected]]
+if.app-id = 'com.microsoft.VSCode'
+run = 'move-node-to-workspace 2'
+
+[[on-window-detected]]
+if.app-id = 'com.google.Chrome'
+run = 'move-node-to-workspace 3'
+
+[[on-window-detected]]
+if.app-id = 'com.apple.Safari'
+run = 'move-node-to-workspace 3'
+
+[[on-window-detected]]
+if.app-id = 'com.brave.Browser'
+run = 'move-node-to-workspace 3'
+
+[[on-window-detected]]
+if.app-id = 'net.whatsapp.WhatsApp'
+run = 'move-node-to-workspace 4'
+
+[[on-window-detected]]
+if.app-id = 'com.anthropic.claudefordesktop'
+run = 'move-node-to-workspace 4'
+
+[[on-window-detected]]
+if.app-id = 'md.obsidian'
+run = 'move-node-to-workspace 5'
+
+[[on-window-detected]]
+if.app-id = 'dev.orbstack.OrbStack'
+run = 'move-node-to-workspace 6'
+
+[[on-window-detected]]
+if.app-id = 'org.wireshark.Wireshark'
+run = 'move-node-to-workspace 6'
+
+# Things that should never be tiled.
+[[on-window-detected]]
+if.app-id = 'com.apple.systempreferences'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.apple.finder'
+if.window-title-regex-substring = 'Copy'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.apple.ActivityMonitor'
+run = 'layout floating'
