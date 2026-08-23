@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Cyberpunk HUD — a four-pane tmux grid of the *Watch tools plus btop.
+#   hud          attach (creating the session if needed)
+#   hud -r       tear down and rebuild
+set -euo pipefail
+SESSION="hud"
+
+if [[ ${1:-} == "-r" ]]; then
+  tmux kill-session -t "$SESSION" 2>/dev/null || true
+fi
+
+if ! tmux has-session -t "$SESSION" 2>/dev/null; then
+  # Named pane targets ({left}, {top-right}) rather than numeric ones —
+  # this config sets pane-base-index 1, so ".0" does not exist.
+  tmux new-session -d -s "$SESSION" -n grid "btop"
+  tmux split-window -h -t "$SESSION:grid"              "netwatch --lite"
+  tmux split-window -v -t "$SESSION:grid.{left}"       "syswatch --lite"
+  tmux split-window -v -t "$SESSION:grid.{top-right}"  "diskwatch --lite"
+  tmux select-layout -t "$SESSION:grid" tiled
+  tmux select-pane   -t "$SESSION:grid.{top-left}"
+fi
+
+if [[ ! -t 1 ]]; then
+  # No terminal to attach to (scripted use) — build it and report.
+  tmux list-panes -t "$SESSION" -F "pane #{pane_index}: #{pane_current_command} dead=#{pane_dead}"
+  exit 0
+fi
+
+if [[ -n ${TMUX:-} ]]; then
+  tmux switch-client -t "$SESSION"
+else
+  tmux attach -t "$SESSION"
+fi

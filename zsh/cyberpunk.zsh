@@ -84,3 +84,6 @@ source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh 2>/dev/nu
 
 # --- syntax highlighting: must be sourced LAST ----------------------------
 source /opt/homebrew/opt/zsh-fast-syntax-highlighting/share/zsh-fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh 2>/dev/null
+
+# --- rice scripts on PATH --------------------------------------------------
+export PATH="$HOME/.dotfiles/bin:$PATH"

@@ -1,0 +1,114 @@
+// Cyberpunk rice - fastfetch
+{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+  "logo": {
+    "type": "file",
+    "source": "~/.dotfiles/fastfetch/logo.txt",
+    "color": {
+      "1": "38;2;234;0;217",
+      "2": "38;2;10;189;198",
+      "3": "38;2;113;28;145"
+    },
+    "padding": {
+      "top": 1,
+      "right": 3
+    }
+  },
+  "display": {
+    "separator": " \u001b[38;2;113;28;145m▸\u001b[0m ",
+    "color": {
+      "keys": "38;2;234;0;217",
+      "title": "38;2;10;189;198"
+    },
+    "constants": [
+      "\u001b[38;2;113;28;145m"
+    ]
+  },
+  "modules": [
+    "break",
+    {
+      "type": "title",
+      "color": {
+        "user": "38;2;234;0;217",
+        "at": "38;2;113;28;145",
+        "host": "38;2;10;189;198"
+      }
+    },
+    {
+      "type": "custom",
+      "format": "{$1}╭──────────────────────────────────────────────╮"
+    },
+    {
+      "type": "os",
+      "key": "  os     "
+    },
+    {
+      "type": "kernel",
+      "key": "  kernel "
+    },
+    {
+      "type": "host",
+      "key": "  host   "
+    },
+    {
+      "type": "uptime",
+      "key": "  uptime "
+    },
+    {
+      "type": "packages",
+      "key": "  pkgs   "
+    },
+    {
+      "type": "shell",
+      "key": "  shell  "
+    },
+    {
+      "type": "terminal",
+      "key": "  term   "
+    },
+    {
+      "type": "custom",
+      "format": "{$1}├──────────────────────────────────────────────┤"
+    },
+    {
+      "type": "cpu",
+      "key": "  cpu    "
+    },
+    {
+      "type": "gpu",
+      "key": "  gpu    "
+    },
+    {
+      "type": "memory",
+      "key": "  memory "
+    },
+    {
+      "type": "disk",
+      "key": "  disk   ",
+      "folders": "/"
+    },
+    {
+      "type": "battery",
+      "key": "  power  "
+    },
+    {
+      "type": "display",
+      "key": "  screen "
+    },
+    {
+      "type": "localip",
+      "key": "  lan    "
+    },
+    {
+      "type": "custom",
+      "format": "{$1}╰──────────────────────────────────────────────╯"
+    },
+    "break",
+    {
+      "type": "colors",
+      "symbol": "circle",
+      "paddingLeft": 2
+    },
+    "break"
+  ]
+}
