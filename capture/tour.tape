@@ -11,7 +11,17 @@ Set Padding 12
 Hide
 Type "exec env ZDOTDIR=$HOME zsh -i" Enter
 Sleep 3s
-Type "cd ~/.dotfiles && clear" Enter
+Type "cd ~/.dotfiles" Enter
+# Build the HUD now and leave it running through the tour, so the finale
+# attaches to a grid that already has data instead of four cold panes. Piping
+# to cat makes stdout not a tty, which is how `hud` knows to build and exit
+# rather than attach.
+# `command hud` rather than `hud`: zsh-autosuggestions completes from history
+# by prefix, so a warm-up starting with "hud" gets suggested in grey the moment
+# the finale types `hud` — visible junk on the one frame that matters.
+Type "command hud -r | cat >/dev/null" Enter
+Sleep 4s
+Type "clear" Enter
 Sleep 2s
 Show
 
@@ -39,7 +49,8 @@ Sleep 5s
 
 Type "clear" Enter
 Sleep 400ms
-Type "hud -r"
+# Attaches to the grid built before the tour began — no -r, nothing to rebuild.
+Type "hud"
 Sleep 600ms
 Enter
-Sleep 14s
+Sleep 13s

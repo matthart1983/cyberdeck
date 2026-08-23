@@ -12,7 +12,7 @@ fi
 if ! tmux has-session -t "$SESSION" 2>/dev/null; then
   # Named pane targets ({left}, {top-right}) rather than numeric ones —
   # this config sets pane-base-index 1, so ".0" does not exist.
-  tmux new-session -d -s "$SESSION" -n grid "soundwatch"
+  tmux new-session -d -s "$SESSION" -n grid "soundwatch --theme btop"
   tmux split-window -h -t "$SESSION:grid"              "netwatch --lite"
   tmux split-window -v -t "$SESSION:grid.{left}"       "syswatch --lite"
   tmux split-window -v -t "$SESSION:grid.{top-right}"  "diskwatch --lite"
