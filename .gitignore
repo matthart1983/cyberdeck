@@ -1,0 +1,10 @@
+# Never commit secrets — the real file lives at ~/.config/secrets.zsh (chmod 600)
+secrets.zsh
+*.secret
+.DS_Store
+
+# Generated wallpapers are large binaries; the generator is committed instead.
+wallpaper/*.png
+
+# Pre-rice backups of the user's own files
+attic/
