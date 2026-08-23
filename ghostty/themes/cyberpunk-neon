@@ -1,0 +1,26 @@
+# Cyberpunk Neon — see ~/.dotfiles/palette.sh
+background = #000b1e
+foreground = #0abdc6
+
+cursor-color = #ea00d9
+cursor-text = #000b1e
+
+selection-background = #133e7c
+selection-foreground = #d7d7d7
+
+palette = 0=#040713
+palette = 1=#ff0055
+palette = 2=#00ff9f
+palette = 3=#f3e600
+palette = 4=#133e7c
+palette = 5=#ea00d9
+palette = 6=#0abdc6
+palette = 7=#d7d7d7
+palette = 8=#1c2541
+palette = 9=#ff4d7e
+palette = 10=#5cffc4
+palette = 11=#fff45c
+palette = 12=#2d6bd4
+palette = 13=#ff4de0
+palette = 14=#4dd9e0
+palette = 15=#ffffff

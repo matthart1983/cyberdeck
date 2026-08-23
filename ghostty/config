@@ -1,0 +1,53 @@
+# Cyberpunk rice — Ghostty
+# Managed in ~/.dotfiles/ghostty/config, symlinked to ~/.config/ghostty/config
+
+theme = cyberpunk-neon
+
+# --- Type ------------------------------------------------------------------
+font-family = JetBrainsMono Nerd Font Mono
+font-size = 14
+font-thicken = true
+adjust-cell-height = 12%
+
+# --- Translucency: most of the cyberpunk read comes from this --------------
+background-opacity = 0.88
+background-blur = 26
+
+# --- Chrome ----------------------------------------------------------------
+window-padding-x = 16
+window-padding-y = 14
+window-padding-balance = true
+window-decoration = true
+macos-titlebar-style = tabs
+macos-option-as-alt = true
+
+# --- Cursor ----------------------------------------------------------------
+cursor-style = block
+cursor-style-blink = true
+mouse-hide-while-typing = true
+
+# --- Splits: dim what isn't focused ---------------------------------------
+unfocused-split-opacity = 0.72
+unfocused-split-fill = #000b1e
+
+# --- Quick terminal: neon dropdown over any app ---------------------------
+quick-terminal-position = top
+quick-terminal-animation-duration = 0.12
+quick-terminal-autohide = true
+keybind = global:cmd+grave_accent=toggle_quick_terminal
+
+# --- Splits / tabs ---------------------------------------------------------
+keybind = cmd+d=new_split:right
+keybind = cmd+shift+d=new_split:down
+keybind = cmd+shift+h=goto_split:left
+keybind = cmd+shift+l=goto_split:right
+keybind = cmd+shift+k=goto_split:up
+keybind = cmd+shift+j=goto_split:down
+
+# --- Behaviour -------------------------------------------------------------
+shell-integration = zsh
+shell-integration-features = cursor,sudo,title
+copy-on-select = clipboard
+confirm-close-surface = false
+window-save-state = always
+scrollback-limit = 100000
