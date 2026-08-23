@@ -1,0 +1,1078 @@
+<title>Cyberdeck Field Manual</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap">
+
+<style>
+  /* ---------------------------------------------------------------------
+     Cyberdeck Field Manual
+     Single-theme by design: this documents a neon terminal rice, so every
+     colour is painted explicitly and no light variant exists.
+     Palette mirrors ~/.dotfiles/palette.sh.
+  --------------------------------------------------------------------- */
+  :root {
+    --ground:    #000b1e;
+    --deepest:   #040713;
+    --panel:     #091833;
+    --panel-hi:  #0d2044;
+    --line:      #133e7c;
+    --line-soft: #16264a;
+
+    --fg:        #cfe9ec;
+    --fg-mid:    #0abdc6;
+    --fg-dim:    #5b8f95;
+    --fg-faint:  #3d6a70;
+
+    --magenta:   #ea00d9;
+    --magenta-d: #a3159a;
+    --purple:    #711c91;
+    --green:     #00ff9f;
+    --yellow:    #f3e600;
+    --orange:    #f57800;
+    --red:       #ff0055;
+
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+    --rail: 268px;
+    --bar: 34px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--fg);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+
+  /* Faint scanline wash — the one ambient flourish, borrowed from the wallpaper. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 5;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(10, 189, 198, 0.028) 0px,
+      rgba(10, 189, 198, 0.028) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  }
+
+  a { color: var(--fg-mid); }
+  :focus-visible {
+    outline: 2px solid var(--magenta);
+    outline-offset: 2px;
+  }
+
+  /* ---------------- shell ---------------- */
+
+  .deck {
+    display: grid;
+    grid-template-columns: var(--rail) minmax(0, 1fr);
+    min-height: 100vh;
+    padding-bottom: var(--bar);
+  }
+
+  /* ---------------- left rail ---------------- */
+
+  .rail {
+    border-right: 1px solid var(--line-soft);
+    background: linear-gradient(180deg, var(--deepest), var(--ground) 40%);
+    padding: 26px 0 40px;
+    position: sticky;
+    top: 0;
+    align-self: start;
+    max-height: 100vh;
+    overflow-y: auto;
+  }
+
+  .brand {
+    padding: 0 22px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* Block wordmark echoing the fastfetch CYBERDECK logo. */
+  .wordmark {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 25px;
+    line-height: 0.92;
+    letter-spacing: 0.13em;
+    margin: 0;
+    text-transform: uppercase;
+  }
+  .wordmark .a { color: var(--magenta); display: block; }
+  .wordmark .b { color: var(--fg-mid); display: block; }
+
+  .brand-sub {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.17em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+    margin: 0;
+  }
+
+  .rail-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+    padding: 0 22px 10px;
+    border-top: 1px solid var(--line-soft);
+    padding-top: 16px;
+  }
+
+  .nav { display: flex; flex-direction: column; }
+
+  .nav button {
+    all: unset;
+    cursor: pointer;
+    display: grid;
+    grid-template-columns: 26px 1fr;
+    align-items: baseline;
+    gap: 10px;
+    padding: 9px 22px;
+    border-left: 2px solid transparent;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--fg-dim);
+    transition: color .12s, background .12s, border-color .12s;
+  }
+  .nav button:hover { color: var(--fg-mid); background: rgba(19, 62, 124, 0.16); }
+  .nav button .idx {
+    font-size: 10.5px;
+    color: var(--fg-faint);
+    font-variant-numeric: tabular-nums;
+  }
+  .nav button[aria-current="true"] {
+    color: var(--magenta);
+    border-left-color: var(--magenta);
+    background: rgba(234, 0, 217, 0.07);
+  }
+  .nav button[aria-current="true"] .idx { color: var(--magenta-d); }
+
+  .rail-foot {
+    padding: 18px 22px 0;
+    margin-top: 18px;
+    border-top: 1px solid var(--line-soft);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--fg-faint);
+    line-height: 1.9;
+  }
+  .rail-foot b { color: var(--fg-dim); font-weight: 500; }
+
+  /* ---------------- main column ---------------- */
+
+  .main { min-width: 0; padding: 0 0 60px; }
+
+  .progress {
+    height: 2px;
+    background: var(--line-soft);
+    position: sticky;
+    top: 0;
+    z-index: 4;
+  }
+  .progress i {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, var(--purple), var(--magenta));
+    transition: width .25s ease;
+  }
+
+  .panel { padding: 40px 46px 0; max-width: 980px; }
+  .panel[hidden] { display: none; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--magenta);
+    margin: 0 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .eyebrow::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(234,0,217,.45), transparent);
+  }
+
+  h1 {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: clamp(28px, 3.6vw, 40px);
+    line-height: 1.08;
+    letter-spacing: -0.015em;
+    margin: 0 0 14px;
+    color: var(--fg);
+    text-wrap: balance;
+  }
+
+  .lede {
+    font-size: 17px;
+    line-height: 1.62;
+    color: var(--fg-dim);
+    max-width: 62ch;
+    margin: 0 0 30px;
+  }
+  .lede strong { color: var(--fg-mid); font-weight: 500; }
+
+  h2 {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+    margin: 34px 0 14px;
+    font-weight: 500;
+  }
+
+  /* ---------------- key tables ---------------- */
+
+  .keys {
+    border: 1px solid var(--line-soft);
+    border-radius: 3px;
+    overflow: hidden;
+    background: rgba(9, 24, 51, 0.5);
+  }
+  .keys .row {
+    display: grid;
+    grid-template-columns: minmax(150px, 210px) 1fr;
+    gap: 18px;
+    padding: 9px 16px;
+    border-top: 1px solid var(--line-soft);
+    align-items: baseline;
+  }
+  .keys .row:first-child { border-top: 0; }
+  .keys .row:hover { background: rgba(19, 62, 124, 0.17); }
+  .keys .act { color: var(--fg); font-size: 14px; }
+  .keys .act em {
+    font-style: normal;
+    color: var(--fg-faint);
+    font-size: 12.5px;
+    display: block;
+  }
+
+  kbd {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--fg-mid);
+    background: var(--panel-hi);
+    border: 1px solid var(--line);
+    border-bottom-width: 2px;
+    border-radius: 3px;
+    padding: 2px 7px;
+    white-space: nowrap;
+    display: inline-block;
+  }
+  kbd.accent { color: var(--magenta); border-color: var(--magenta-d); }
+  .kseq { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+  .kseq .plus { color: var(--fg-faint); font-family: var(--mono); font-size: 11px; }
+
+  /* ---------------- command list ---------------- */
+
+  .cmds { display: flex; flex-direction: column; gap: 1px; }
+  .cmd {
+    display: grid;
+    grid-template-columns: minmax(190px, 260px) 1fr;
+    gap: 18px;
+    padding: 10px 16px;
+    background: rgba(9, 24, 51, 0.5);
+    border-left: 2px solid var(--purple);
+    align-items: baseline;
+  }
+  .cmd code {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--green);
+    word-break: break-word;
+  }
+  .cmd span { color: var(--fg-dim); font-size: 14px; }
+
+  /* ---------------- notes ---------------- */
+
+  .note {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 14px;
+    padding: 13px 16px;
+    border: 1px solid var(--line-soft);
+    border-left: 3px solid var(--orange);
+    border-radius: 3px;
+    background: rgba(245, 120, 0, 0.05);
+    margin-top: 16px;
+    align-items: start;
+  }
+  .note.blocked { border-left-color: var(--red); background: rgba(255, 0, 85, 0.05); }
+  .note.good { border-left-color: var(--green); background: rgba(0, 255, 159, 0.05); }
+  .note .tag {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--orange);
+    padding-top: 3px;
+    white-space: nowrap;
+  }
+  .note.blocked .tag { color: var(--red); }
+  .note.good .tag { color: var(--green); }
+  .note p { margin: 0; font-size: 14px; color: var(--fg-dim); }
+  .note code {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--fg-mid);
+  }
+
+  /* ---------------- meta strip ---------------- */
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 26px;
+  }
+  .chip {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--fg-dim);
+    border: 1px solid var(--line-soft);
+    border-radius: 999px;
+    padding: 3px 11px;
+    background: rgba(9, 24, 51, 0.6);
+  }
+  .chip b { color: var(--fg-mid); font-weight: 400; }
+
+  /* ---------------- workspace map ---------------- */
+
+  .wsmap { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 8px; }
+  .ws {
+    border: 1px solid var(--line-soft);
+    border-radius: 3px;
+    padding: 11px 13px;
+    background: rgba(9, 24, 51, 0.5);
+  }
+  .ws .n {
+    font-family: var(--mono);
+    font-size: 15px;
+    color: var(--magenta);
+    font-weight: 700;
+  }
+  .ws .apps { font-size: 12.5px; color: var(--fg-dim); margin-top: 3px; line-height: 1.45; }
+
+  /* ---------------- hud grid diagram ---------------- */
+
+  .hudgrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    border: 1px solid var(--magenta-d);
+    border-radius: 3px;
+    padding: 6px;
+    background: var(--deepest);
+  }
+  .hudpane {
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 13px;
+    min-height: 82px;
+    background: rgba(9, 24, 51, 0.6);
+  }
+  .hudpane .t {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--fg-mid);
+  }
+  .hudpane .d { font-size: 12.5px; color: var(--fg-faint); margin-top: 4px; line-height: 1.45; }
+
+  /* ---------------- search ---------------- */
+
+  .searchwrap { padding: 34px 46px 0; max-width: 980px; }
+  .searchbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid var(--magenta-d);
+    border-radius: 3px;
+    background: var(--panel);
+    padding: 9px 14px;
+  }
+  .searchbox .p { font-family: var(--mono); color: var(--magenta); font-size: 14px; }
+  .searchbox input {
+    all: unset;
+    flex: 1;
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--fg);
+    min-width: 0;
+  }
+  .searchbox input::placeholder { color: var(--fg-faint); }
+  .searchbox .esc { font-family: var(--mono); font-size: 10.5px; color: var(--fg-faint); }
+
+  .results { margin-top: 16px; display: flex; flex-direction: column; gap: 1px; }
+  .result {
+    display: grid;
+    grid-template-columns: minmax(140px, 190px) 1fr auto;
+    gap: 16px;
+    align-items: baseline;
+    padding: 9px 16px;
+    background: rgba(9, 24, 51, 0.5);
+    border-left: 2px solid var(--line);
+  }
+  .result .where {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+  }
+  .result .act { font-size: 14px; color: var(--fg); }
+  .noresult {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--fg-faint);
+    padding: 18px 16px;
+  }
+
+  /* ---------------- bottom status bar (echoes tmux) ---------------- */
+
+  .statusbar {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    height: var(--bar);
+    z-index: 6;
+    display: flex;
+    align-items: stretch;
+    background: var(--deepest);
+    border-top: 1px solid var(--line-soft);
+    font-family: var(--mono);
+    font-size: 11.5px;
+  }
+  .sb-left {
+    background: var(--magenta);
+    color: var(--deepest);
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    letter-spacing: 0.05em;
+  }
+  .sb-mid {
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    color: var(--fg-faint);
+    gap: 14px;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+  }
+  .sb-mid::-webkit-scrollbar { display: none; }
+  .sb-mid b { color: var(--fg-dim); font-weight: 400; }
+  .sb-mid kbd { font-size: 10.5px; padding: 1px 5px; border-bottom-width: 1px; }
+  .sb-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    color: var(--fg-mid);
+    background: var(--panel);
+    border-left: 1px solid var(--line-soft);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  /* ---------------- responsive ---------------- */
+
+  @media (max-width: 860px) {
+    .deck { grid-template-columns: 1fr; }
+    .rail {
+      position: static;
+      max-height: none;
+      border-right: 0;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .nav { flex-direction: row; overflow-x: auto; }
+    .nav button { white-space: nowrap; border-left: 0; border-bottom: 2px solid transparent; }
+    .nav button[aria-current="true"] { border-left-color: transparent; border-bottom-color: var(--magenta); }
+    .rail-foot { display: none; }
+    .panel, .searchwrap { padding-left: 20px; padding-right: 20px; }
+    .keys .row, .cmd, .result { grid-template-columns: 1fr; gap: 5px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div class="deck">
+
+  <!-- ============================= RAIL ============================= -->
+  <aside class="rail">
+    <div class="brand">
+      <h2 class="wordmark" style="margin:0;">
+        <span class="a">Cyber</span><span class="b">deck</span>
+      </h2>
+      <p class="brand-sub">Field manual · ~/.dotfiles</p>
+    </div>
+
+    <p class="rail-label">The tour</p>
+    <nav class="nav" id="nav" aria-label="Layers"></nav>
+
+    <div class="rail-foot">
+      <b>Palette</b> palette.sh<br>
+      <b>Health</b> rice-doctor<br>
+      <b>Re-link</b> install.sh
+    </div>
+  </aside>
+
+  <!-- ============================= MAIN ============================= -->
+  <main class="main">
+    <div class="progress"><i id="bar" style="width:11%"></i></div>
+
+    <!-- search overlay panel -->
+    <div class="searchwrap" id="searchwrap" hidden>
+      <div class="searchbox">
+        <span class="p">/</span>
+        <input id="q" type="text" placeholder="filter every key and command…" autocomplete="off" spellcheck="false">
+        <span class="esc">ESC to close</span>
+      </div>
+      <div class="results" id="results"></div>
+    </div>
+
+    <div id="panels">
+
+      <!-- ---------------- 1 · WINDOWS ---------------- -->
+      <section class="panel" data-title="Windows">
+        <p class="eyebrow">Layer 01 · AeroSpace</p>
+        <h1>Windows tile themselves</h1>
+        <p class="lede">AeroSpace tiles every window into workspaces. It runs with <strong>SIP intact</strong> — that's why it was chosen over yabai, whose best features need SIP disabled. Gaps are 10px, except 42px at the top where the bar sits.</p>
+
+        <div class="meta">
+          <span class="chip"><b>Config</b> aerospace/aerospace.toml</span>
+          <span class="chip"><b>Layout</b> tiles, auto orientation</span>
+          <span class="chip"><b>Starts</b> at login</span>
+        </div>
+
+        <h2>Focus and move</h2>
+        <div class="keys">
+          <div class="row"><div class="kseq"><kbd>alt</kbd><span class="plus">+</span><kbd>h j k l</kbd></div><div class="act">Focus the window left / down / up / right <em>Arrow keys work too</em></div></div>
+          <div class="row"><div class="kseq"><kbd>alt</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>h j k l</kbd></div><div class="act">Move this window in that direction</div></div>
+          <div class="row"><div class="kseq"><kbd>alt</kbd><span class="plus">+</span><kbd>tab</kbd></div><div class="act">Jump back to the last workspace</div></div>
+          <div class="row"><div class="kseq"><kbd>alt</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>tab</kbd></div><div class="act">Throw this workspace to the next monitor</div></div>
+        </div>
+
+        <h2>Workspaces</h2>
+        <div class="keys">
+          <div class="row"><div class="kseq"><kbd class="accent">alt</kbd><span class="plus">+</span><kbd class="accent">1</kbd>–<kbd class="accent">9</kbd></div><div class="act">Switch to that workspace</div></div>
+          <div class="row"><div class="kseq"><kbd>alt</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>1</kbd>–<kbd>9</kbd></div><div class="act">Send this window there and follow it</div></div>
+        </div>
+
+        <h2>Where apps land on their own</h2>
+        <div class="wsmap">
+          <div class="ws"><div class="n">1</div><div class="apps">Ghostty</div></div>
+          <div class="ws"><div class="n">2</div><div class="apps">Zed, RustRover, VS Code</div></div>
+          <div class="ws"><div class="n">3</div><div class="apps">Chrome, Safari, Brave</div></div>
+          <div class="ws"><div class="n">4</div><div class="apps">WhatsApp, Claude</div></div>
+          <div class="ws"><div class="n">5</div><div class="apps">Obsidian</div></div>
+          <div class="ws"><div class="n">6</div><div class="apps">OrbStack</div></div>
+        </div>
+
+        <h2>Shape the layout</h2>
+        <div class="keys">
+          <div class="row"><div class="kseq"><kbd>alt</kbd><span class="plus">+</span><kbd>-</kbd> / <kbd>=</kbd></div><div class="act">Shrink or grow the focused window by 50px</div></div>
+          <div class="row"><div class="kseq"><kbd>alt</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>=</kbd></div><div class="act">Balance every window to equal size</div></div>
+          <div class="row"><div class="kseq"><kbd>alt</kbd><span class="plus">+</span><kbd>/</kbd></div><div class="act">Tiles layout — flip horizontal / vertical</div></div>
+          <div class="row"><div class="kseq"><kbd>alt</kbd><span class="plus">+</span><kbd>,</kbd></div><div class="act">Accordion layout</div></div>
+          <div class="row"><div class="kseq"><kbd>alt</kbd><span class="plus">+</span><kbd>f</kbd></div><div class="act">Float this window out of the tiler</div></div>
+          <div class="row"><div class="kseq"><kbd>alt</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>f</kbd></div><div class="act">Fullscreen</div></div>
+          <div class="row"><div class="kseq"><kbd>alt</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>'</kbd></div><div class="act">Join this window with the one to its right</div></div>
+        </div>
+
+        <h2>Modes — hands stay on the keys</h2>
+        <div class="keys">
+          <div class="row"><div class="kseq"><kbd>alt</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>r</kbd></div><div class="act">Resize mode <em>h j k l to resize, b balances, esc or enter leaves</em></div></div>
+          <div class="row"><div class="kseq"><kbd>alt</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>;</kbd></div><div class="act">Service mode — the escape hatches <em>r resets the layout · f floats · backspace closes every other window · esc reloads the config</em></div></div>
+        </div>
+
+        <div class="note blocked">
+          <span class="tag">Blocked</span>
+          <p>If the CLI says it can't connect while AeroSpace is clearly running, Accessibility permission hasn't been granted. Open <code>System Settings ▸ Privacy &amp; Security ▸ Accessibility</code> and enable AeroSpace. This is the one step that can't be scripted.</p>
+        </div>
+      </section>
+
+      <!-- ---------------- 2 · THE BAR ---------------- -->
+      <section class="panel" data-title="The bar">
+        <p class="eyebrow">Layer 02 · SketchyBar + JankyBorders</p>
+        <h1>The bar reads your own network</h1>
+        <p class="lede">macOS's menu bar is hidden; SketchyBar replaces it with 18 items. The interesting part: the <strong>net</strong> and <strong>link</strong> items aren't shelling out to netstat and ping — they scrape <strong>netwatch's own daemon</strong>.</p>
+
+        <div class="meta">
+          <span class="chip"><b>Config</b> sketchybar/sketchybarrc</span>
+          <span class="chip"><b>Feed</b> 127.0.0.1:9464</span>
+          <span class="chip"><b>Cost</b> 0.4% CPU · 15MB</span>
+        </div>
+
+        <h2>What's up there</h2>
+        <div class="keys">
+          <div class="row"><div class="kseq"><kbd>spaces</kbd></div><div class="act">Live AeroSpace workspaces — the focused one glows magenta</div></div>
+          <div class="row"><div class="kseq"><kbd>front_app</kbd></div><div class="act">Whatever app currently has focus</div></div>
+          <div class="row"><div class="kseq"><kbd>cpu · mem · disk</kbd></div><div class="act">System vitals</div></div>
+          <div class="row"><div class="kseq"><kbd class="accent">net</kbd></div><div class="act">Throughput up and down <em>from netwatch, not netstat</em></div></div>
+          <div class="row"><div class="kseq"><kbd class="accent">link</kbd></div><div class="act">Gateway RTT, DNS RTT, loss ratio, live connection count</div></div>
+          <div class="row"><div class="kseq"><kbd>battery · clock</kbd></div><div class="act">The usual suspects, in the palette</div></div>
+        </div>
+
+        <h2>Driving it</h2>
+        <div class="cmds">
+          <div class="cmd"><code>brew services restart sketchybar</code><span>Restart the bar after a config edit</span></div>
+          <div class="cmd"><code>sketchybar --reload</code><span>Reload without a full restart</span></div>
+          <div class="cmd"><code>curl -s 127.0.0.1:9464/metrics</code><span>Read the raw feed the bar is drinking from</span></div>
+          <div class="cmd"><code>launchctl kickstart -k gui/501/io.matt.netwatch-metrics</code><span>Restart the netwatch daemon behind it</span></div>
+        </div>
+
+        <div class="note">
+          <span class="tag">Gotcha</span>
+          <p><code>launchctl bootout</code> is asynchronous — bootstrapping straight after it races the teardown and fails silently. Always <code>kickstart</code> a service that's already loaded rather than cycling it.</p>
+        </div>
+
+        <div class="note good">
+          <span class="tag">Borders</span>
+          <p>JankyBorders draws the magenta glow on the focused window and a dim purple on the rest. It's launched by <code>bin/borders.sh</code> and needs no permissions.</p>
+        </div>
+      </section>
+
+      <!-- ---------------- 3 · TERMINAL ---------------- -->
+      <section class="panel" data-title="Terminal">
+        <p class="eyebrow">Layer 03 · Ghostty</p>
+        <h1>One terminal, always a keystroke away</h1>
+        <p class="lede">Ghostty at 88% opacity with a 26px blur — the translucency is most of what makes the rice read as cyberpunk. The <strong>quick terminal</strong> drops down over any app, from anywhere.</p>
+
+        <div class="meta">
+          <span class="chip"><b>Config</b> ghostty/config</span>
+          <span class="chip"><b>Font</b> JetBrainsMono NF 14</span>
+          <span class="chip"><b>Window</b> 200 × 52 cells</span>
+        </div>
+
+        <h2>Keys</h2>
+        <div class="keys">
+          <div class="row"><div class="kseq"><kbd class="accent">cmd</kbd><span class="plus">+</span><kbd class="accent">`</kbd></div><div class="act">Drop the quick terminal over whatever you're in <em>Global — works from any app</em></div></div>
+          <div class="row"><div class="kseq"><kbd>cmd</kbd><span class="plus">+</span><kbd>d</kbd></div><div class="act">Split right</div></div>
+          <div class="row"><div class="kseq"><kbd>cmd</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>d</kbd></div><div class="act">Split down</div></div>
+          <div class="row"><div class="kseq"><kbd>cmd</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>h j k l</kbd></div><div class="act">Move between splits <em>Unfocused splits dim to 72%</em></div></div>
+        </div>
+
+        <h2>Checking it</h2>
+        <div class="cmds">
+          <div class="cmd"><code>ghostty +validate-config</code><span>Exits 0 when the config parses</span></div>
+          <div class="cmd"><code>ghostty +show-config</code><span>See every value as actually resolved</span></div>
+          <div class="cmd"><code>ghostty +list-fonts</code><span>Confirm a font is visible to Ghostty</span></div>
+        </div>
+
+        <div class="note">
+          <span class="tag">First run</span>
+          <p>The quick terminal is a <em>global</em> hotkey, so macOS asks for Accessibility permission the first time you press it. Grant it once and it stays.</p>
+        </div>
+      </section>
+
+      <!-- ---------------- 4 · SHELL ---------------- -->
+      <section class="panel" data-title="Shell">
+        <p class="eyebrow">Layer 04 · zsh + powerlevel10k</p>
+        <h1>The shell you already had, re-skinned</h1>
+        <p class="lede">p10k keeps its original pure-style layout — only the colours were overridden, so nothing you'd configured was lost. Around it sits a modern CLI layer. Startup still costs <strong>330ms</strong>, hidden behind instant prompt.</p>
+
+        <div class="meta">
+          <span class="chip"><b>Config</b> zsh/cyberpunk.zsh</span>
+          <span class="chip"><b>Prompt</b> p10k, colours only</span>
+          <span class="chip"><b>Secrets</b> ~/.config/secrets.zsh</span>
+        </div>
+
+        <h2>Everyday commands</h2>
+        <div class="cmds">
+          <div class="cmd"><code>ls · ll · la</code><span>eza with icons, git status, directories first</span></div>
+          <div class="cmd"><code>lt [dir]</code><span>Two-level icon tree</span></div>
+          <div class="cmd"><code>cat &lt;file&gt;</code><span>bat — syntax highlighted, no pager</span></div>
+          <div class="cmd"><code>lg</code><span>Git log as a decorated graph, all branches</span></div>
+          <div class="cmd"><code>fetch</code><span>fastfetch with the CYBERDECK logo</span></div>
+          <div class="cmd"><code>top</code><span>btop in the cyberpunk theme</span></div>
+          <div class="cmd"><code>cd &lt;partial&gt;</code><span>zoxide — jumps to the best match, learns as you go</span></div>
+        </div>
+
+        <h2>Keys</h2>
+        <div class="keys">
+          <div class="row"><div class="kseq"><kbd class="accent">ctrl</kbd><span class="plus">+</span><kbd class="accent">r</kbd></div><div class="act">atuin — fuzzy search every command you've ever run <em>Up-arrow is deliberately left alone</em></div></div>
+          <div class="row"><div class="kseq"><kbd>ctrl</kbd><span class="plus">+</span><kbd>t</kbd></div><div class="act">fzf file picker with a bat preview</div></div>
+          <div class="row"><div class="kseq"><kbd>alt</kbd><span class="plus">+</span><kbd>c</kbd></div><div class="act">fzf directory jump with a tree preview</div></div>
+          <div class="row"><div class="kseq"><kbd>→</kbd></div><div class="act">Accept the dim-cyan autosuggestion</div></div>
+        </div>
+
+        <div class="note good">
+          <span class="tag">One theme</span>
+          <p>The <code>cyberpunk-neon.tmTheme</code> written for bat also drives <strong>delta</strong> (git diffs) and every fzf preview — one file, three surfaces. Rebuild it with <code>bat cache --build</code>.</p>
+        </div>
+      </section>
+
+      <!-- ---------------- 5 · TMUX ---------------- -->
+      <section class="panel" data-title="Multiplexer">
+        <p class="eyebrow">Layer 05 · tmux</p>
+        <h1>Sessions that survive a reboot</h1>
+        <p class="lede">The prefix is <strong>ctrl+a</strong>, not ctrl+b. Splits keep the current directory, panes navigate like vim, and continuum saves the whole session every 15 minutes and restores it on launch.</p>
+
+        <div class="meta">
+          <span class="chip"><b>Config</b> tmux/tmux.conf</span>
+          <span class="chip"><b>Prefix</b> ctrl+a</span>
+          <span class="chip"><b>Mouse</b> on</span>
+        </div>
+
+        <h2>Panes and windows <em style="font-style:normal;color:var(--fg-faint);text-transform:none;letter-spacing:0">— all after the prefix</em></h2>
+        <div class="keys">
+          <div class="row"><div class="kseq"><kbd class="accent">ctrl</kbd><span class="plus">+</span><kbd class="accent">a</kbd></div><div class="act">The prefix — press it before everything below</div></div>
+          <div class="row"><div class="kseq"><kbd>|</kbd></div><div class="act">Split right, keeping the current directory</div></div>
+          <div class="row"><div class="kseq"><kbd>-</kbd></div><div class="act">Split down, keeping the current directory</div></div>
+          <div class="row"><div class="kseq"><kbd>c</kbd></div><div class="act">New window, same directory</div></div>
+          <div class="row"><div class="kseq"><kbd>h j k l</kbd></div><div class="act">Move between panes</div></div>
+          <div class="row"><div class="kseq"><kbd>H J K L</kbd></div><div class="act">Resize by 5 — hold to repeat</div></div>
+          <div class="row"><div class="kseq"><kbd>r</kbd></div><div class="act">Reload the config and say so</div></div>
+        </div>
+
+        <h2>Copy mode</h2>
+        <div class="keys">
+          <div class="row"><div class="kseq"><kbd>[</kbd></div><div class="act">Enter copy mode — vim keys from here</div></div>
+          <div class="row"><div class="kseq"><kbd>v</kbd></div><div class="act">Start the selection</div></div>
+          <div class="row"><div class="kseq"><kbd>y</kbd></div><div class="act">Yank straight to the macOS clipboard</div></div>
+          <div class="row"><div class="kseq"><kbd>drag</kbd></div><div class="act">Mouse-select also copies to the clipboard</div></div>
+        </div>
+
+        <div class="note">
+          <span class="tag">Careful</span>
+          <p>Panes are 1-indexed here, so scripts targeting <code>session:window.0</code> will fail. Use named targets — <code>{left}</code>, <code>{top-right}</code> — the way <code>bin/hud</code> does.</p>
+        </div>
+      </section>
+
+      <!-- ---------------- 6 · HUD ---------------- -->
+      <section class="panel" data-title="The HUD">
+        <p class="eyebrow">Layer 06 · hud</p>
+        <h1>Four tools, one screen</h1>
+        <p class="lede">One command tiles btop and all three <strong>*Watch</strong> tools into a grid. Every pane is live; the magenta border marks the focused one.</p>
+
+        <div class="meta">
+          <span class="chip"><b>Script</b> bin/hud</span>
+          <span class="chip"><b>Needs</b> 160 × 50 cells</span>
+          <span class="chip"><b>Session</b> tmux "hud"</span>
+        </div>
+
+        <h2>The grid</h2>
+        <div class="hudgrid">
+          <div class="hudpane"><div class="t">btop</div><div class="d">CPU per-core, memory, disks, processes</div></div>
+          <div class="hudpane"><div class="t">syswatch</div><div class="d">Load, thermals, power draw, process table</div></div>
+          <div class="hudpane"><div class="t">netwatch</div><div class="d">Throughput, gateway and DNS RTT, live connections</div></div>
+          <div class="hudpane"><div class="t">diskwatch</div><div class="d">Read/write throughput, capacity, busiest files</div></div>
+        </div>
+
+        <h2>Launching</h2>
+        <div class="cmds">
+          <div class="cmd"><code>hud</code><span>Attach, building the session if it isn't there</span></div>
+          <div class="cmd"><code>hud -r</code><span>Tear down and rebuild from scratch</span></div>
+        </div>
+
+        <h2>Keys inside the tools</h2>
+        <div class="keys">
+          <div class="row"><div class="kseq"><kbd>q</kbd></div><div class="act">Quit the tool</div></div>
+          <div class="row"><div class="kseq"><kbd>p</kbd></div><div class="act">Pause the feed</div></div>
+          <div class="row"><div class="kseq"><kbd>/</kbd></div><div class="act">Filter rows</div></div>
+          <div class="row"><div class="kseq"><kbd>↵</kbd></div><div class="act">Open the detail view for the selected row</div></div>
+          <div class="row"><div class="kseq"><kbd>L</kbd></div><div class="act">Toggle Lite view — one 80×24 screen</div></div>
+          <div class="row"><div class="kseq"><kbd>V</kbd></div><div class="act">Cycle views: full → lite → dense <em>syswatch and diskwatch</em></div></div>
+          <div class="row"><div class="kseq"><kbd>1</kbd>–<kbd>7</kbd></div><div class="act">Switch tabs <em>netwatch</em></div></div>
+          <div class="row"><div class="kseq"><kbd class="accent">shift</kbd><span class="plus">+</span><kbd class="accent">R F E</kbd></div><div class="act">Flight recorder — arm, freeze, export <em>netwatch</em></div></div>
+          <div class="row"><div class="kseq"><kbd>?</kbd></div><div class="act">Help inside any of them</div></div>
+        </div>
+
+        <div class="note">
+          <span class="tag">Sizing</span>
+          <p>All four refuse to draw below 80×24, and each gets a quarter of the window — so the terminal has to clear roughly 160×50 cells or the panes show a "terminal too small" message instead.</p>
+        </div>
+      </section>
+
+      <!-- ---------------- 7 · EDITOR + AGENT ---------------- -->
+      <section class="panel" data-title="Editor + agent">
+        <p class="eyebrow">Layer 07 · Zed, Claude Code, atuin</p>
+        <h1>Where the palette gets quieter</h1>
+        <p class="lede">Zed keeps the neon chrome but its <strong>syntax colours are deliberately desaturated</strong>. Chrome is glanced at; code is read for hours, and full-saturation magenta on black is exhausting at that duration.</p>
+
+        <div class="meta">
+          <span class="chip"><b>Zed</b> zed/themes/cyberpunk-neon.json</span>
+          <span class="chip"><b>Scopes</b> 35</span>
+          <span class="chip"><b>Claude</b> dark-ansi</span>
+        </div>
+
+        <h2>What each app does</h2>
+        <div class="cmds">
+          <div class="cmd"><code>Zed</code><span>Custom theme — neon UI, calm syntax, JetBrainsMono buffers</span></div>
+          <div class="cmd"><code>Claude Code</code><span>dark-ansi theme, so it inherits Ghostty's palette instead of duplicating it</span></div>
+          <div class="cmd"><code>atuin</code><span>Themed history UI, since ctrl+r takes over the whole screen</span></div>
+          <div class="cmd"><code>bin/cc-statusline</code><span>Model ▸ directory ▸ git branch ▸ context pressure</span></div>
+        </div>
+
+        <div class="note good">
+          <span class="tag">Why ANSI</span>
+          <p>Setting Claude Code to <code>dark-ansi</code> means it renders through the terminal's own 16 colours. Change the Ghostty theme and Claude follows automatically — there's no second palette to keep in sync.</p>
+        </div>
+
+        <div class="note">
+          <span class="tag">Two palettes</span>
+          <p>Both live in <code>palette.sh</code>: the neon set, and <code>CP_SOFT_*</code> for the desaturated syntax. Anything new should pull from one of them rather than inventing a colour.</p>
+        </div>
+      </section>
+
+      <!-- ---------------- 8 · SYSTEM ---------------- -->
+      <section class="panel" data-title="System">
+        <p class="eyebrow">Layer 08 · macOS</p>
+        <h1>Everything here is reversible</h1>
+        <p class="lede">The system layer is the only part that reaches outside the dotfiles, so it was built undo-first: <strong>snapshot before apply</strong>, and a restore script that replays the snapshot back into the defaults system.</p>
+
+        <div class="meta">
+          <span class="chip"><b>Scripts</b> macos/</span>
+          <span class="chip"><b>Snapshot</b> 22 keys</span>
+          <span class="chip"><b>Wallpaper</b> generated, not downloaded</span>
+        </div>
+
+        <h2>The three scripts, in order</h2>
+        <div class="cmds">
+          <div class="cmd"><code>macos/snapshot.sh</code><span>Record the current state first — always</span></div>
+          <div class="cmd"><code>macos/defaults.sh</code><span>Apply the rice. Idempotent; safe to re-run</span></div>
+          <div class="cmd"><code>macos/restore.sh</code><span>Put everything back from the snapshot</span></div>
+          <div class="cmd"><code>wallpaper/generate.py</code><span>Regenerate both wallpapers with PIL</span></div>
+        </div>
+
+        <h2>What changed</h2>
+        <div class="keys">
+          <div class="row"><div class="kseq"><kbd>Dock</kbd></div><div class="act">Shrunk 68 → 36, autohidden with no delay</div></div>
+          <div class="row"><div class="kseq"><kbd>Desktop</kbd></div><div class="act">Icons off, so the wallpaper stays clean</div></div>
+          <div class="row"><div class="kseq"><kbd>Menu bar</kbd></div><div class="act">Hidden — SketchyBar took the job</div></div>
+          <div class="row"><div class="kseq"><kbd>Motion</kbd></div><div class="act">Window and expose animations cut to near-zero</div></div>
+          <div class="row"><div class="kseq"><kbd>Screenshots</kbd></div><div class="act">~/Pictures/shots, PNG, no drop shadow</div></div>
+        </div>
+
+        <div class="note">
+          <span class="tag">Order matters</span>
+          <p>The menu-bar line stayed commented out until SketchyBar existed. Hiding it first would have left no clock and nothing to replace it — apply chrome removal only once the replacement is running.</p>
+        </div>
+      </section>
+
+      <!-- ---------------- 9 · UPKEEP ---------------- -->
+      <section class="panel" data-title="Upkeep">
+        <p class="eyebrow">Layer 09 · Maintenance</p>
+        <h1>Keeping it honest</h1>
+        <p class="lede">Three scripts cover everything: one checks the rice is actually running, one re-links it onto a fresh machine, one records what it looks like. All exit non-zero when something is genuinely wrong.</p>
+
+        <div class="meta">
+          <span class="chip"><b>Repo</b> ~/.dotfiles</span>
+          <span class="chip"><b>Layers checked</b> 12</span>
+          <span class="chip"><b>Tapes</b> 3</span>
+        </div>
+
+        <h2>The three</h2>
+        <div class="cmds">
+          <div class="cmd"><code>rice-doctor</code><span>Check every layer; exits non-zero if one is down</span></div>
+          <div class="cmd"><code>install.sh</code><span>Re-link every config. Idempotent</span></div>
+          <div class="cmd"><code>rice-capture</code><span>Render all demo GIFs</span></div>
+          <div class="cmd"><code>rice-capture hud</code><span>Render just one tape</span></div>
+        </div>
+
+        <h2>What the doctor looks at</h2>
+        <div class="keys">
+          <div class="row"><div class="kseq"><kbd>aerospace</kbd></div><div class="act">Running <em>and</em> the CLI can actually reach it</div></div>
+          <div class="row"><div class="kseq"><kbd>sketchybar</kbd></div><div class="act">Alive, with its item count</div></div>
+          <div class="row"><div class="kseq"><kbd>netwatch feed</kbd></div><div class="act">Service loaded and :9464 answering with live RTT</div></div>
+          <div class="row"><div class="kseq"><kbd>ghostty · tmux</kbd></div><div class="act">Configs linked and parsing</div></div>
+          <div class="row"><div class="kseq"><kbd>zed · claude · atuin</kbd></div><div class="act">Themes linked and selected</div></div>
+          <div class="row"><div class="kseq"><kbd class="accent">secrets</kbd></div><div class="act">No API key inlined in ~/.zshrc</div></div>
+        </div>
+
+        <div class="note good">
+          <span class="tag">Rule</span>
+          <p>Secrets live in <code>~/.config/secrets.zsh</code> at mode 600, gitignored and sourced from <code>.zshrc</code>. The doctor fails loudly if a key ever creeps back into a tracked file.</p>
+        </div>
+
+        <div class="note">
+          <span class="tag">Captures</span>
+          <p>VHS points <code>ZDOTDIR</code> at its own temp rc, so <code>~/.zshrc</code> never loads and none of the rice appears. Every tape re-execs into a real interactive shell first — and any pager-capable command needs <code>--paging=never</code>, or the recording hangs forever waiting on a keypress.</p>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<!-- ============================= STATUS BAR ============================= -->
+<div class="statusbar">
+  <div class="sb-left" id="sbLeft">01 · WINDOWS</div>
+  <div class="sb-mid">
+    <span><kbd>←</kbd> <kbd>→</kbd> <b>step</b></span>
+    <span><kbd>1</kbd>–<kbd>9</kbd> <b>jump</b></span>
+    <span><kbd>/</kbd> <b>find a key</b></span>
+    <span><kbd>esc</kbd> <b>close</b></span>
+  </div>
+  <div class="sb-right" id="sbRight">01 / 09</div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var panels  = Array.prototype.slice.call(document.querySelectorAll("#panels .panel"));
+  var nav     = document.getElementById("nav");
+  var bar     = document.getElementById("bar");
+  var sbLeft  = document.getElementById("sbLeft");
+  var sbRight = document.getElementById("sbRight");
+  var wrap    = document.getElementById("searchwrap");
+  var input   = document.getElementById("q");
+  var results = document.getElementById("results");
+
+  var current = 0;
+  var total   = panels.length;
+
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+
+  /* Commands legitimately contain < and > (cat <file>), so escape before
+     any of this text goes back out through innerHTML. */
+  function esc(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  /* ---- build the rail from the panels themselves ---- */
+  panels.forEach(function (p, i) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.innerHTML = '<span class="idx">' + pad(i + 1) + "</span><span>" +
+                  p.getAttribute("data-title") + "</span>";
+    b.addEventListener("click", function () { show(i); });
+    nav.appendChild(b);
+  });
+  var navButtons = Array.prototype.slice.call(nav.querySelectorAll("button"));
+
+  function show(i, skipHash) {
+    if (i < 0 || i >= total) { return; }
+    current = i;
+    panels.forEach(function (p, n) { p.hidden = (n !== i); });
+    navButtons.forEach(function (b, n) {
+      b.setAttribute("aria-current", n === i ? "true" : "false");
+    });
+    bar.style.width = Math.round(((i + 1) / total) * 100) + "%";
+    sbLeft.textContent = pad(i + 1) + " · " +
+                         panels[i].getAttribute("data-title").toUpperCase();
+    sbRight.textContent = pad(i + 1) + " / " + pad(total);
+    if (!skipHash) { history.replaceState(null, "", "#" + (i + 1)); }
+    window.scrollTo(0, 0);
+  }
+
+  /* ---- flat index of every key row and command, for the / filter ---- */
+  var index = [];
+  panels.forEach(function (p, i) {
+    var where = p.getAttribute("data-title");
+    p.querySelectorAll(".keys .row").forEach(function (row) {
+      var k = row.querySelector(".kseq");
+      var a = row.querySelector(".act");
+      if (!k || !a) { return; }
+      index.push({
+        panel: i,
+        where: where,
+        keyHTML: k.innerHTML,
+        act: esc((a.childNodes[0] ? a.childNodes[0].textContent : a.textContent).trim()),
+        hay: (k.textContent + " " + a.textContent + " " + where).toLowerCase()
+      });
+    });
+    p.querySelectorAll(".cmd").forEach(function (row) {
+      var c = row.querySelector("code");
+      var s = row.querySelector("span");
+      if (!c || !s) { return; }
+      index.push({
+        panel: i,
+        where: where,
+        keyHTML: "<kbd>" + esc(c.textContent) + "</kbd>",
+        act: esc(s.textContent.trim()),
+        hay: (c.textContent + " " + s.textContent + " " + where).toLowerCase()
+      });
+    });
+  });
+
+  function render(q) {
+    var needle = q.trim().toLowerCase();
+    results.innerHTML = "";
+    if (!needle) {
+      results.innerHTML = '<div class="noresult">' + index.length +
+        " keys and commands indexed. Start typing.</div>";
+      return;
+    }
+    var hits = index.filter(function (it) { return it.hay.indexOf(needle) !== -1; });
+    if (!hits.length) {
+      results.innerHTML = '<div class="noresult">Nothing matches &ldquo;' +
+        needle.replace(/[<>&]/g, "") + '&rdquo;.</div>';
+      return;
+    }
+    hits.slice(0, 40).forEach(function (it) {
+      var el = document.createElement("div");
+      el.className = "result";
+      el.innerHTML = '<div class="kseq">' + it.keyHTML + '</div>' +
+                     '<div class="act">' + it.act + '</div>' +
+                     '<div class="where">' + it.where + '</div>';
+      el.addEventListener("click", function () { closeSearch(); show(it.panel); });
+      el.style.cursor = "pointer";
+      results.appendChild(el);
+    });
+  }
+
+  function openSearch() {
+    wrap.hidden = false;
+    document.getElementById("panels").hidden = true;
+    render("");
+    input.value = "";
+    input.focus();
+  }
+  function closeSearch() {
+    wrap.hidden = true;
+    document.getElementById("panels").hidden = false;
+  }
+
+  input.addEventListener("input", function () { render(input.value); });
+
+  /* ---- keyboard ---- */
+  document.addEventListener("keydown", function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) { return; }
+
+    if (!wrap.hidden) {
+      if (e.key === "Escape") { e.preventDefault(); closeSearch(); }
+      return;
+    }
+    if (e.key === "/") { e.preventDefault(); openSearch(); return; }
+    if (e.key === "ArrowRight" || e.key === "j") { e.preventDefault(); show(Math.min(current + 1, total - 1)); return; }
+    if (e.key === "ArrowLeft"  || e.key === "k") { e.preventDefault(); show(Math.max(current - 1, 0)); return; }
+    if (e.key >= "1" && e.key <= "9") {
+      var n = parseInt(e.key, 10) - 1;
+      if (n < total) { e.preventDefault(); show(n); }
+      return;
+    }
+  });
+
+  /* ---- deep link ---- */
+  var start = parseInt((location.hash || "").replace("#", ""), 10);
+  show(isNaN(start) || start < 1 || start > total ? 0 : start - 1, true);
+})();
+</script>

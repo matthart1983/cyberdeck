@@ -70,6 +70,7 @@ mirrors it by hand, because none of them can read shell variables.
 | `prefix` = `C-a` | tmux prefix; `\|` and `-` split, `hjkl` navigate |
 | `rice-doctor` | verify aerospace, borders, bar, netwatch feed, configs, secrets |
 | `rice-capture` | render demo GIFs (`rice-capture hud` for just one) |
+| `open docs/cyberdeck-manual.html` | the field manual — every key and command, searchable |
 
 ## Window management
 
