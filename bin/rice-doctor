@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# Health check for every moving part of the rice. Exit 1 if anything is down.
+source "$HOME/.dotfiles/palette.sh" 2>/dev/null
+
+ok=0; bad=0
+pass() { printf '  \033[38;5;48m✔\033[0m %-22s %s\n' "$1" "$2"; ok=$((ok+1)); }
+fail() { printf '  \033[38;5;197m✘\033[0m %-22s %s\n' "$1" "$2"; bad=$((bad+1)); }
+
+echo
+printf '\033[38;5;201m▐ CYBERPUNK RICE — DOCTOR\033[0m\n\n'
+
+# --- window layer ----------------------------------------------------------
+if pgrep -q -f 'AeroSpace.app/Contents/MacOS/AeroSpace'; then
+  if ws=$(aerospace list-workspaces --focused 2>/dev/null); then
+    pass "aerospace" "running · workspace $ws"
+  else
+    fail "aerospace" "process up but CLI can't connect — grant Accessibility:
+                         System Settings ▸ Privacy & Security ▸ Accessibility ▸ AeroSpace"
+  fi
+else
+  fail "aerospace" "not running — open -a AeroSpace"
+fi
+
+pgrep -q -f '/borders' \
+  && pass "borders" "active window glow on" \
+  || fail "borders" "not running — ~/.dotfiles/bin/borders.sh &"
+
+# --- bar -------------------------------------------------------------------
+if pgrep -q sketchybar; then
+  n=$(sketchybar --query bar 2>/dev/null | jq -r '.items | length')
+  pass "sketchybar" "running · $n items"
+else
+  fail "sketchybar" "not running — brew services start sketchybar"
+fi
+
+if defaults read NSGlobalDomain _HIHideMenuBar 2>/dev/null | grep -q 1; then
+  pass "menu bar" "hidden (sketchybar replaces it)"
+else
+  fail "menu bar" "still visible — run macos/defaults.sh"
+fi
+
+# --- the netwatch feed -----------------------------------------------------
+if launchctl print "gui/$UID/io.matt.netwatch-metrics" 2>/dev/null | grep -q 'state = running'; then
+  if body=$(curl -sf --max-time 2 http://127.0.0.1:9464/metrics 2>/dev/null); then
+    rtt=$(printf '%s' "$body" | awk '/^netwatch_gateway_rtt_seconds /{printf "%.0fms", $2*1000}')
+    conns=$(printf '%s' "$body" | awk '/^netwatch_connections /{print $2}')
+    pass "netwatch feed" "serving · gw ${rtt:-?} · ${conns:-?} conns"
+  else
+    fail "netwatch feed" "daemon up but :9464 not answering"
+  fi
+else
+  fail "netwatch feed" "service down — launchctl bootstrap gui/$UID \\
+                         ~/Library/LaunchAgents/io.matt.netwatch-metrics.plist"
+fi
+
+# --- terminal + shell ------------------------------------------------------
+if [ -L "$HOME/.config/ghostty/config" ]; then
+  /Applications/Ghostty.app/Contents/MacOS/ghostty +validate-config >/dev/null 2>&1 \
+    && pass "ghostty" "config valid" \
+    || fail "ghostty" "config does not validate"
+else
+  fail "ghostty" "config not linked — run install.sh"
+fi
+
+[ -L "$HOME/.config/tmux/tmux.conf" ] \
+  && pass "tmux" "config linked" \
+  || fail "tmux" "config not linked — run install.sh"
+
+for t in eza bat fd fzf zoxide atuin delta rg fastfetch btop; do
+  command -v "$t" >/dev/null || missing="$missing $t"
+done
+[ -z "${missing:-}" ] \
+  && pass "cli layer" "all tools present" \
+  || fail "cli layer" "missing:$missing"
+
+# --- secret hygiene --------------------------------------------------------
+if grep -qE 'API_KEY|SECRET|TOKEN' "$HOME/.zshrc" 2>/dev/null; then
+  fail "secrets" "a key looks inlined in ~/.zshrc"
+else
+  pass "secrets" "none inlined in ~/.zshrc"
+fi
+
+echo
+printf '  %d ok, %d down\n\n' "$ok" "$bad"
+[ "$bad" -eq 0 ]
