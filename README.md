@@ -11,6 +11,9 @@ btop, bat, delta, fastfetch and Zed — from one palette, in one repo.
 
 ![tour](capture/out/tour.gif)
 
+**[📖 Read the Field Manual](https://matthart1983.github.io/cyberdeck/)** — every
+key, command and surface in one searchable page.
+
 </div>
 
 ---
@@ -36,6 +39,20 @@ doesn't. It's fed by [netwatch](https://github.com/matthart1983/netwatch)'s own
 headless daemon over a Prometheus endpoint, so the bar shows **gateway RTT, DNS
 RTT, packet loss and live connection count** — diagnostics, not decoration. See
 [The bar](#the-bar).
+
+## The Field Manual
+
+Everything this rice binds, in one page you can search: the tiling keys, the
+bar's items and where each one gets its data, the Ghostty and tmux bindings,
+the shell aliases, and how to undo any of it.
+
+**→ [matthart1983.github.io/cyberdeck](https://matthart1983.github.io/cyberdeck/)**
+
+It ships with the repo too, so it works offline and without GitHub:
+
+```sh
+open ~/.dotfiles/docs/cyberdeck-manual.html
+```
 
 ## Requirements
 
@@ -148,7 +165,7 @@ mirrors it by hand, because none of them can read shell variables.
 | `prefix` = `C-a` | tmux prefix; `\|` and `-` split, `hjkl` navigate |
 | `rice-doctor` | verify aerospace, borders, bar, netwatch feed, configs, secrets |
 | `rice-capture` | render demo GIFs (`rice-capture hud` for just one) |
-| `open docs/cyberdeck-manual.html` | the field manual — every key and command, searchable |
+| `open docs/cyberdeck-manual.html` | the [field manual](https://matthart1983.github.io/cyberdeck/) — every key and command, searchable |
 
 ## Window management
 
