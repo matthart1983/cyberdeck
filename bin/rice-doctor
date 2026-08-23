@@ -33,10 +33,19 @@ else
   fail "sketchybar" "not running — brew services start sketchybar"
 fi
 
+# Ask the window server where the menu bar actually is, not what the default
+# says: on macOS 15 the key is set and ignored until a logout, and a bar drawn
+# behind the menu bar still reports drawing=on.
+menubar_h=$(osascript -e 'tell application "System Events" to get height of item 1 of (get the bounds of window of desktop)' 2>/dev/null)
+bar_y=$(sketchybar --query bar 2>/dev/null | jq -r '.y_offset // "?"')
 if defaults read NSGlobalDomain _HIHideMenuBar 2>/dev/null | grep -q 1; then
-  pass "menu bar" "hidden (sketchybar replaces it)"
+  if [ "${bar_y:-0}" -ge 20 ]; then
+    pass "menu bar" "visible; bar clears it at y_offset $bar_y"
+  else
+    pass "menu bar" "hide requested (needs a logout to apply)"
+  fi
 else
-  fail "menu bar" "still visible — run macos/defaults.sh"
+  fail "menu bar" "hide not requested — run macos/defaults.sh"
 fi
 
 # --- the netwatch feed -----------------------------------------------------

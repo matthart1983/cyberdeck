@@ -34,7 +34,12 @@ defaults write com.apple.dock show-recents -bool false
 defaults write com.apple.dock mineffect -string "scale"
 defaults write com.apple.dock minimize-to-application -bool true
 
-# --- Menu bar: hide it — SketchyBar replaces it (Phase 5, shipped) ---------
+# --- Menu bar ---------------------------------------------------------------
+# On macOS 15 this key no longer takes effect without a full logout — writing
+# it and restarting SystemUIServer (and the -currentHost variant) leaves the
+# menu bar on screen. It is still written so a logout gets you the classic
+# "SketchyBar replaces the menu bar" look, but nothing depends on it: the bar
+# sits at y_offset 38, below the menu bar, so it is visible either way.
 # Reversible: macos/restore.sh puts it back from the pre-rice snapshot.
 defaults write NSGlobalDomain _HIHideMenuBar -bool true
 

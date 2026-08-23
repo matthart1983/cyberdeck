@@ -39,8 +39,10 @@ inner.vertical   = 10
 outer.left       = 10
 outer.right      = 10
 outer.bottom     = 10
-# Top gap leaves room for SketchyBar (height 32 + a little breathing room).
-outer.top        = 42
+# Top gap clears the system menu bar (~37) plus SketchyBar (y_offset 38 +
+# height 32). If you hide the menu bar and move the bar to y_offset 4, this
+# goes back to 42.
+outer.top        = 78
 
 # ---------------------------------------------------------------------------
 # Main mode

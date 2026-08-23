@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
-# Cyberpunk Neon bar. Replaces the macOS menu bar.
+# Cyberpunk Neon bar. Sits under the macOS menu bar.
+#
+# `y_offset=38` clears the system menu bar rather than sitting at the top of the
+# screen. On macOS 15 `_HIHideMenuBar` no longer takes effect without a full
+# logout — set and verified as ignored here — so a bar at y_offset=4 is drawn
+# *behind* the menu bar and is simply invisible, while still reporting
+# `drawing=on` to `sketchybar --query`. If you do hide the menu bar (log out
+# after `macos/defaults.sh`), drop this to 4 for the classic replacement look
+# and set aerospace's `outer.top` back to 42.
 # Workspace state comes from AeroSpace; network state comes from netwatch's own
 # daemon (Prometheus endpoint on 127.0.0.1:9464) — not from netstat.
 
@@ -21,7 +29,7 @@ sketchybar --bar \
   padding_left=8 \
   padding_right=8 \
   margin=8 \
-  y_offset=4 \
+  y_offset=38 \
   corner_radius=8 \
   blur_radius=30 \
   color="$BAR_BG" \
