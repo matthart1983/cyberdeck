@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Battery readout for the tmux status bar: nerd-font glyph + percentage.
+raw=$(pmset -g batt 2>/dev/null)
+pct=$(printf '%s' "$raw" | grep -Eo '[0-9]+%' | head -1 | tr -d '%')
+[[ -z $pct ]] && { printf '󰚥 AC'; exit 0; }
+
+if printf '%s' "$raw" | grep -q 'AC Power'; then
+  printf '󰂄 %s%%' "$pct"
+  exit 0
+fi
+
+if   (( pct >= 90 )); then icon=󰁹
+elif (( pct >= 70 )); then icon=󰂀
+elif (( pct >= 50 )); then icon=󰁾
+elif (( pct >= 30 )); then icon=󰁼
+elif (( pct >= 15 )); then icon=󰁺
+else                       icon=󰂃
+fi
+printf '%s %s%%' "$icon" "$pct"
