@@ -1,24 +1,102 @@
-# Cyberpunk rice
+<div align="center">
 
-Cyberpunk Neon theming for macOS: AeroSpace tiling, SketchyBar, JankyBorders,
-Ghostty, zsh, tmux, btop, bat, delta, fastfetch, and a four-pane HUD built
-from the *Watch tools.
+# CYBERDECK
 
-SIP stays enabled. Nothing here needs it disabled.
+**A cyberpunk rice of macOS — tiling, bar, terminal, shell and a live system HUD.**
+
+Cyberpunk Neon across AeroSpace, SketchyBar, JankyBorders, Ghostty, zsh, tmux,
+btop, bat, delta, fastfetch and Zed — from one palette, in one repo.
+
+*SIP stays enabled. Nothing here asks you to disable it.*
+
+![fetch](capture/out/fetch.gif)
+
+</div>
+
+---
+
+## The HUD
+
+`hud` tiles four terminal monitors into one screen — [btop](https://github.com/aristocratos/btop),
+[netwatch](https://github.com/matthart1983/netwatch), [syswatch](https://github.com/matthart1983/syswatch)
+and [diskwatch](https://github.com/matthart1983/diskwatch), all themed from the same palette.
+
+![hud](capture/out/hud.gif)
+
+## The shell
+
+![shell](capture/out/shell.gif)
+
+---
+
+## What makes this one different
+
+Most bars shell out to `netstat` and `ping` for their network readout. This one
+doesn't. It's fed by [netwatch](https://github.com/matthart1983/netwatch)'s own
+headless daemon over a Prometheus endpoint, so the bar shows **gateway RTT, DNS
+RTT, packet loss and live connection count** — diagnostics, not decoration. See
+[The bar](#the-bar).
+
+## Requirements
+
+macOS 13+. Homebrew. A Nerd Font (the configs ask for JetBrainsMono Nerd Font).
+
+```sh
+# window layer
+brew install --cask nikitabobko/tap/aerospace
+brew tap felixkratz/formulae
+brew trust felixkratz/formulae      # Homebrew gates this tap; sketchybar and
+brew install sketchybar borders     # borders are upstreamed by its author
+
+# terminal + shell layer
+brew install --cask ghostty font-jetbrains-mono-nerd-font
+brew install eza bat fd fzf zoxide atuin git-delta ripgrep fastfetch btop tmux jq
+
+# the HUD's four panes (optional — hud degrades to whatever is installed)
+cargo install netwatch-tui syswatch diskwatch
+```
+
+`netwatch` is also what feeds the bar's network items. Without it the bar still
+works; those two items read `netwatch off`.
 
 ## Install
 
 ```sh
-git clone <this repo> ~/.dotfiles && ~/.dotfiles/install.sh && exec zsh
+git clone https://github.com/matthart1983/cyberdeck ~/.dotfiles
+~/.dotfiles/install.sh
+exec zsh
 ```
 
-`install.sh` is idempotent. The macOS system layer is separate and opt-in:
+`install.sh` only symlinks and loads services — it is idempotent and touches no
+system settings. The macOS system layer is separate and opt-in:
 
 ```sh
-~/.dotfiles/macos/snapshot.sh    # record current state FIRST
-~/.dotfiles/macos/defaults.sh    # apply
-~/.dotfiles/macos/restore.sh     # undo, from the snapshot
+~/.dotfiles/macos/snapshot.sh    # record YOUR current state first — required
+~/.dotfiles/macos/defaults.sh    # apply (refuses to run without a snapshot)
+~/.dotfiles/macos/restore.sh     # undo, replaying the snapshot
 ```
+
+The snapshot is machine-specific and deliberately not committed. `defaults.sh`
+refuses to run until you have one, so the undo path can never be missing when
+the apply path has run.
+
+Then check your work:
+
+```sh
+rice-doctor      # every layer, exits non-zero if one is down
+```
+
+**AeroSpace needs Accessibility permission granted by hand** the first time
+(System Settings ▸ Privacy & Security ▸ Accessibility). Until it is, its CLI
+reports "can't connect to AeroSpace server" even though the app is running, and
+the bar's workspace indicators stay hidden. `rice-doctor` calls this out.
+
+## Making it yours
+
+This is one person's setup, published because the parts are worth stealing.
+Fork it and edit `palette.sh` — it's the single source of truth, and every
+themed surface mirrors it. The pieces are independent: take the bar without the
+tiling, the HUD without either, or just the Ghostty theme.
 
 ## Palette
 
@@ -144,3 +222,7 @@ Two things the tapes have to work around:
   of the rice exists. Each tape re-execs into a real interactive shell first.
 - `hud.tape` needs a canvas over 160x50 cells, because all four tools refuse
   to draw below 80x24 and each gets a quarter of the screen.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
