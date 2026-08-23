@@ -13,6 +13,15 @@ exec-on-workspace-change = [
   '/opt/homebrew/bin/sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE',
 ]
 
+config-version = 2
+
+# In config-version 1 this was inferred from the workspace keybindings, which
+# the upstream guide calls error-prone; in 2 the fallback is an empty array and
+# it has to be said out loud. The six named workspaces stay alive when empty so
+# the bar's indicators and the window rules always have somewhere to land; 7-9
+# are scratch and come and go.
+persistent-workspaces = ["1", "2", "3", "4", "5", "6"]
+
 start-at-login = true
 
 # Tiling defaults ------------------------------------------------------------
@@ -24,7 +33,7 @@ default-root-container-layout = 'tiles'
 default-root-container-orientation = 'auto'
 
 # Focus follows the mouse only on click; no accidental focus steals.
-on-focused-monitor-changed = ['move-mouse monitor-lazy']
+on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
 
 # Keep macOS from fighting the tiler.
 automatically-unhide-macos-hidden-apps = true
