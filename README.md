@@ -9,7 +9,7 @@ btop, bat, delta, fastfetch and Zed — from one palette, in one repo.
 
 *SIP stays enabled. Nothing here asks you to disable it.*
 
-![fetch](capture/out/fetch.gif)
+![tour](capture/out/tour.gif)
 
 </div>
 
