@@ -12,10 +12,21 @@ fi
 if ! tmux has-session -t "$SESSION" 2>/dev/null; then
   # Named pane targets ({left}, {top-right}) rather than numeric ones —
   # this config sets pane-base-index 1, so ".0" does not exist.
-  tmux new-session -d -s "$SESSION" -n grid "soundwatch --theme btop"
-  tmux split-window -h -t "$SESSION:grid"              "netwatch --lite"
-  tmux split-window -v -t "$SESSION:grid.{left}"       "syswatch --lite"
-  tmux split-window -v -t "$SESSION:grid.{top-right}"  "diskwatch --lite"
+  #
+  # soundwatch is macOS-only: it binds a CoreAudio tap and there is no Linux
+  # build. Rather than open a pane that dies immediately, drop to a three-pane
+  # grid where it is absent — the same degradation the README promises for any
+  # missing tool.
+  if command -v soundwatch >/dev/null; then
+    tmux new-session -d -s "$SESSION" -n grid "soundwatch --theme btop"
+    tmux split-window -h -t "$SESSION:grid"              "netwatch --lite"
+    tmux split-window -v -t "$SESSION:grid.{left}"       "syswatch --lite"
+    tmux split-window -v -t "$SESSION:grid.{top-right}"  "diskwatch --lite"
+  else
+    tmux new-session -d -s "$SESSION" -n grid "netwatch --lite"
+    tmux split-window -h -t "$SESSION:grid"              "syswatch --lite"
+    tmux split-window -v -t "$SESSION:grid.{right}"      "diskwatch --lite"
+  fi
   tmux select-layout -t "$SESSION:grid" tiled
   tmux select-pane   -t "$SESSION:grid.{top-left}"
 fi

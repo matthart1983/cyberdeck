@@ -1,135 +1,22 @@
 #!/usr/bin/env bash
-# Health check for every moving part of the rice. Exit 1 if anything is down.
-source "$HOME/.dotfiles/palette.sh" 2>/dev/null
+# Health check for every moving part of the rice.
+# The layers differ completely between platforms — aerospace/sketchybar/launchd
+# on one side, niri/waybar/systemd on the other — so there is no shared body
+# worth factoring out. This just picks the right one.
+set -euo pipefail
+D="${D:-$HOME/.dotfiles}"
 
-ok=0; bad=0
-pass() { printf '  \033[38;5;48m✔\033[0m %-22s %s\n' "$1" "$2"; ok=$((ok+1)); }
-fail() { printf '  \033[38;5;197m✘\033[0m %-22s %s\n' "$1" "$2"; bad=$((bad+1)); }
-
-echo
-printf '\033[38;5;201m▐ CYBERPUNK RICE — DOCTOR\033[0m\n\n'
-
-# --- window layer ----------------------------------------------------------
-if pgrep -q -f 'AeroSpace.app/Contents/MacOS/AeroSpace'; then
-  if ws=$(aerospace list-workspaces --focused 2>/dev/null); then
-    pass "aerospace" "running · workspace $ws"
-  else
-    fail "aerospace" "process up but CLI can't connect — grant Accessibility:
-                         System Settings ▸ Privacy & Security ▸ Accessibility ▸ AeroSpace"
-  fi
-else
-  fail "aerospace" "not running — open -a AeroSpace"
-fi
-
-pgrep -q -f '/borders' \
-  && pass "borders" "active window glow on" \
-  || fail "borders" "not running — ~/.dotfiles/bin/borders.sh &"
-
-# --- bar -------------------------------------------------------------------
-if pgrep -q sketchybar; then
-  n=$(sketchybar --query bar 2>/dev/null | jq -r '.items | length')
-  pass "sketchybar" "running · $n items"
-else
-  fail "sketchybar" "not running — brew services start sketchybar"
-fi
-
-# Ask the window server where the menu bar actually is, not what the default
-# says: on macOS 15 the key is set and ignored until a logout, and a bar drawn
-# behind the menu bar still reports drawing=on.
-menubar_h=$(osascript -e 'tell application "System Events" to get height of item 1 of (get the bounds of window of desktop)' 2>/dev/null)
-bar_y=$(sketchybar --query bar 2>/dev/null | jq -r '.y_offset // "?"')
-if defaults read NSGlobalDomain _HIHideMenuBar 2>/dev/null | grep -q 1; then
-  if [ "${bar_y:-0}" -ge 20 ]; then
-    pass "menu bar" "visible; bar clears it at y_offset $bar_y"
-  else
-    pass "menu bar" "hide requested (needs a logout to apply)"
-  fi
-else
-  fail "menu bar" "hide not requested — run macos/defaults.sh"
-fi
-
-# --- the netwatch feed -----------------------------------------------------
-if launchctl print "gui/$UID/io.cyberdeck.netwatch-metrics" 2>/dev/null | grep -q 'state = running'; then
-  if body=$(curl -sf --max-time 2 http://127.0.0.1:9464/metrics 2>/dev/null); then
-    rtt=$(printf '%s' "$body" | awk '/^netwatch_gateway_rtt_seconds /{printf "%.0fms", $2*1000}')
-    conns=$(printf '%s' "$body" | awk '/^netwatch_connections /{print $2}')
-    pass "netwatch feed" "serving · gw ${rtt:-?} · ${conns:-?} conns"
-  else
-    fail "netwatch feed" "daemon up but :9464 not answering"
-  fi
-else
-  fail "netwatch feed" "service down — launchctl bootstrap gui/$UID \\
-                         ~/Library/LaunchAgents/io.cyberdeck.netwatch-metrics.plist"
-fi
-
-# --- terminal + shell ------------------------------------------------------
-if [ -L "$HOME/.config/ghostty/config" ]; then
-  /Applications/Ghostty.app/Contents/MacOS/ghostty +validate-config >/dev/null 2>&1 \
-    && pass "ghostty" "config valid" \
-    || fail "ghostty" "config does not validate"
-else
-  fail "ghostty" "config not linked — run install.sh"
-fi
-
-[ -L "$HOME/.config/tmux/tmux.conf" ] \
-  && pass "tmux" "config linked" \
-  || fail "tmux" "config not linked — run install.sh"
-
-# The HUD's four panes. soundwatch is checked separately below — its
-# failure mode is silence, not a missing binary.
-for t in netwatch syswatch diskwatch; do
-  command -v "$t" >/dev/null || hud_missing="$hud_missing $t"
+# The HUD's panes are cargo installs, and cargo's bin dir is on PATH only for
+# shells that have sourced a profile. rice-doctor gets run from bars, keybinds
+# and scripts that have not, so put it there before checking anything —
+# otherwise the tools read as missing when they are sitting right there.
+for d in "$HOME/.cargo/bin" "$HOME/.local/bin" "$D/bin"; do
+  [ -d "$d" ] && case ":$PATH:" in *":$d:"*) ;; *) PATH="$d:$PATH" ;; esac
 done
-[ -z "${hud_missing:-}" ] \
-  && pass "hud panes" "netwatch, syswatch, diskwatch present" \
-  || fail "hud panes" "missing:$hud_missing"
+export PATH
 
-if ! command -v soundwatch >/dev/null; then
-  fail "soundwatch" "not installed — build with 'make build', not cargo"
-elif codesign -dvv "$(command -v soundwatch)" 2>&1 | grep -q "Info.plist entries"; then
-  pass "soundwatch" "signed with a bound Info.plist (meters can prompt)"
-else
-  fail "soundwatch" "Info.plist not bound — cargo-built, so every audio
-                         sample reads zero. Rebuild with 'make build' and
-                         check with 'soundwatch --probe-tap'."
-fi
-
-for t in eza bat fd fzf zoxide atuin delta rg fastfetch btop; do
-  command -v "$t" >/dev/null || missing="$missing $t"
-done
-[ -z "${missing:-}" ] \
-  && pass "cli layer" "all tools present" \
-  || fail "cli layer" "missing:$missing"
-
-# --- app layer -------------------------------------------------------------
-if [ -L "$HOME/.config/zed/themes/cyberpunk-neon.json" ] \
-   && grep -q '"dark": "Cyberpunk Neon"' "$HOME/.config/zed/settings.json" 2>/dev/null; then
-  pass "zed" "theme linked and selected"
-else
-  fail "zed" "theme missing or not selected in settings.json"
-fi
-
-cc_theme=$(/opt/homebrew/bin/jq -r '.theme // empty' "$HOME/.claude/settings.json" 2>/dev/null)
-cc_sl=$(/opt/homebrew/bin/jq -r '.statusLine.command // empty' "$HOME/.claude/settings.json" 2>/dev/null)
-if [ "$cc_theme" = "dark-ansi" ] && [ -x "$cc_sl" ]; then
-  pass "claude code" "dark-ansi + neon statusline"
-else
-  fail "claude code" "theme=${cc_theme:-unset} statusline=${cc_sl:-unset}"
-fi
-
-if grep -q 'name = "cyberpunk-neon"' "$HOME/.config/atuin/config.toml" 2>/dev/null; then
-  pass "atuin" "theme enabled"
-else
-  fail "atuin" "theme not enabled in config.toml"
-fi
-
-# --- secret hygiene --------------------------------------------------------
-if grep -qE 'API_KEY|SECRET|TOKEN' "$HOME/.zshrc" 2>/dev/null; then
-  fail "secrets" "a key looks inlined in ~/.zshrc"
-else
-  pass "secrets" "none inlined in ~/.zshrc"
-fi
-
-echo
-printf '  %d ok, %d down\n\n' "$ok" "$bad"
-[ "$bad" -eq 0 ]
+case "$(uname -s)" in
+  Darwin) exec bash "$D/macos/bin/rice-doctor" "$@" ;;
+  Linux)  exec bash "$D/linux/bin/rice-doctor" "$@" ;;
+  *)      echo "rice-doctor: unsupported platform $(uname -s)" >&2; exit 1 ;;
+esac

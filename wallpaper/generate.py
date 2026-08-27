@@ -101,7 +101,11 @@ def build(w, h):
 
 
 if __name__ == "__main__":
-    targets = [(3024, 1964, "cyberpunk-mbp.png"), (3840, 2160, "cyberpunk-4k.png")]
+    targets = [
+        (3024, 1964, "cyberpunk-mbp.png"),   # MacBook Pro 14"
+        (2256, 1504, "cyberpunk-fw13.png"),  # Framework Laptop 13
+        (3840, 2160, "cyberpunk-4k.png"),
+    ]
     outdir = sys.argv[1] if len(sys.argv) > 1 else "."
     for w, h, name in targets:
         path = f"{outdir}/{name}"

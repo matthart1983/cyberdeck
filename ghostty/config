@@ -20,8 +20,6 @@ window-padding-balance = true
 window-decoration = true
 window-width = 200
 window-height = 52
-macos-titlebar-style = tabs
-macos-option-as-alt = true
 
 # --- Cursor ----------------------------------------------------------------
 cursor-style = block
@@ -32,20 +30,6 @@ mouse-hide-while-typing = true
 unfocused-split-opacity = 0.72
 unfocused-split-fill = #000b1e
 
-# --- Quick terminal: neon dropdown over any app ---------------------------
-quick-terminal-position = top
-quick-terminal-animation-duration = 0.12
-quick-terminal-autohide = true
-keybind = global:cmd+grave_accent=toggle_quick_terminal
-
-# --- Splits / tabs ---------------------------------------------------------
-keybind = cmd+d=new_split:right
-keybind = cmd+shift+d=new_split:down
-keybind = cmd+shift+h=goto_split:left
-keybind = cmd+shift+l=goto_split:right
-keybind = cmd+shift+k=goto_split:up
-keybind = cmd+shift+j=goto_split:down
-
 # --- Behaviour -------------------------------------------------------------
 shell-integration = zsh
 shell-integration-features = cursor,sudo,title
@@ -53,3 +37,10 @@ copy-on-select = clipboard
 confirm-close-surface = false
 window-save-state = always
 scrollback-limit = 100000
+
+# --- Platform half ---------------------------------------------------------
+# Everything above is identical on macOS and Linux. The chrome keys and the
+# whole keybind block are not: cmd does not exist on Linux, and the GTK build
+# has no macos-* settings. install.sh links the right one of
+# ghostty/platform-{macos,linux}.conf here.
+config-file = ~/.config/ghostty/platform.conf

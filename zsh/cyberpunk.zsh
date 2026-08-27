@@ -78,12 +78,48 @@ alias lg='git log --oneline --graph --decorate --all'
 alias fetch='fastfetch'
 alias top='btop'
 
+# --- Platform shims --------------------------------------------------------
+# The clipboard is the one thing with no portable name. Everything else in this
+# file is identical on both platforms.
+if [[ $OSTYPE != darwin* ]]; then
+  if command -v wl-copy >/dev/null; then
+    alias pbcopy='wl-copy'
+    alias pbpaste='wl-paste'
+  elif command -v xclip >/dev/null; then
+    alias pbcopy='xclip -selection clipboard'
+    alias pbpaste='xclip -selection clipboard -o'
+  fi
+fi
+
 # --- autosuggestions (dim cyan) -------------------------------------------
+# Sourced from wherever the platform's package manager put it: Homebrew keeps
+# these under /opt/homebrew, Fedora under /usr/share. First hit wins.
 ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#0f7d84"
-source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh 2>/dev/null
+for _cp_p in \
+  /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh \
+  /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+do
+  [[ -r $_cp_p ]] && { source "$_cp_p"; break; }
+done
 
 # --- syntax highlighting: must be sourced LAST ----------------------------
-source /opt/homebrew/opt/zsh-fast-syntax-highlighting/share/zsh-fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh 2>/dev/null
+# Prefer fast-syntax-highlighting where it exists; Fedora only packages the
+# original zsh-syntax-highlighting, which is the same idea at half the speed.
+for _cp_p in \
+  /opt/homebrew/opt/zsh-fast-syntax-highlighting/share/zsh-fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh \
+  /usr/share/zsh-fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh \
+  /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+do
+  [[ -r $_cp_p ]] && { source "$_cp_p"; break; }
+done
+unset _cp_p
 
-# --- rice scripts on PATH --------------------------------------------------
-export PATH="$HOME/.dotfiles/bin:$PATH"
+# --- PATH -------------------------------------------------------------------
+# The HUD's panes (netwatch, syswatch, diskwatch) are cargo installs, and
+# cargo does not put its bin dir on PATH for you. Fedora's packaged cargo
+# writes no ~/.cargo/env either — only rustup does — so add it by hand.
+# Guarded so re-sourcing this file doesn't stack duplicates.
+for _cp_d in "$HOME/.cargo/bin" "$HOME/.local/bin" "$HOME/.dotfiles/bin"; do
+  [[ -d $_cp_d ]] && [[ ":$PATH:" != *":$_cp_d:"* ]] && export PATH="$_cp_d:$PATH"
+done
+unset _cp_d

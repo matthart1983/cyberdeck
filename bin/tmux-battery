@@ -1,10 +1,23 @@
 #!/usr/bin/env bash
 # Battery readout for the tmux status bar: nerd-font glyph + percentage.
-raw=$(pmset -g batt 2>/dev/null)
-pct=$(printf '%s' "$raw" | grep -Eo '[0-9]+%' | head -1 | tr -d '%')
+# macOS reads pmset; Linux reads /sys/class/power_supply. The Framework's
+# pack enumerates as BAT1, not BAT0, so glob rather than hardcode.
+if command -v pmset >/dev/null; then
+  raw=$(pmset -g batt 2>/dev/null)
+  pct=$(printf '%s' "$raw" | grep -Eo '[0-9]+%' | head -1 | tr -d '%')
+  charging=0
+  printf '%s' "$raw" | grep -q 'AC Power' && charging=1
+else
+  bat=$(ls -d /sys/class/power_supply/BAT* 2>/dev/null | head -1)
+  pct=$([[ -n $bat ]] && cat "$bat/capacity" 2>/dev/null)
+  status=$([[ -n $bat ]] && cat "$bat/status" 2>/dev/null)
+  charging=0
+  [[ $status == Charging || $status == "Not charging" || $status == Full ]] && charging=1
+fi
+
 [[ -z $pct ]] && { printf '󰚥 AC'; exit 0; }
 
-if printf '%s' "$raw" | grep -q 'AC Power'; then
+if (( charging )); then
   printf '󰂄 %s%%' "$pct"
   exit 0
 fi
