@@ -1,0 +1,50 @@
+# Headless netwatch collector — the Linux counterpart of
+# launchd/netwatch-metrics.plist.template.
+#
+# Feeds the Waybar net + link items over 127.0.0.1:9464. No root: interface
+# counters and probes only, no packet capture, so this is a --user unit.
+#
+#   systemctl --user enable --now netwatch-metrics.service
+#
+# install.sh writes the ExecStart path in, because netwatch may be a cargo
+# install under ~/.cargo/bin rather than anything on the system path.
+
+[Unit]
+Description=netwatch metrics daemon (feeds the cyberdeck bar)
+Documentation=https://github.com/matthart1983/netwatch
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=__NETWATCH__ daemon --metrics
+
+# launchd's ThrottleInterval 30 + KeepAlive{SuccessfulExit:false} maps onto
+# Restart=on-failure with a 30s gap: come back when it dies, stay down when
+# it exits cleanly.
+Restart=on-failure
+RestartSec=30
+
+# launchd's ProcessType=Background + LowPriorityIO.
+Nice=10
+IOSchedulingClass=idle
+CPUWeight=20
+
+# Measured at 0.4% CPU / 15MB RSS on macOS; the ceiling is generous.
+MemoryMax=128M
+
+# It needs the network and nothing else.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_NETLINK AF_UNIX
+
+# journalctl --user -u netwatch-metrics -f  replaces the two log files.
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

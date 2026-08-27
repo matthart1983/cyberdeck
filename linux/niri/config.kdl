@@ -1,0 +1,276 @@
+// ---------------------------------------------------------------------------
+// Cyberpunk rice — niri (Wayland tiling compositor)
+// ~/.dotfiles/linux/niri/config.kdl  ->  ~/.config/niri/config.kdl
+// Palette: see ~/.dotfiles/palette.sh
+//
+// This is the Linux stand-in for aerospace/aerospace.toml. Two deliberate
+// divergences from the macOS side, both forced by the platform:
+//
+//   1. The modifier is Super, not Alt. On macOS, alt is free. On Linux,
+//      Alt+<letter> is the GTK mnemonic accelerator — binding it here would
+//      make every app's menu bar unreachable. Super is the Wayland convention
+//      and collides with nothing.
+//   2. niri is a *scrollable* tiler, not a tree tiler. There is no
+//      balance-sizes and no accordion; columns scroll horizontally instead.
+//      The nearest equivalents are noted per-bind below.
+//
+// niri draws its own focus ring, so JankyBorders has no counterpart here —
+// the magenta-on-focus glow is layout/focus-ring below.
+// ---------------------------------------------------------------------------
+
+input {
+    keyboard {
+        xkb { layout "us"; }
+        repeat-delay 300
+        repeat-rate 40
+    }
+
+    // Framework 13 touchpad.
+    touchpad {
+        tap
+        dwt                      // disable-while-typing
+        natural-scroll
+        scroll-method "two-finger"
+        accel-profile "adaptive"
+    }
+
+    // Don't steal focus just because the pointer crossed a window — this
+    // mirrors aerospace's "no accidental focus steals".
+    focus-follows-mouse max-scroll-amount="0%"
+}
+
+// Framework 13: 2256x1504 panel. Fractional scale keeps text honest at 13".
+output "eDP-1" {
+    scale 1.5
+    transform "normal"
+}
+
+layout {
+    // Matches aerospace's inner/outer 10. The top strut is *not* set here:
+    // waybar declares its own exclusive zone, so niri gets out of its way
+    // automatically. (On macOS the 78px top gap had to be hand-counted to
+    // clear the menu bar + bar; nothing to hand-count on Wayland.)
+    gaps 10
+    center-focused-column "never"
+
+    preset-column-widths {
+        proportion 0.33333
+        proportion 0.5
+        proportion 0.66667
+    }
+    default-column-width { proportion 0.5; }
+
+    // The border layer. Magenta on focus, purple at rest — the same two
+    // colours JankyBorders draws on the macOS side.
+    focus-ring {
+        width 2
+        active-color "#ea00d9"
+        inactive-color "#711c91"
+    }
+    border { off; }
+
+    // Neon shadow under the focused column.
+    shadow {
+        on
+        softness 24
+        spread 2
+        offset x=0 y=4
+        color "#ea00d955"
+    }
+
+    insert-hint {
+        color "#0abdc655"
+    }
+}
+
+// --- Workspaces -------------------------------------------------------------
+// 1 term · 2 code · 3 web · 4 chat · 5 notes · 6 infra — same six as aerospace's
+// persistent-workspaces. Declaring them by name makes them permanent and pins
+// them to indices 1-6; 7-9 stay dynamic scratch space, exactly as before.
+workspace "term"
+workspace "code"
+workspace "web"
+workspace "chat"
+workspace "notes"
+workspace "infra"
+
+// --- Startup ----------------------------------------------------------------
+spawn-at-startup "waybar"
+spawn-at-startup "sh" "-c" "swaybg -i ~/.local/share/wallpapers/cyberpunk-fw13.png -m fill"
+
+prefer-no-csd
+screenshot-path "~/Pictures/Screenshots/cyberdeck-%Y-%m-%d-%H%M%S.png"
+
+environment {
+    DISPLAY ":0"
+    ELECTRON_OZONE_PLATFORM_HINT "auto"
+}
+
+hotkey-overlay { skip-at-startup; }
+
+animations {
+    slowdown 0.7
+}
+
+// ---------------------------------------------------------------------------
+// Window rules — where things land.
+// aerospace matched macOS bundle IDs; Wayland matches app-id. Where an app
+// ships under a different id on Linux, the Linux one is used.
+// ---------------------------------------------------------------------------
+window-rule {
+    match app-id=r#"^com\.mitchellh\.ghostty$"#
+    open-on-workspace "term"
+}
+window-rule {
+    match app-id=r#"^dev\.zed\.Zed$"#
+    match app-id=r#"^jetbrains-rustrover$"#
+    match app-id=r#"^code$"#
+    open-on-workspace "code"
+}
+window-rule {
+    match app-id=r#"^google-chrome$"#
+    match app-id=r#"^brave-browser$"#
+    match app-id=r#"^firefox$"#
+    open-on-workspace "web"
+}
+window-rule {
+    match app-id=r#"^WhatsApp$"#
+    match app-id=r#"^claude$"#
+    match app-id=r#"^Slack$"#
+    open-on-workspace "chat"
+}
+window-rule {
+    match app-id=r#"^obsidian$"#
+    open-on-workspace "notes"
+}
+window-rule {
+    match app-id=r#"^wireshark$"#
+    match app-id=r#"^org\.wireshark\.Wireshark$"#
+    open-on-workspace "infra"
+}
+
+// Things that should never be tiled — the aerospace 'layout floating' rules.
+window-rule {
+    match app-id=r#"^org\.gnome\.Settings$"#
+    match app-id=r#"^org\.gnome\.Nautilus$"# title=r#"Copy"#
+    match app-id=r#"^gnome-system-monitor$"#
+    match app-id=r#"^org\.gnome\.Calculator$"#
+    open-floating true
+}
+
+// Rounded corners on everything, matching the bar's radius.
+window-rule {
+    geometry-corner-radius 8
+    clip-to-geometry true
+}
+
+// ---------------------------------------------------------------------------
+// Binds
+// ---------------------------------------------------------------------------
+binds {
+    Mod+Shift+Slash { show-hotkey-overlay; }
+
+    // --- Launchers (no macOS counterpart: Spotlight did this) --------------
+    Mod+Return       { spawn "ghostty"; }
+    Mod+Space        { spawn "fuzzel"; }
+    Mod+Shift+Q      { close-window; }
+    Mod+Shift+E      { quit; }
+
+    // --- Layout (aerospace: alt-slash / alt-comma / alt-f / alt-shift-f) ---
+    // niri has no tiles/accordion pair. The closest analogues:
+    //   Slash  -> cycle preset column widths (the "retile" gesture)
+    //   Comma  -> tabbed column display, niri's accordion
+    Mod+Slash        { switch-preset-column-width; }
+    Mod+Comma        { toggle-column-tabbed-display; }
+    Mod+F            { toggle-window-floating; }
+    Mod+Shift+F      { fullscreen-window; }
+    Mod+Shift+M      { maximize-column; }
+
+    // --- Focus (vim keys + arrows) -----------------------------------------
+    Mod+H            { focus-column-left; }
+    Mod+J            { focus-window-down; }
+    Mod+K            { focus-window-up; }
+    Mod+L            { focus-column-right; }
+    Mod+Left         { focus-column-left; }
+    Mod+Down         { focus-window-down; }
+    Mod+Up           { focus-window-up; }
+    Mod+Right        { focus-column-right; }
+
+    // --- Move ---------------------------------------------------------------
+    Mod+Shift+H      { move-column-left; }
+    Mod+Shift+J      { move-window-down; }
+    Mod+Shift+K      { move-window-up; }
+    Mod+Shift+L      { move-column-right; }
+    Mod+Shift+Left   { move-column-left; }
+    Mod+Shift+Down   { move-window-down; }
+    Mod+Shift+Up     { move-window-up; }
+    Mod+Shift+Right  { move-column-right; }
+
+    // --- Resize (aerospace: alt-minus / alt-equal / alt-shift-equal) -------
+    // 'balance-sizes' has no niri equivalent; reset-window-height is the
+    // nearest thing — it drops the column back to its natural share.
+    Mod+Minus        { set-column-width "-10%"; }
+    Mod+Equal        { set-column-width "+10%"; }
+    Mod+Shift+Minus  { set-window-height "-10%"; }
+    Mod+Shift+Equal  { reset-window-height; }
+
+    // --- Join / split (aerospace: alt-shift-quote = join-with right) -------
+    Mod+Shift+Apostrophe { consume-or-expel-window-right; }
+    Mod+BracketLeft      { consume-or-expel-window-left; }
+    Mod+BracketRight     { consume-or-expel-window-right; }
+
+    // --- Workspaces ---------------------------------------------------------
+    Mod+1 { focus-workspace "term"; }
+    Mod+2 { focus-workspace "code"; }
+    Mod+3 { focus-workspace "web"; }
+    Mod+4 { focus-workspace "chat"; }
+    Mod+5 { focus-workspace "notes"; }
+    Mod+6 { focus-workspace "infra"; }
+    Mod+7 { focus-workspace 7; }
+    Mod+8 { focus-workspace 8; }
+    Mod+9 { focus-workspace 9; }
+
+    // --focus-follows-window is aerospace's flag; in niri the move-to-workspace
+    // actions already follow, which is why there is no extra argument here.
+    Mod+Shift+1 { move-column-to-workspace "term"; }
+    Mod+Shift+2 { move-column-to-workspace "code"; }
+    Mod+Shift+3 { move-column-to-workspace "web"; }
+    Mod+Shift+4 { move-column-to-workspace "chat"; }
+    Mod+Shift+5 { move-column-to-workspace "notes"; }
+    Mod+Shift+6 { move-column-to-workspace "infra"; }
+    Mod+Shift+7 { move-column-to-workspace 7; }
+    Mod+Shift+8 { move-column-to-workspace 8; }
+    Mod+Shift+9 { move-column-to-workspace 9; }
+
+    Mod+Tab       { focus-workspace-previous; }
+    Mod+Shift+Tab { move-workspace-to-monitor-next; }
+
+    Mod+Page_Down { focus-workspace-down; }
+    Mod+Page_Up   { focus-workspace-up; }
+
+    // --- Service mode's escape hatches --------------------------------------
+    // niri has no modal layer, so aerospace's `alt shift ;` service mode is
+    // flattened into direct binds. `flatten-workspace-tree` and
+    // `close-all-windows-but-current` have no niri equivalent at all --
+    // there is no tree to flatten in a scrollable tiler.
+    Mod+Shift+R      { switch-preset-column-width; }   // nearest "reset layout"
+    Mod+Shift+Escape { spawn "niri" "msg" "action" "quit" "--skip-confirmation"; }
+
+    // --- The HUD ------------------------------------------------------------
+    Mod+Shift+D { spawn "ghostty" "-e" "hud"; }
+
+    // --- Screenshots --------------------------------------------------------
+    Print            { screenshot; }
+    Mod+Print        { screenshot-window; }
+    Mod+Shift+Print  { screenshot-screen; }
+
+    // --- Framework 13 hardware keys ----------------------------------------
+    XF86AudioRaiseVolume  allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%+" "--limit" "1.0"; }
+    XF86AudioLowerVolume  allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%-"; }
+    XF86AudioMute         allow-when-locked=true { spawn "wpctl" "set-mute"   "@DEFAULT_AUDIO_SINK@" "toggle"; }
+    XF86AudioMicMute      allow-when-locked=true { spawn "wpctl" "set-mute"   "@DEFAULT_AUDIO_SOURCE@" "toggle"; }
+    XF86MonBrightnessUp   allow-when-locked=true { spawn "brightnessctl" "set" "5%+"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn "brightnessctl" "set" "5%-"; }
+
+    Mod+Shift+P { power-off-monitors; }
+}

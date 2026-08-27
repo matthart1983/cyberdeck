@@ -1,0 +1,112 @@
+// ---------------------------------------------------------------------------
+// Cyberpunk rice — Waybar
+// ~/.dotfiles/linux/waybar/config.jsonc  ->  ~/.config/waybar/config.jsonc
+//
+// The Linux stand-in for sketchybar/sketchybarrc. Read the right side
+// right-to-left: clock, battery, disk, mem, cpu, net, link — the same order
+// as the macOS bar.
+//
+// One structural difference worth knowing: on macOS, cpu/mem/disk/battery each
+// needed a shell plugin, because `top`, `memory_pressure` and `pmset` have to
+// be parsed. Waybar reads all four from /proc and /sys itself, so those four
+// plugins simply don't exist here. The two that DO still need scripts are the
+// netwatch-fed ones — link and net — because that data comes from netwatch's
+// Prometheus endpoint, not from the kernel. That was always the point.
+// ---------------------------------------------------------------------------
+{
+  "layer": "top",
+  "position": "top",
+  "height": 32,
+  "margin-top": 8,
+  "margin-left": 8,
+  "margin-right": 8,
+  "spacing": 2,
+
+  "modules-left":   ["niri/workspaces", "custom/sep", "niri/window"],
+  "modules-center": [],
+  "modules-right":  ["custom/link", "custom/net", "cpu", "memory", "disk", "battery", "clock"],
+
+  // --- Left: niri workspaces, named exactly as the compositor names them ---
+  "niri/workspaces": {
+    "format": "{icon}",
+    "format-icons": {
+      "term":  "1",
+      "code":  "2",
+      "web":   "3",
+      "chat":  "4",
+      "notes": "5",
+      "infra": "6",
+      "default": "{index}"
+    },
+    "on-click": "activate"
+  },
+
+  "custom/sep": {
+    "format": "│",
+    "tooltip": false
+  },
+
+  "niri/window": {
+    "format": "  {}",
+    "max-length": 48,
+    "separate-outputs": true
+  },
+
+  // --- The two netwatch-fed items -----------------------------------------
+  "custom/link": {
+    "exec": "~/.config/waybar/scripts/link.sh",
+    "return-type": "json",
+    "interval": 5,
+    "on-click": "ghostty -e netwatch"
+  },
+
+  "custom/net": {
+    "exec": "~/.config/waybar/scripts/net.sh",
+    "return-type": "json",
+    "interval": 2,
+    "on-click": "ghostty -e netwatch"
+  },
+
+  // --- Kernel-fed items ----------------------------------------------------
+  "cpu": {
+    "format": "󰻠 {usage}%",
+    "interval": 3,
+    "states": { "warning": 70, "critical": 90 },
+    "on-click": "ghostty -e btop"
+  },
+
+  "memory": {
+    "format": "󰍛 {percentage}%",
+    "interval": 5,
+    "states": { "warning": 80, "critical": 92 },
+    "tooltip-format": "{used:0.1f}G / {total:0.1f}G",
+    "on-click": "ghostty -e btop"
+  },
+
+  "disk": {
+    // On Linux `/` is the real root — no sealed-snapshot workaround needed.
+    "path": "/",
+    "format": "󰋊 {percentage_used}% · {free} free",
+    "interval": 300,
+    "states": { "warning": 85, "critical": 93 }
+  },
+
+  "battery": {
+    // Framework 13 reports as BAT1, not BAT0.
+    "bat": "BAT1",
+    "interval": 30,
+    "states": { "critical": 15, "warning": 35, "good": 85 },
+    "format": "{icon} {capacity}%",
+    "format-charging": "󰂄 {capacity}%",
+    "format-plugged": "󰚥 {capacity}%",
+    "format-icons": ["󰁺", "󰁽", "󰂀", "󰂂", "󰁹"],
+    "tooltip-format": "{timeTo} · {power:0.1f}W"
+  },
+
+  "clock": {
+    "interval": 10,
+    "format": "󰥔 {:%H:%M}",
+    "format-alt": "󰃭 {:%a %d %b}",
+    "tooltip-format": "<tt><small>{calendar}</small></tt>"
+  }
+}

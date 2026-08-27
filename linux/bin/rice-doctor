@@ -1,0 +1,182 @@
+#!/usr/bin/env bash
+# Health check for every moving part of the rice, Linux edition.
+# Exit 1 if anything is down. Same output shape as the macOS rice-doctor;
+# the checks underneath are entirely different, because the layers are.
+source "$HOME/.dotfiles/palette.sh" 2>/dev/null
+
+ok=0; bad=0
+pass() { printf '  \033[38;5;48m✔\033[0m %-22s %s\n' "$1" "$2"; ok=$((ok+1)); }
+fail() { printf '  \033[38;5;197m✘\033[0m %-22s %s\n' "$1" "$2"; bad=$((bad+1)); }
+
+echo
+printf '\033[38;5;201m▐ CYBERDECK — DOCTOR (linux)\033[0m\n\n'
+
+# --- window layer ----------------------------------------------------------
+if pgrep -x niri >/dev/null; then
+  if ws=$(niri msg --json workspaces 2>/dev/null \
+          | jq -r '.[] | select(.is_focused) | .name // (.idx|tostring)'); then
+    pass "niri" "running · workspace ${ws:-?}"
+  else
+    fail "niri" "process up but niri msg can't reach the socket
+                         (check \$NIRI_SOCKET in this shell)"
+  fi
+else
+  fail "niri" "not running — log out and pick niri at the session chooser"
+fi
+
+# niri draws its own focus ring, so there is no borders daemon to check.
+if [ -L "$HOME/.config/niri/config.kdl" ]; then
+  if ! command -v niri >/dev/null; then
+    # Don't report a config error when the only thing missing is the validator.
+    pass "niri config" "linked (niri itself not installed)"
+  elif niri validate -c "$HOME/.config/niri/config.kdl" >/dev/null 2>&1; then
+    pass "niri config" "linked and valid"
+  else
+    fail "niri config" "linked but does not validate — niri validate"
+  fi
+else
+  fail "niri config" "not linked — run install.sh"
+fi
+
+# --- bar -------------------------------------------------------------------
+if pgrep -x waybar >/dev/null; then
+  pass "waybar" "running"
+else
+  fail "waybar" "not running — niri spawns it; try 'waybar &' to see why"
+fi
+
+for f in config.jsonc style.css scripts; do
+  [ -e "$HOME/.config/waybar/$f" ] || wb_missing="${wb_missing:-}$f "
+done
+[ -z "${wb_missing:-}" ] \
+  && pass "waybar config" "config, style and scripts linked" \
+  || fail "waybar config" "missing: $wb_missing— run install.sh"
+
+# --- the netwatch feed -----------------------------------------------------
+if systemctl --user is-active --quiet netwatch-metrics.service; then
+  if body=$(curl -sf --max-time 2 http://127.0.0.1:9464/metrics 2>/dev/null); then
+    rtt=$(printf '%s' "$body" | awk '/^netwatch_gateway_rtt_seconds /{printf "%.0fms", $2*1000}')
+    conns=$(printf '%s' "$body" | awk '/^netwatch_connections /{print $2}')
+    pass "netwatch feed" "serving · gw ${rtt:-?} · ${conns:-?} conns"
+  else
+    fail "netwatch feed" "daemon up but :9464 not answering"
+  fi
+elif command -v netwatch >/dev/null; then
+  fail "netwatch feed" "service down —
+                         systemctl --user enable --now netwatch-metrics"
+else
+  fail "netwatch feed" "netwatch not installed — cargo install netwatch-tui"
+fi
+
+# --- terminal + shell ------------------------------------------------------
+if [ -L "$HOME/.config/ghostty/config" ] && [ -L "$HOME/.config/ghostty/platform.conf" ]; then
+  if command -v ghostty >/dev/null; then
+    ghostty +validate-config >/dev/null 2>&1 \
+      && pass "ghostty" "config valid" \
+      || fail "ghostty" "config does not validate"
+  else
+    pass "ghostty" "config linked (ghostty itself not installed)"
+  fi
+else
+  fail "ghostty" "config not linked — run install.sh"
+fi
+
+[ -L "$HOME/.config/tmux/tmux.conf" ] \
+  && pass "tmux" "config linked" \
+  || fail "tmux" "config not linked — run install.sh"
+
+# Read the passwd entry, not $SHELL: $SHELL is stamped at login and stays
+# stale for the rest of the session after a chsh, so it reports the old shell
+# on exactly the run where you want confirmation the change took.
+login_shell=$(getent passwd "$USER" 2>/dev/null | cut -d: -f7)
+if [ "$(basename "${login_shell:-}")" = zsh ]; then
+  if [ "$(basename "${SHELL:-}")" = zsh ]; then
+    pass "shell" "zsh is the login shell"
+  else
+    pass "shell" "zsh is the login shell (this session predates it — log out)"
+  fi
+else
+  fail "shell" "login shell is ${login_shell:-unset} — chsh -s \$(command -v zsh)"
+fi
+
+# --- the HUD's panes -------------------------------------------------------
+# soundwatch is deliberately not checked: it is macOS-only (CoreAudio tap),
+# and bin/hud drops to a three-pane grid without it.
+for t in netwatch syswatch diskwatch; do
+  command -v "$t" >/dev/null || hud_missing="${hud_missing:-}$t "
+done
+[ -z "${hud_missing:-}" ] \
+  && pass "hud panes" "netwatch, syswatch, diskwatch present" \
+  || fail "hud panes" "missing: $hud_missing— cargo install netwatch-tui syswatch diskwatch"
+
+for t in eza bat fd fzf zoxide atuin delta rg fastfetch btop wl-copy; do
+  command -v "$t" >/dev/null || missing="${missing:-}$t "
+done
+[ -z "${missing:-}" ] \
+  && pass "cli layer" "all tools present" \
+  || fail "cli layer" "missing: $missing— run linux/packages.sh"
+
+fc-list 2>/dev/null | grep -qi "JetBrainsMono Nerd" \
+  && pass "nerd font" "JetBrainsMono Nerd Font installed" \
+  || fail "nerd font" "not installed — the bar and prompt will show tofu"
+
+# --- Framework 13 hardware -------------------------------------------------
+# Two implementations provide net.hadess.PowerProfiles, and they conflict:
+# Fedora 44 ships tuned-ppd, other distros ship power-profiles-daemon. Either
+# is fine — GNOME only ever talks to the D-Bus name. Note that the
+# `powerprofilesctl` CLI lives only in the latter package, so tuned-ppd systems
+# have to be read with `tuned-adm`.
+if systemctl is-active --quiet tuned-ppd; then
+  prof=$(tuned-adm active 2>/dev/null | sed 's/^Current active profile: //')
+  pass "power profiles" "tuned-ppd up · ${prof:-?}"
+elif systemctl is-active --quiet power-profiles-daemon; then
+  prof=$(powerprofilesctl get 2>/dev/null)
+  pass "power profiles" "power-profiles-daemon up · ${prof:-?}"
+else
+  fail "power profiles" "no ppd-service running — sudo systemctl enable --now tuned-ppd"
+fi
+
+if grep -q '\[s2idle\]' /sys/power/mem_sleep 2>/dev/null; then
+  pass "suspend" "s2idle (correct for Framework AMD)"
+else
+  fail "suspend" "mem_sleep is $(cat /sys/power/mem_sleep 2>/dev/null)"
+fi
+
+if fw=$(fwupdmgr get-updates 2>&1) && ! printf '%s' "$fw" | grep -q 'No updates'; then
+  fail "firmware" "updates pending — sudo fwupdmgr update"
+else
+  pass "firmware" "up to date"
+fi
+
+# --- app layer -------------------------------------------------------------
+if [ -L "$HOME/.config/zed/themes/cyberpunk-neon.json" ] \
+   && grep -q '"dark": "Cyberpunk Neon"' "$HOME/.config/zed/settings.json" 2>/dev/null; then
+  pass "zed" "theme linked and selected"
+else
+  fail "zed" "theme missing or not selected in settings.json"
+fi
+
+cc_theme=$(jq -r '.theme // empty' "$HOME/.claude/settings.json" 2>/dev/null)
+cc_sl=$(jq -r '.statusLine.command // empty' "$HOME/.claude/settings.json" 2>/dev/null)
+if [ "$cc_theme" = "dark-ansi" ] && [ -x "$cc_sl" ]; then
+  pass "claude code" "dark-ansi + neon statusline"
+else
+  fail "claude code" "theme=${cc_theme:-unset} statusline=${cc_sl:-unset}"
+fi
+
+if grep -q 'name = "cyberpunk-neon"' "$HOME/.config/atuin/config.toml" 2>/dev/null; then
+  pass "atuin" "theme enabled"
+else
+  fail "atuin" "theme not enabled in config.toml"
+fi
+
+# --- secret hygiene --------------------------------------------------------
+if grep -qE 'API_KEY|SECRET|TOKEN' "$HOME/.zshrc" 2>/dev/null; then
+  fail "secrets" "a key looks inlined in ~/.zshrc"
+else
+  pass "secrets" "none inlined in ~/.zshrc"
+fi
+
+echo
+printf '  %d ok, %d down\n\n' "$ok" "$bad"
+[ "$bad" -eq 0 ]

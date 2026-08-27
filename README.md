@@ -2,9 +2,9 @@
 
 # CYBERDECK
 
-**A cyberpunk rice of macOS — tiling, bar, terminal, shell and a live system HUD.**
+**A cyberpunk rice of macOS and Fedora — tiling, bar, terminal, shell and a live system HUD.**
 
-Cyberpunk Neon across AeroSpace, SketchyBar, JankyBorders, Ghostty, zsh, tmux,
+Cyberpunk Neon across AeroSpace/niri, SketchyBar/Waybar, Ghostty, zsh, tmux,
 btop, bat, delta, fastfetch and Zed — from one palette, in one repo.
 
 *SIP stays enabled. Nothing here asks you to disable it.*
@@ -52,12 +52,17 @@ the shell aliases, and how to undo any of it.
 It ships with the repo too, so it works offline and without GitHub:
 
 ```sh
-open ~/.dotfiles/docs/cyberdeck-manual.html
+open ~/.dotfiles/docs/cyberdeck-manual.html     # macOS
+xdg-open ~/.dotfiles/docs/cyberdeck-manual.html # Fedora
 ```
 
 ## Requirements
 
-macOS 13+. Homebrew. A Nerd Font (the configs ask for JetBrainsMono Nerd Font).
+A Nerd Font on either platform (the configs ask for JetBrainsMono Nerd Font).
+
+### macOS
+
+macOS 13+. Homebrew.
 
 ```sh
 # window layer
@@ -80,6 +85,39 @@ git clone https://github.com/matthart1983/soundwatch && cd soundwatch && make bu
 `netwatch` is also what feeds the bar's network items. Without it the bar still
 works; those two items read `netwatch off`.
 
+### Fedora
+
+Fedora 42+. Everything below is in Fedora's own repos:
+
+```sh
+# window layer
+sudo dnf install niri waybar swaybg fuzzel wl-clipboard brightnessctl
+
+# terminal + shell layer
+sudo dnf install zsh zsh-autosuggestions zsh-syntax-highlighting
+sudo dnf install eza bat fd-find fzf zoxide atuin git-delta ripgrep \
+                 fastfetch btop tmux jq python3-pillow
+
+# or just run the lot, plus the Framework/power bits
+~/.dotfiles/linux/packages.sh
+```
+
+Three things Fedora does not package, and `packages.sh` deliberately will not
+install behind your back:
+
+- **Ghostty** — not in the repos, not on Fedora's filtered Flathub. Only
+  third-party COPRs carry it; pick one yourself. The rice runs in any terminal
+  until you do; only `ghostty/config` goes unused.
+- **powerlevel10k** — `git clone --depth=1 https://github.com/romkatv/powerlevel10k
+  ~/.local/share/powerlevel10k`, then source it at the top of `~/.zshrc`.
+- **JetBrainsMono Nerd Font** — drop the release zip in `~/.local/share/fonts`
+  and run `fc-cache -f`.
+
+`soundwatch` is macOS-only — it binds a CoreAudio tap. On Linux `hud` comes up
+as a three-pane grid instead of four; the other three are the same cargo
+installs.
+
+
 ## Install
 
 ```sh
@@ -88,8 +126,12 @@ git clone https://github.com/matthart1983/cyberdeck ~/.dotfiles
 exec zsh
 ```
 
-`install.sh` only symlinks and loads services — it is idempotent and touches no
-system settings. The macOS system layer is separate and opt-in:
+`install.sh` detects the platform, runs `common/install.sh`, then the matching
+`macos/` or `linux/` half. It only symlinks and loads services — it is
+idempotent and touches no system settings. Each platform's system layer is
+separate and opt-in.
+
+On Fedora that opt-in layer is `linux/packages.sh` (above). On macOS:
 
 ```sh
 ~/.dotfiles/macos/snapshot.sh    # record YOUR current state first — required
@@ -107,10 +149,13 @@ Then check your work:
 rice-doctor      # every layer, exits non-zero if one is down
 ```
 
-**AeroSpace needs Accessibility permission granted by hand** the first time
-(System Settings ▸ Privacy & Security ▸ Accessibility). Until it is, its CLI
-reports "can't connect to AeroSpace server" even though the app is running, and
-the bar's workspace indicators stay hidden. `rice-doctor` calls this out.
+On macOS, **AeroSpace needs Accessibility permission granted by hand** the first
+time (System Settings ▸ Privacy & Security ▸ Accessibility). Until it is, its
+CLI reports "can't connect to AeroSpace server" even though the app is running,
+and the bar's workspace indicators stay hidden. `rice-doctor` calls this out.
+
+On Fedora there is no equivalent grant: log out, pick **niri** at the session
+chooser, and it comes up with Waybar already running.
 
 ## Making it yours
 
@@ -136,20 +181,32 @@ mirrors it by hand, because none of them can read shell variables.
 
 ## Layout
 
+The repo is split three ways: shared, `macos/`, `linux/`. Anything not under a
+platform directory works identically on both.
+
 | Path | What |
 |---|---|
-| `ghostty/` | terminal config + `themes/cyberpunk-neon` |
+| `palette.sh` | the single source of truth, shared |
+| `install.sh` | dispatcher — runs `common/` then the platform half |
+| `common/install.sh` | the symlinks both platforms share |
+| `ghostty/` | terminal config + `themes/cyberpunk-neon`, plus `platform-{macos,linux}.conf` |
 | `zsh/cyberpunk.zsh` | aliases, tool init, p10k colour overrides |
 | `tmux/tmux.conf` | neon status bar, vim nav, tpm plugins |
 | `bat/` | `cyberpunk-neon.tmTheme` — also drives delta and fzf previews |
 | `btop/themes/` | btop theme — btop is still themed, just not in the HUD |
 | `fastfetch/` | config + ASCII logo |
-| `aerospace/` | tiling WM config — workspaces, keybinds, window rules |
-| `sketchybar/` | the bar: `sketchybarrc`, `colors.sh`, `icons.sh`, `plugins/` |
-| `launchd/` | LaunchAgent for the netwatch daemon that feeds the bar |
+| `aerospace/` | **macOS** tiling WM config — workspaces, keybinds, window rules |
+| `sketchybar/` | **macOS** bar: `sketchybarrc`, `colors.sh`, `icons.sh`, `plugins/` |
+| `launchd/` | **macOS** LaunchAgent for the netwatch daemon that feeds the bar |
+| `macos/bin/rice-doctor` | the macOS half of the health check |
+| `linux/niri/` | **Fedora** tiling compositor config — the AeroSpace counterpart |
+| `linux/waybar/` | **Fedora** bar: `config.jsonc`, `style.css`, `scripts/` |
+| `linux/systemd/` | **Fedora** user unit for the netwatch daemon |
+| `linux/packages.sh` | **Fedora** package + firmware layer (opt-in, needs sudo) |
+| `linux/bin/rice-doctor` | the Fedora half of the health check |
 | `bin/hud` | four-pane dashboard |
-| `bin/borders.sh` | JankyBorders launcher (magenta on focus) |
-| `bin/rice-doctor` | health check for every layer; exits non-zero if one is down |
+| `bin/borders.sh` | **macOS** JankyBorders launcher (magenta on focus); on Fedora niri draws its own focus ring |
+| `bin/rice-doctor` | health check for every layer; dispatches to the platform half |
 | `bin/tmux-battery` | battery glyph for the status bar |
 | `zed/themes/` | Zed theme — neon chrome, desaturated syntax |
 | `atuin/themes/` | atuin (ctrl-R) theme |
@@ -157,7 +214,7 @@ mirrors it by hand, because none of them can read shell variables.
 | `bin/rice-capture` | render the demo tapes |
 | `capture/` | VHS tapes; GIFs land in `capture/out/` (gitignored) |
 | `wallpaper/generate.py` | wallpaper generator (PIL, no numpy) |
-| `macos/` | defaults apply + snapshot + restore |
+| `macos/` | defaults apply + snapshot + restore, plus the macOS install half |
 
 ## Commands
 
@@ -169,11 +226,14 @@ mirrors it by hand, because none of them can read shell variables.
 | `prefix` = `C-a` | tmux prefix; `\|` and `-` split, `hjkl` navigate |
 | `rice-doctor` | verify aerospace, borders, bar, netwatch feed, configs, secrets |
 | `rice-capture` | render demo GIFs (`rice-capture hud` for just one) |
-| `open docs/cyberdeck-manual.html` | the [field manual](https://matthart1983.github.io/cyberdeck/) — every key and command, searchable |
+| `open`/`xdg-open docs/cyberdeck-manual.html` | the [field manual](https://matthart1983.github.io/cyberdeck/) — every key and command, searchable |
 
 ## Window management
 
-`alt` is the tiling modifier throughout.
+`alt` is the tiling modifier on macOS; **`super` on Fedora**. That is the one
+deliberate divergence in the whole port: on Linux `alt`+letter is the GTK
+mnemonic accelerator, so binding it here would make every app's menu bar
+unreachable. Everything below reads the same with the modifier swapped.
 
 | Keys | Does |
 |---|---|
@@ -189,7 +249,14 @@ mirrors it by hand, because none of them can read shell variables.
 | `alt shift` + `;` | service mode — `r` reset tree, `f` float, `esc` reload config |
 
 Workspaces: 1 term · 2 code · 3 web · 4 chat · 5 notes · 6 infra.
-Apps land there automatically via `on-window-detected` rules.
+Apps land there automatically — `on-window-detected` rules on macOS,
+`window-rule { open-on-workspace }` on Fedora.
+
+Two keys mean something slightly different under niri, because it is a
+*scrollable* tiler rather than a tree tiler: there is no tree to flatten and
+no sizes to balance. `super /` cycles the preset column widths, `super ,`
+toggles a tabbed column — niri's accordion. Both are annotated in
+`linux/niri/config.kdl`.
 
 ## The bar
 
@@ -209,11 +276,28 @@ with a 1.5s ceiling so a sick daemon can never stall the bar.
 No sudo: the daemon does interface counters and probes, not packet capture.
 Cost measured at 0.4% CPU / 15MB RSS.
 
+On Fedora the same two items are Waybar custom modules reading the same
+endpoint, with the daemon under `systemctl --user` instead of launchd. The
+other four items shrink to nothing there: `cpu`, `mem`, `disk` and `battery`
+each needed a shell plugin on macOS only because `top`, `memory_pressure` and
+`pmset` have to be parsed. Waybar reads all four out of `/proc` and `/sys`
+itself, so `linux/waybar/scripts/` holds just the two netwatch ones — which
+was always the part worth having.
+
 ## Notes
 
 - Secrets live in `~/.config/secrets.zsh` (chmod 600), never in this repo.
-- The menu bar is hidden now that SketchyBar replaces it. Undo with
+- **macOS:** the menu bar is hidden now that SketchyBar replaces it. Undo with
   `defaults delete NSGlobalDomain _HIHideMenuBar`, or `macos/restore.sh`.
+- **Fedora:** nothing equivalent to hide. Waybar declares its own exclusive
+  zone, so niri gets out of its way — unlike AeroSpace's `outer.top`, which
+  has to be hand-counted to clear the menu bar plus the bar.
+- **Framework 13:** `linux/packages.sh` also installs `power-profiles-daemon`
+  and refreshes firmware through `fwupd` — Framework ships BIOS over LVFS, so
+  `sudo fwupdmgr update` is the whole update path. `rice-doctor` checks both,
+  plus that `/sys/power/mem_sleep` is on `s2idle`, which is what the AMD boards
+  want. The battery enumerates as `BAT1`, not `BAT0`; `bin/tmux-battery` and
+  the Waybar battery module both account for that.
 - **AeroSpace needs Accessibility permission granted by hand** on first run
   (System Settings ▸ Privacy & Security ▸ Accessibility). Until it is, the
   CLI reports "can't connect to AeroSpace server" even though the app is up,
