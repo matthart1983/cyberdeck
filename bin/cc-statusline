@@ -38,7 +38,9 @@ if [[ -n $pct ]]; then
   elif (( p >= 60 )); then c=$YELLOW
   else                     c=$DIM
   fi
-  out+=" ${sep} ${c}${p}%%${RESET}"
+  # A single % here, not %%: $out is passed to printf as an *argument* to the
+  # '%b' format, not as the format itself, so nothing unescapes it.
+  out+=" ${sep} ${c}${p}%${RESET}"
 fi
 
 printf '%b' "$out"
