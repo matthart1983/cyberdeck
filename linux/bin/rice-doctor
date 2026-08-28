@@ -156,6 +156,10 @@ else
   fail "zed" "theme missing or not selected in settings.json"
 fi
 
+command -v claude >/dev/null \
+  && pass "claude on PATH" "$(claude --version 2>/dev/null | head -1)" \
+  || fail "claude on PATH" "not found — ~/.local/bin missing from the PATH block?"
+
 cc_theme=$(jq -r '.theme // empty' "$HOME/.claude/settings.json" 2>/dev/null)
 cc_sl=$(jq -r '.statusLine.command // empty' "$HOME/.claude/settings.json" 2>/dev/null)
 if [ "$cc_theme" = "dark-ansi" ] && [ -x "$cc_sl" ]; then

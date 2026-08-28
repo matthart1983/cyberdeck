@@ -1,5 +1,5 @@
 # Cyberpunk rice — Ghostty
-# Managed in ~/.dotfiles/ghostty/config, symlinked to ~/.config/ghostty/config
+# Managed in ~/.dotfiles/common/ghostty/config, symlinked to ~/.config/ghostty/config
 
 theme = cyberpunk-neon
 

@@ -6,59 +6,68 @@
 #   linux/packages.sh    (needs sudo; Fedora/dnf)
 set -euo pipefail
 D="${D:-$HOME/.dotfiles}"
+# shellcheck source=common/lib.sh
+source "$D/common/lib.sh"
 
-link() {
-  local src="$1" dst="$2"
-  mkdir -p "$(dirname "$dst")"
-  ln -sfn "$src" "$dst"
-  echo "  $dst -> $src"
-}
-
-echo "==> linking Linux configs"
-link "$D/ghostty/platform-linux.conf" "$HOME/.config/ghostty/platform.conf"
-link "$D/linux/niri/config.kdl"       "$HOME/.config/niri/config.kdl"
-link "$D/linux/waybar/config.jsonc"   "$HOME/.config/waybar/config.jsonc"
-link "$D/linux/waybar/style.css"      "$HOME/.config/waybar/style.css"
-link "$D/linux/waybar/scripts"        "$HOME/.config/waybar/scripts"
+echo "==> Linux configs"
+link "$D/common/ghostty/platform-linux.conf" "$HOME/.config/ghostty/platform.conf"
+link "$D/linux/niri/config.kdl"              "$HOME/.config/niri/config.kdl"
+link "$D/linux/waybar/config.jsonc"          "$HOME/.config/waybar/config.jsonc"
+link "$D/linux/waybar/style.css"             "$HOME/.config/waybar/style.css"
+link "$D/linux/waybar/scripts"               "$HOME/.config/waybar/scripts"
 
 echo "==> netwatch metrics service (feeds the bar)"
-UNIT_DIR="$HOME/.config/systemd/user"
+UNIT="$HOME/.config/systemd/user/netwatch-metrics.service"
 NETWATCH="$(command -v netwatch || true)"
 if [ -z "$NETWATCH" ]; then
-  echo "  netwatch not on PATH — skipping."
-  echo "  The bar's net/link items will read 'netwatch off' until it is."
-  echo "  Install: cargo install netwatch-tui"
+  warn "netwatch not on PATH — the bar's net/link items will read 'netwatch off'"
+  warn "install it with: cargo install netwatch-tui"
 else
-  mkdir -p "$UNIT_DIR"
-  sed -e "s|__NETWATCH__|$NETWATCH|g" \
-      "$D/linux/systemd/netwatch-metrics.service" > "$UNIT_DIR/netwatch-metrics.service"
-  systemctl --user daemon-reload
-  systemctl --user enable --now netwatch-metrics.service >/dev/null 2>&1 \
-    && echo "  enabled ($NETWATCH)" || echo "  failed — journalctl --user -u netwatch-metrics"
+  # render() returns 0 only when it actually wrote, so the daemon is reloaded
+  # on a real change and left alone otherwise.
+  if render "$D/linux/systemd/netwatch-metrics.service" "$UNIT" -e "s|__NETWATCH__|$NETWATCH|g"; then
+    # A user bus is not always reachable — over SSH without lingering enabled
+    # this fails, and it must not take the rest of the install down with it.
+    systemctl --user daemon-reload || warn "no user bus — unit written but not reloaded"
+  fi
+  if systemctl --user is-enabled --quiet netwatch-metrics.service 2>/dev/null \
+     && systemctl --user is-active --quiet netwatch-metrics.service 2>/dev/null; then
+    same "netwatch-metrics.service (enabled, running)"
+  else
+    systemctl --user enable --now netwatch-metrics.service >/dev/null 2>&1 \
+      && chg "netwatch-metrics.service enabled" \
+      || warn "could not start — journalctl --user -u netwatch-metrics"
+  fi
 fi
 
 echo "==> wallpaper"
-# generate.py takes an output DIRECTORY and writes one file per panel size.
+# generate.py takes an output DIRECTORY and writes one file per panel size, so
+# check for all of them rather than assuming this machine's is the only one.
 WP_DIR="$HOME/.local/share/wallpapers"
-WP="$WP_DIR/cyberpunk-fw13.png"
-if [ ! -f "$WP" ]; then
-  mkdir -p "$WP_DIR"
-  if python3 -c 'import PIL' 2>/dev/null; then
-    python3 "$D/wallpaper/generate.py" "$WP_DIR" >/dev/null 2>&1 \
-      && echo "  generated -> $WP_DIR" || echo "  generator failed — see wallpaper/generate.py"
-  else
-    echo "  python3-pillow not installed — skipping (run linux/packages.sh)"
-  fi
+WP_MISSING=0
+for f in cyberpunk-mbp.png cyberpunk-fw13.png cyberpunk-4k.png; do
+  [ -f "$WP_DIR/$f" ] || WP_MISSING=1
+done
+if [ "$WP_MISSING" -eq 0 ]; then
+  same "$WP_DIR"
+elif ! python3 -c 'import PIL' 2>/dev/null; then
+  warn "python3-pillow not installed — skipped (run linux/packages.sh)"
 else
-  echo "  already present"
+  mkdir -p "$WP_DIR"
+  python3 "$D/wallpaper/generate.py" "$WP_DIR" >/dev/null 2>&1 \
+    && chg "$WP_DIR" || warn "generator failed — see wallpaper/generate.py"
 fi
 
 echo "==> waybar"
-if pgrep -x waybar >/dev/null; then
-  pkill -USR2 waybar && echo "  reloaded"
+# Only poke the bar if this run actually rewrote something under it.
+if [ "$_changed" -gt 0 ] && pgrep -x waybar >/dev/null; then
+  pkill -USR2 waybar && chg "waybar reloaded"
+elif pgrep -x waybar >/dev/null; then
+  same "waybar running"
 else
-  echo "  not running — niri spawns it at startup"
+  warn "waybar not running — niri spawns it at startup"
 fi
 
+summary "linux"
 echo "    niri needs no accessibility grant; log out and pick 'niri' at the"
 echo "    session chooser to switch off GNOME."

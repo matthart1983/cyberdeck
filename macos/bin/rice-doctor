@@ -23,7 +23,7 @@ fi
 
 pgrep -q -f '/borders' \
   && pass "borders" "active window glow on" \
-  || fail "borders" "not running — ~/.dotfiles/bin/borders.sh &"
+  || fail "borders" "not running — ~/.dotfiles/macos/bin/borders.sh &"
 
 # --- bar -------------------------------------------------------------------
 if pgrep -q sketchybar; then

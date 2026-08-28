@@ -10,7 +10,7 @@ D="${D:-$HOME/.dotfiles}"
 # shells that have sourced a profile. rice-doctor gets run from bars, keybinds
 # and scripts that have not, so put it there before checking anything —
 # otherwise the tools read as missing when they are sitting right there.
-for d in "$HOME/.cargo/bin" "$HOME/.local/bin" "$D/bin"; do
+for d in "$HOME/.cargo/bin" "$HOME/.local/bin" "$D/common/bin"; do
   [ -d "$d" ] && case ":$PATH:" in *":$d:"*) ;; *) PATH="$d:$PATH" ;; esac
 done
 export PATH

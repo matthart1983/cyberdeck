@@ -181,40 +181,72 @@ mirrors it by hand, because none of them can read shell variables.
 
 ## Layout
 
-The repo is split three ways: shared, `macos/`, `linux/`. Anything not under a
-platform directory works identically on both.
+The repo is split three ways: `common/`, `macos/`, `linux/`. Every path under
+`common/` works identically on both platforms; the two platform directories
+mirror each other, and each holds its own `install.sh` and `bin/rice-doctor`.
 
 | Path | What |
 |---|---|
 | `palette.sh` | the single source of truth, shared |
 | `install.sh` | dispatcher — runs `common/` then the platform half |
-| `common/install.sh` | the symlinks both platforms share |
-| `ghostty/` | terminal config + `themes/cyberpunk-neon`, plus `platform-{macos,linux}.conf` |
-| `zsh/cyberpunk.zsh` | aliases, tool init, p10k colour overrides |
-| `tmux/tmux.conf` | neon status bar, vim nav, tpm plugins |
-| `bat/` | `cyberpunk-neon.tmTheme` — also drives delta and fzf previews |
-| `btop/themes/` | btop theme — btop is still themed, just not in the HUD |
-| `fastfetch/` | config + ASCII logo |
-| `aerospace/` | **macOS** tiling WM config — workspaces, keybinds, window rules |
-| `sketchybar/` | **macOS** bar: `sketchybarrc`, `colors.sh`, `icons.sh`, `plugins/` |
-| `launchd/` | **macOS** LaunchAgent for the netwatch daemon that feeds the bar |
+| `test/idempotent.sh` | runs the installer twice against a throwaway `$HOME` and fails if the second run writes anything |
+| **`common/`** | |
+| `common/install.sh` | the symlinks and settings both platforms share |
+| `common/lib.sh` | `link` / `copy` / `render` — the helpers that make a re-run a no-op |
+| `common/ghostty/` | terminal config + `themes/cyberpunk-neon`, plus `platform-{macos,linux}.conf` |
+| `common/zsh/cyberpunk.zsh` | aliases, tool init, PATH, p10k colour overrides |
+| `common/tmux/tmux.conf` | neon status bar, vim nav, tpm plugins |
+| `common/bat/` | `cyberpunk-neon.tmTheme` — also drives delta and fzf previews |
+| `common/btop/themes/` | btop theme — btop is still themed, just not in the HUD |
+| `common/fastfetch/` | config + ASCII logo |
+| `common/zed/themes/` | Zed theme — neon chrome, desaturated syntax |
+| `common/atuin/themes/` | atuin (ctrl-R) theme |
+| `common/claude-settings.py` | patches Claude Code's theme + statusline, leaving your other settings alone |
+| `common/bin/hud` | four-pane dashboard |
+| `common/bin/rice-doctor` | health check; dispatches to the platform half |
+| `common/bin/cc-statusline` | Claude Code statusline: model, dir, git, context |
+| `common/bin/tmux-battery` | battery glyph for the status bar |
+| `common/bin/rice-capture` | render the demo tapes |
+| **`macos/`** | |
+| `macos/install.sh` | the macOS half — links, LaunchAgent, sketchybar |
+| `macos/aerospace/` | tiling WM config — workspaces, keybinds, window rules |
+| `macos/sketchybar/` | the bar: `sketchybarrc`, `colors.sh`, `icons.sh`, `plugins/` |
+| `macos/launchd/` | LaunchAgent for the netwatch daemon that feeds the bar |
+| `macos/bin/borders.sh` | JankyBorders launcher (magenta on focus) |
 | `macos/bin/rice-doctor` | the macOS half of the health check |
-| `linux/niri/` | **Fedora** tiling compositor config — the AeroSpace counterpart |
-| `linux/waybar/` | **Fedora** bar: `config.jsonc`, `style.css`, `scripts/` |
-| `linux/systemd/` | **Fedora** user unit for the netwatch daemon |
-| `linux/packages.sh` | **Fedora** package + firmware layer (opt-in, needs sudo) |
+| `macos/defaults.sh` | system settings apply + `snapshot.sh` / `restore.sh` |
+| **`linux/`** | |
+| `linux/install.sh` | the Fedora half — links, systemd unit, wallpaper |
+| `linux/niri/` | tiling compositor config — the AeroSpace counterpart |
+| `linux/waybar/` | the bar: `config.jsonc`, `style.css`, `scripts/` |
+| `linux/systemd/` | user unit for the netwatch daemon |
+| `linux/packages.sh` | package + firmware layer (opt-in, needs sudo) |
 | `linux/bin/rice-doctor` | the Fedora half of the health check |
-| `bin/hud` | four-pane dashboard |
-| `bin/borders.sh` | **macOS** JankyBorders launcher (magenta on focus); on Fedora niri draws its own focus ring |
-| `bin/rice-doctor` | health check for every layer; dispatches to the platform half |
-| `bin/tmux-battery` | battery glyph for the status bar |
-| `zed/themes/` | Zed theme — neon chrome, desaturated syntax |
-| `atuin/themes/` | atuin (ctrl-R) theme |
-| `bin/cc-statusline` | Claude Code statusline: model, dir, git, context |
-| `bin/rice-capture` | render the demo tapes |
+| **root** | |
 | `capture/` | VHS tapes; GIFs land in `capture/out/` (gitignored) |
 | `wallpaper/generate.py` | wallpaper generator (PIL, no numpy) |
-| `macos/` | defaults apply + snapshot + restore, plus the macOS install half |
+| `attic/` | anything the installer displaced, under a per-run timestamp (gitignored) |
+
+niri draws its own focus ring, so JankyBorders has no Linux counterpart —
+that is one fewer daemon on the Fedora side, not a missing feature.
+
+## Re-running the install
+
+`install.sh` is idempotent, and that is tested rather than asserted:
+
+```sh
+test/idempotent.sh
+```
+
+It runs the real installer twice against a throwaway `$HOME` — with systemd,
+launchd, brew and the bar stubbed out so a test can never bounce the live
+daemon — and fails unless the second run reports zero writes *and* leaves a
+byte-identical tree. Three fixtures: a fresh machine, one whose `~/.config`
+already holds real directories where the rice wants symlinks, and one still on
+the pre-restructure layout.
+
+Nothing is ever overwritten in place. Whatever the installer displaces is moved
+to `attic/<timestamp>/`, mirroring its path under `$HOME`.
 
 ## Commands
 
