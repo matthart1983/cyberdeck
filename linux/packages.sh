@@ -4,8 +4,8 @@
 #
 #   ~/.dotfiles/linux/packages.sh
 #
-# Everything below is in Fedora's own repos except Ghostty, which is not
-# packaged by Fedora and not on Flathub — see the note at the bottom.
+# Everything below is in Fedora's own repos. Ghostty is not, and is built from
+# source by linux/ghostty.sh — see the note at the bottom.
 set -euo pipefail
 
 echo "==> compositor + bar"
@@ -57,11 +57,13 @@ cat <<'NOTE'
                   then add to the TOP of ~/.zshrc:
                     source ~/.local/share/powerlevel10k/powerlevel10k.zsh-theme
 
-  Ghostty         Not in Fedora's repos and not on Fedora's filtered Flathub.
-                  Only third-party COPRs carry it. Pick one deliberately —
-                  this script will not choose an unofficial build for you:
-                    sudo dnf copr enable <owner>/ghostty && sudo dnf install ghostty
-                  Until then the rice runs fine in any terminal; only
+  Ghostty         Not in Fedora's repos and not on Fedora's filtered Flathub,
+                  and the only prebuilt binaries are third-party COPRs — this
+                  script will not choose an unofficial build for you. Build it
+                  from upstream's signed source tarball instead:
+                    ~/.dotfiles/linux/ghostty.sh
+                  It installs into ~/.local, so it leaves nothing root-owned.
+                  Until you run it the rice works fine in any terminal; only
                   ghostty/config and the quick-terminal bind go unused.
 
   Nerd Font       JetBrainsMono Nerd Font is not packaged. Fetch the release

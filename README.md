@@ -111,9 +111,20 @@ sudo dnf install eza bat fd-find fzf zoxide atuin git-delta ripgrep \
 Three things Fedora does not package, and `packages.sh` deliberately will not
 install behind your back:
 
-- **Ghostty** — not in the repos, not on Fedora's filtered Flathub. Only
-  third-party COPRs carry it; pick one yourself. The rice runs in any terminal
-  until you do; only `ghostty/config` goes unused.
+- **Ghostty** — not in the repos, not on Fedora's filtered Flathub, and the
+  only prebuilt binaries are third-party COPRs. So the rice builds it from
+  upstream's signed source tarball instead:
+
+  ```sh
+  ~/.dotfiles/linux/ghostty.sh
+  ```
+
+  Sudo, once, for the GTK build dependencies; Ghostty itself lands in
+  `~/.local` and leaves no root-owned files. The tarball's minisign signature
+  is checked before anything is unpacked, and the Zig version is read out of
+  the source that was just verified — Fedora ships two Zig minors and only one
+  of them can build Ghostty. Budget a few minutes for the compile. Until you
+  run it the rice works in any terminal; only `ghostty/config` goes unused.
 - **powerlevel10k** — `git clone --depth=1 https://github.com/romkatv/powerlevel10k
   ~/.local/share/powerlevel10k`, then source it at the top of `~/.zshrc`.
 - **JetBrainsMono Nerd Font** — drop the release zip in `~/.local/share/fonts`
@@ -228,6 +239,7 @@ mirror each other, and each holds its own `install.sh` and `bin/rice-doctor`.
 | `linux/waybar/` | the bar: `config.jsonc`, `style.css`, `scripts/` |
 | `linux/systemd/` | user unit for the netwatch daemon |
 | `linux/packages.sh` | package + firmware layer (opt-in, needs sudo) |
+| `linux/ghostty.sh` | builds Ghostty from upstream's signed tarball into `~/.local` (opt-in) |
 | `linux/bin/rice-doctor` | the Fedora half of the health check |
 | **root** | |
 | `capture/` | VHS tapes; GIFs land in `capture/out/` (gitignored) |
