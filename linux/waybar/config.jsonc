@@ -43,14 +43,17 @@
   // --- Left: niri workspaces, named exactly as the compositor names them ---
   "niri/workspaces": {
     "format": "{icon}",
+    // Material Design glyphs, the same set the right-hand items use. The
+    // labels were "1".."6", which the six pinned workspaces would have got
+    // from {index} anyway — the map only earns its place saying something
+    // the index cannot.
     "format-icons": {
-      "term":  "1",
-      "code":  "2",
-      "web":   "3",
-      "chat":  "4",
-      "notes": "5",
-      "infra": "6",
-      "default": "{index}"
+      "term":  "󰆍",
+      "code":  "󰅩",
+      "web":   "󰖟",
+      "chat":  "󰭹",
+      "notes": "󰎚",
+      "infra": "󰒋"
     },
     "on-click": "activate"
   },

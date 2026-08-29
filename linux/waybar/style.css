@@ -65,15 +65,48 @@ window#waybar.hidden { opacity: 0.2; }
 
 #workspaces { padding: 0 4px; }
 
+/* The labels are glyphs rather than digits now. A glyph reads optically
+   smaller than a numeral at the same size, so this runs 2px larger than the
+   bar's 13px — and drops the bold, which thickened the icon strokes into
+   mush while doing nothing a numeral needed. */
 #workspaces button {
   color: @fg_dim;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 6px;
-  padding: 0 9px;
+  padding: 0 8px;
   margin: 3px 1px;
-  font-weight: bold;
+  font-size: 15px;
   transition: color 120ms ease, background 120ms ease;
+}
+
+/* niri keeps a spare empty workspace at the end of the output so there is
+   always somewhere to throw a window. It is a real workspace, so waybar draws
+   a button for it, and beside six glyphs that button is a numeral in a
+   different language — or, with no label, an unclickable gap.
+
+   It has to be hidden here rather than in config.jsonc, and that is the part
+   worth writing down: waybar checks format-icons STATE keys before NAME keys,
+   so an "empty": "" that looks like it only targets the scratch workspace
+   silently blanks every named workspace with nothing open on it too — which
+   is most of them, most of the time. There is no config-side way to say
+   "unnamed and empty".
+
+   Hiding by id is what is left. Named workspaces are addressable by name and
+   unnamed ones only by index, so these ids can only ever be scratch; 1-6 are
+   pinned by name in config.kdl and nothing here can reach them. GTK CSS has
+   no `display`, so min-width is what takes the space back. */
+#workspaces button#niri-workspace-7,
+#workspaces button#niri-workspace-8,
+#workspaces button#niri-workspace-9,
+#workspaces button#niri-workspace-10,
+#workspaces button#niri-workspace-11,
+#workspaces button#niri-workspace-12 {
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  border: none;
+  opacity: 0;
 }
 
 #workspaces button:hover {
