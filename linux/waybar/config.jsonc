@@ -27,13 +27,17 @@
   "modules-right":  ["custom/link", "custom/net", "cpu", "memory", "disk", "battery", "clock"],
 
   // --- Left: the launcher button ------------------------------------------
-  // Mod+Space does the same thing; this is the discoverable half of it.
-  // Click toggles: a second click dismisses a fuzzel that is already up.
+  // Opens nwg-drawer, not fuzzel: a button is for the times you are looking
+  // rather than typing, and the drawer is the one that answers that. It drops
+  // down from here as a panel, so the button and its menu read as one thing.
+  // linux/bin/drawer is what sizes that panel to the current output and
+  // toggles the resident copy. Right-click still gets you fuzzel.
   "custom/launcher": {
     "format": "󰀻",
     "tooltip": true,
-    "tooltip-format": "Run a program  (Mod+Space)",
-    "on-click": "pkill fuzzel || fuzzel"
+    "tooltip-format": "Browse applications  (Mod+A)\nRight-click to type  (Mod+Space)",
+    "on-click": "~/.dotfiles/linux/bin/drawer",
+    "on-click-right": "pkill fuzzel || fuzzel"
   },
 
   // --- Left: niri workspaces, named exactly as the compositor names them ---

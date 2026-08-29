@@ -1,0 +1,152 @@
+/* ---------------------------------------------------------------------------
+   Cyberpunk rice — nwg-drawer
+   ~/.dotfiles/linux/nwg-drawer/drawer.css  ->  ~/.config/nwg-drawer/drawer.css
+   Rendered from themes/cyberpunk-neon.sh by `theme` — edit the .tmpl, not this.
+
+   The browsable half of the launcher. fuzzel answers "run this thing I can
+   name"; this answers "what is on this machine" — a grid with category
+   buttons, which is the one thing GNOME's overview did better than anything a
+   tiling compositor ships with.
+
+   It hangs off the bar's left edge as a panel rather than covering the screen.
+   The size and position of that panel are margins, computed per output by
+   linux/bin/drawer; what belongs here is only how the panel looks — and it
+   looks like the bar, because it is meant to read as the bar's own menu.
+
+   GTK3, so this is GTK CSS and @define-color works, same as the bar. The
+   selectors come from nwg-drawer's own default sheet
+   (/usr/share/nwg-drawer/drawer.css) — check there first if a widget stops
+   picking colour up after an upgrade.
+   --------------------------------------------------------------------------- */
+
+@define-color bg        #000b1e;
+@define-color bg_alt    #091833;
+@define-color bg_sel    #13284f;
+@define-color border    #133e7c;
+@define-color fg        #0abdc6;
+@define-color fg_dim    #0f7d84;
+@define-color white     #d7d7d7;
+@define-color magenta   #ea00d9;
+@define-color purple    #711c91;
+
+/* The panel is the bar's card, continued downward: same 8px radius, same 1px
+   border, and a touch more opaque than the bar's 90% because a grid of icons
+   over wallpaper needs to read against itself, not through itself.
+
+   The radius only clips to transparent corners because nwg-drawer gives the
+   toplevel an RGBA visual — the same reason waybar can round its own window. */
+window {
+  background-color: rgba(0, 11, 30, 0.94);
+  color: @white;
+  border: 1px solid @border;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: "JetBrainsMono Nerd Font", monospace;
+  font-size: 13px;
+}
+
+/* --- Search ------------------------------------------------------------- */
+entry {
+  background-color: @bg_alt;
+  color: @white;
+  border: 1px solid @border;
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin: 4px 0;
+  caret-color: @magenta;
+}
+
+entry:focus {
+  border-color: @magenta;
+  box-shadow: none;
+}
+
+entry selection {
+  background-color: @magenta;
+  color: @bg;
+}
+
+/* --- Grid --------------------------------------------------------------- */
+/* Every tile is a button. No frame at rest: the grid should read as icons on
+   a ground, not as a table of boxes. The frame arrives on hover instead. */
+button, image {
+  background: none;
+  border: none;
+  box-shadow: none;
+}
+
+button {
+  color: @white;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 6px;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+button:hover {
+  background-color: @bg_sel;
+  border-color: @border;
+}
+
+/* Keyboard focus has to be louder than hover — arrowing through the grid is
+   the whole point of it being browsable. Magenta, the accent the bar's
+   active workspace and launcher button already use. */
+button:focus {
+  background-color: @bg_sel;
+  border-color: @magenta;
+  outline: none;
+}
+
+/* --- Category filters --------------------------------------------------- */
+#category-button {
+  margin: 0 4px;
+  padding: 4px 12px;
+  color: @fg_dim;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-weight: bold;
+}
+
+#category-button:hover {
+  color: @fg;
+  background-color: @bg_alt;
+}
+
+#category-button:focus {
+  color: @bg;
+  background-color: @magenta;
+  border-color: @magenta;
+}
+
+/* --- Pinned, files, descriptions ---------------------------------------- */
+#pinned-box {
+  padding-bottom: 8px;
+  border-bottom: 1px solid @border;
+}
+
+#files-box {
+  padding: 6px;
+  border: 1px solid @border;
+  border-radius: 8px;
+  background-color: alpha(@bg_alt, 0.6);
+}
+
+#desc-label {
+  color: @fg_dim;
+  font-size: 12px;
+}
+
+#separator {
+  background-color: @border;
+}
+
+tooltip {
+  background-color: @bg_alt;
+  border: 1px solid @purple;
+  border-radius: 6px;
+}
+
+tooltip label {
+  color: @fg;
+  padding: 4px;
+}

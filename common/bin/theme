@@ -2,15 +2,15 @@
 # Switch the rice's palette, everywhere, in one command.
 #
 #   theme                 what's active, and what else there is
-#   theme blade           switch: render all 13 surfaces, re-link, reload what
+#   theme blade           switch: render all 14 surfaces, re-link, reload what
 #                         is running, and name what you still have to restart
 #   theme blade --render-only   rewrite the files and stop
 #   theme --render        re-render the active theme (install.sh calls this)
 #   theme --check         render to a temp tree and report drift, writing nothing
 #
-# Thirteen surfaces mirror the palette, in nine different colour notations.
+# Fourteen surfaces mirror the palette, in nine different colour notations.
 # They were mirrored by hand until now, which meant eight themes would have
-# been 104 files that could drift with nothing to catch it. Each one is a
+# been 112 files that could drift with nothing to catch it. Each one is a
 # .tmpl beside its output; this renders them.
 #
 # Which theme you run is a property of your machine, so themes/active.sh is a
@@ -38,6 +38,7 @@ SURFACES=(
   "common/zsh/cyberpunk.zsh.tmpl                common/zsh/cyberpunk.zsh"
   "linux/waybar/style.css.tmpl                  linux/waybar/style.css"
   "linux/niri/config.kdl.tmpl                   linux/niri/config.kdl"
+  "linux/nwg-drawer/drawer.css.tmpl             linux/nwg-drawer/drawer.css"
   "macos/sketchybar/colors.sh.tmpl              macos/sketchybar/colors.sh"
   "macos/bin/borders.sh.tmpl                    macos/bin/borders.sh"
   "capture/theme.tape.tmpl                      capture/theme.tape"
@@ -114,7 +115,7 @@ case "${1:-}" in
       fi
     done
     if [ "$drift" -eq 0 ]; then
-      printf '  %s=%s 13 surfaces match themes/%s.sh\n' "$_c_ok" "$_c_off" "$slug"
+      printf '  %s=%s 14 surfaces match themes/%s.sh\n' "$_c_ok" "$_c_off" "$slug"
     fi
     exit "$drift"
     ;;

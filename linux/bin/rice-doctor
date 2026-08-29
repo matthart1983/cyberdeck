@@ -52,6 +52,34 @@ done
   && pass "waybar config" "config, style and scripts linked" \
   || fail "waybar config" "missing: $wb_missing— run install.sh"
 
+# --- launcher --------------------------------------------------------------
+# The drawer is the bar's menu, so it belongs next to the bar. Two ways it goes
+# wrong and neither is visible until you press the button: the daemon is not
+# there, or it is there with margins computed for an output you have since
+# unplugged, which puts the panel off-screen or half a screen wide.
+if ! command -v nwg-drawer >/dev/null; then
+  fail "launcher" "nwg-drawer not installed — run linux/packages.sh"
+elif ! pgrep -x nwg-drawer >/dev/null; then
+  fail "launcher" "nwg-drawer not resident — niri spawns it; try
+                         'linux/bin/drawer --daemon' to see why"
+else
+  want=$("$HOME/.dotfiles/linux/bin/drawer" --margins 2>/dev/null || true)
+  have=$(cat "${XDG_RUNTIME_DIR:-/tmp}/drawer.margins" 2>/dev/null || true)
+  if [ -n "$want" ] && [ "$want" != "$have" ]; then
+    fail "launcher" "panel geometry is stale (output changed) —
+                         press it once and the wrapper restarts it"
+  else
+    # Report the panel, not the margins: the margins are the mechanism, and
+    # what you want to know here is how big the thing that opens will be.
+    size=$(niri msg --json focused-output 2>/dev/null \
+           | jq -r '.logical | "\(.width) \(.height)"')
+    pass "launcher" "$(awk -v s="$size" '{
+      split(s, o, " ")
+      printf "nwg-drawer resident · panel %d\303\227%d", o[1]-$4-$6, o[2]-$2-$8
+    }' <<<"$have")"
+  fi
+fi
+
 # --- the netwatch feed -----------------------------------------------------
 if systemctl --user is-active --quiet netwatch-metrics.service; then
   if body=$(curl -sf --max-time 2 http://127.0.0.1:9464/metrics 2>/dev/null); then
@@ -176,11 +204,11 @@ else
 fi
 
 # --- theme -----------------------------------------------------------------
-# Thirteen surfaces are rendered from themes/<active>.sh. Hand-editing one is
+# Fourteen surfaces are rendered from themes/<active>.sh. Hand-editing one is
 # the failure this catches: the edit survives until the next `theme` run and
 # then vanishes, which is a miserable thing to debug from the colours alone.
 if theme_out=$("$HOME/.dotfiles/common/bin/theme" --check 2>&1); then
-  pass "theme" "${CP_THEME_NAME:-?} · 13 surfaces match their templates"
+  pass "theme" "${CP_THEME_NAME:-?} · 14 surfaces match their templates"
 else
   fail "theme" "rendered surfaces have drifted from their templates —
                          $(printf '%s' "$theme_out" | sed -n 's/.*drifted: //p' | tr '\n' ' ')

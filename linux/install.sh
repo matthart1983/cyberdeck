@@ -18,6 +18,7 @@ link "$D/linux/niri/config.kdl"              "$HOME/.config/niri/config.kdl"
 link "$D/linux/waybar/config.jsonc"          "$HOME/.config/waybar/config.jsonc"
 link "$D/linux/waybar/style.css"             "$HOME/.config/waybar/style.css"
 link "$D/linux/waybar/scripts"               "$HOME/.config/waybar/scripts"
+link "$D/linux/nwg-drawer/drawer.css"        "$HOME/.config/nwg-drawer/drawer.css"
 
 echo "==> netwatch metrics service (feeds the bar)"
 UNIT="$HOME/.config/systemd/user/netwatch-metrics.service"

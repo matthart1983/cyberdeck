@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+# The launcher panel — nwg-drawer, shaped like the bar's own menu.
+#
+#   drawer --daemon   start it resident but closed  (niri's spawn-at-startup)
+#   drawer            toggle it                     (Mod+A, the bar's button)
+#   drawer --margins  print this output's margins   (rice-doctor)
+#
+# nwg-drawer's window is fullscreen by design. There is no "panel" mode; what
+# there is instead is four margins, and gtk-layer-shell anchors the surface to
+# all four edges and insets it by them. So a 760px-wide panel is really "screen
+# width minus 760 minus the left margin, on the right" — which is why these are
+# computed here at launch rather than written into a config. They are only ever
+# correct for one output size.
+set -euo pipefail
+
+# --- the panel, in logical pixels -------------------------------------------
+PANEL_W=760          # five columns at a comfortable tile width
+PANEL_H=860
+GAP=6                # between the bar's lower edge and the panel's upper one
+COLS=5
+ICON=48
+
+STAMP="${XDG_RUNTIME_DIR:-/tmp}/drawer.margins"
+
+# The bar's numbers come from waybar's own config rather than being repeated
+# here, so changing the bar's height or margin drags the panel along with it.
+margins() {
+  niri msg --json focused-output | python3 -c '
+import json, os, re, sys
+
+scr = json.load(sys.stdin)["logical"]
+sw, sh = scr["width"], scr["height"]
+
+bar = {}
+try:  # JSONC — strip the // comments before handing it to json
+    src = open(os.path.expanduser("~/.config/waybar/config.jsonc")).read()
+    bar = json.loads(re.sub(r"^\s*//.*$", "", src, flags=re.M))
+except Exception:
+    pass                      # defaults below match the bar as committed
+bar_h, bar_mt, bar_ml = (bar.get("height", 32),
+                         bar.get("margin-top", 8),
+                         bar.get("margin-left", 8))
+
+W, H, gap = (int(a) for a in sys.argv[1:4])
+top = bar_mt + bar_h + gap
+w = min(W, sw - 2 * bar_ml)   # clamp: a small output gets a smaller panel,
+h = min(H, sh - top - bar_mt) # never a negative margin
+print("-mt", top, "-ml", bar_ml, "-mr", sw - bar_ml - w, "-mb", sh - top - h)
+' "$PANEL_W" "$PANEL_H" "$GAP"
+}
+
+start_daemon() {  # $1 = margin flags
+  printf '%s\n' "$1" > "$STAMP"
+  # shellcheck disable=SC2086 # word splitting is the point: $1 is flag pairs
+  setsid nwg-drawer -r -c "$COLS" -is "$ICON" -spacing 12 $1 >/dev/null 2>&1 &
+}
+
+case "${1:-toggle}" in
+  --daemon)
+    m="$(margins)"
+    printf '%s\n' "$m" > "$STAMP"
+    # shellcheck disable=SC2086
+    exec nwg-drawer -r -c "$COLS" -is "$ICON" -spacing 12 $m
+    ;;
+  toggle)
+    m="$(margins)"
+    if ! pgrep -x nwg-drawer >/dev/null; then
+      start_daemon "$m"
+    elif [ "$(cat "$STAMP" 2>/dev/null || true)" != "$m" ]; then
+      # The output changed since the daemon started, so its margins describe a
+      # screen that is no longer there. Restart rather than open it misplaced.
+      pkill -x nwg-drawer || true
+      start_daemon "$m"
+    else
+      exec pkill -USR1 -x nwg-drawer
+    fi
+    # Freshly started: it parses every .desktop file and loads every icon
+    # before it listens, and a USR1 that arrives first is simply dropped.
+    # ~370ms on this machine with 116 .desktop files; wait, then open.
+    for _ in $(seq 30); do
+      pgrep -x nwg-drawer >/dev/null && break
+      sleep 0.1
+    done
+    sleep 0.6
+    pkill -USR1 -x nwg-drawer
+    ;;
+  --margins)
+    margins ;;
+  *)
+    echo "usage: drawer [--daemon|--margins]" >&2; exit 2 ;;
+esac

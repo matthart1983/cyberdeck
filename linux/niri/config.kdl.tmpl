@@ -96,6 +96,12 @@ workspace "infra"
 
 // --- Startup ----------------------------------------------------------------
 spawn-at-startup "waybar"
+// --daemon keeps nwg-drawer resident: it parses every .desktop file and loads
+// every icon at startup instead of on each open, which is the difference
+// between the grid appearing instantly and appearing in about a second. The
+// wrapper is what turns it from a fullscreen overlay into a panel under the
+// bar — see linux/bin/drawer for why those margins have to be computed.
+spawn-at-startup "sh" "-c" "~/.dotfiles/linux/bin/drawer --daemon"
 spawn-at-startup "sh" "-c" "swaybg -i ~/.local/share/wallpapers/cyberpunk-fw13.png -m fill"
 
 prefer-no-csd
@@ -173,6 +179,13 @@ binds {
     // --- Launchers (no macOS counterpart: Spotlight did this) --------------
     Mod+Return       { spawn "ghostty"; }
     Mod+Space        { spawn "fuzzel"; }
+    // Two launchers, because they answer different questions. fuzzel is for
+    // when you can name the thing. This is for when you cannot: a grid with
+    // categories, panelled under the bar, which is the part of GNOME worth
+    // keeping.
+    // The wrapper toggles the resident copy, and starts one if the daemon
+    // died or the output changed under it.
+    Mod+A            { spawn "sh" "-c" "~/.dotfiles/linux/bin/drawer"; }
     Mod+Shift+Q      { close-window; }
     Mod+Shift+E      { quit; }
 

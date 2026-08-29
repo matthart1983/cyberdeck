@@ -97,7 +97,7 @@ Fedora 42+. Everything below is in Fedora's own repos:
 
 ```sh
 # window layer
-sudo dnf install niri waybar swaybg fuzzel wl-clipboard brightnessctl
+sudo dnf install niri waybar swaybg fuzzel nwg-drawer wl-clipboard brightnessctl
 
 # terminal + shell layer
 sudo dnf install zsh zsh-autosuggestions zsh-syntax-highlighting
@@ -182,14 +182,14 @@ either, or just the Ghostty theme.
 
 ## Themes
 
-Eight of them. One command moves all thirteen themed surfaces at once:
+Eight of them. One command moves all fourteen themed surfaces at once:
 
 ```sh
 theme                 # what's active, and what else there is
 theme blade           # tiling, bar, terminal, shell, tmux, editor, HUD, wallpaper
 ```
 
-One command. It renders the thirteen surfaces, re-links them, reloads what can
+One command. It renders the fourteen surfaces, re-links them, reloads what can
 be reloaded from outside, and tells you the two or three things that can't be —
 Ghostty has no reload-from-CLI, and a shell's colours are fixed at start.
 
@@ -207,7 +207,7 @@ Ghostty has no reload-from-CLI, and a shell's colours are fixed at start.
 A palette is 41 colour slots of literal hex in `themes/<slug>.sh` — data, read
 rather than sourced. Each themed surface is a `.tmpl` beside its output;
 `theme` renders them. Nothing is mirrored by hand any more, which is the point:
-eight themes across thirteen surfaces is 104 files that would drift with
+eight themes across fourteen surfaces is 112 files that would drift with
 nothing to catch it.
 
 The rendered surfaces are tracked, so `theme blade && git diff` shows you
@@ -247,7 +247,7 @@ mirror each other, and each holds its own `install.sh` and `bin/rice-doctor`.
 | `themes/active.sh` | gitignored symlink to whichever is in use |
 | `install.sh` | dispatcher — runs `common/` then the platform half |
 | `test/idempotent.sh` | runs the installer twice against a throwaway `$HOME` and fails if the second run writes anything |
-| `test/theme.sh` | renders all 8 themes across all 13 surfaces and checks the contract, the drift and the contrast floors |
+| `test/theme.sh` | renders all 8 themes across all 14 surfaces and checks the contract, the drift and the contrast floors |
 | **`common/`** | |
 | `common/install.sh` | the symlinks and settings both platforms share |
 | `common/lib.sh` | `link` / `copy` / `render` — the helpers that make a re-run a no-op |
@@ -280,10 +280,12 @@ mirror each other, and each holds its own `install.sh` and `bin/rice-doctor`.
 | `linux/install.sh` | the Fedora half — links, systemd unit, wallpaper |
 | `linux/niri/` | tiling compositor config — the AeroSpace counterpart |
 | `linux/waybar/` | the bar: `config.jsonc`, `style.css`, `scripts/` |
+| `linux/nwg-drawer/` | the launcher panel's stylesheet — a themed surface like the bar's |
 | `linux/systemd/` | user unit for the netwatch daemon |
 | `linux/packages.sh` | package + firmware layer (opt-in, needs sudo) |
 | `linux/ghostty.sh` | builds Ghostty from upstream's signed tarball into `~/.local` (opt-in) |
 | `linux/bin/rice-doctor` | the Fedora half of the health check |
+| `linux/bin/drawer` | sizes the launcher panel to the focused output and toggles it |
 | **root** | |
 | `capture/` | VHS tapes; GIFs land in `capture/out/` (gitignored) |
 | `wallpaper/generate.py` | wallpaper generator (PIL, no numpy) |
@@ -313,7 +315,7 @@ The themes have their own:
 test/theme.sh
 ```
 
-Eight palettes across thirteen surfaces is 104 renders nobody is going to check
+Eight palettes across fourteen surfaces is 112 renders nobody is going to check
 by eye. It proves each palette actually *sets* its variables (a space before the
 `=` makes it a command, which `bash -n` passes and which sets nothing), that
 every palette fills the same contract in the same order, that every surface

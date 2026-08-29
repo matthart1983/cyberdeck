@@ -10,7 +10,7 @@ set -euo pipefail
 
 echo "==> compositor + bar"
 sudo dnf install -y \
-  niri waybar swaybg fuzzel \
+  niri waybar swaybg fuzzel nwg-drawer \
   wl-clipboard brightnessctl wireplumber \
   xdg-desktop-portal-gnome xdg-desktop-portal-gtk
 
