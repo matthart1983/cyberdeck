@@ -202,6 +202,7 @@ mirror each other, and each holds its own `install.sh` and `bin/rice-doctor`.
 | `common/zed/themes/` | Zed theme — neon chrome, desaturated syntax |
 | `common/atuin/themes/` | atuin (ctrl-R) theme |
 | `common/claude-settings.py` | patches Claude Code's theme + statusline, leaving your other settings alone |
+| `common/zed-settings.py` | selects the Zed theme in `settings.json`, preserving its comments |
 | `common/bin/hud` | four-pane dashboard |
 | `common/bin/rice-doctor` | health check; dispatches to the platform half |
 | `common/bin/cc-statusline` | Claude Code statusline: model, dir, git, context |

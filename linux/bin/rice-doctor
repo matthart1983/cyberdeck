@@ -150,7 +150,8 @@ fi
 
 # --- app layer -------------------------------------------------------------
 if [ -L "$HOME/.config/zed/themes/cyberpunk-neon.json" ] \
-   && grep -q '"dark": "Cyberpunk Neon"' "$HOME/.config/zed/settings.json" 2>/dev/null; then
+   && grep -qE '"(theme|dark)"[[:space:]]*:[[:space:]]*"Cyberpunk Neon"' \
+        "$HOME/.config/zed/settings.json" 2>/dev/null; then
   pass "zed" "theme linked and selected"
 else
   fail "zed" "theme missing or not selected in settings.json"

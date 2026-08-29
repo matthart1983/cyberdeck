@@ -43,6 +43,22 @@ else
   chg "$ATUIN_CFG"
 fi
 
+echo "==> zed theme"
+# Linking the theme file only puts "Cyberpunk Neon" in Zed's picker — Zed does
+# not use it until settings.json names it. That file is the user's own, and
+# Zed's defaults are almost entirely comments, so this splices one key and
+# leaves the rest of the bytes alone.
+ZED_SETTINGS="$HOME/.config/zed/settings.json"
+if ! command -v python3 >/dev/null; then
+  warn "python3 not available — zed theme not selected"
+else
+  case "$(python3 "$D/common/zed-settings.py" "$ZED_SETTINGS")" in
+    changed) chg "$ZED_SETTINGS" ;;
+    same)    same "$ZED_SETTINGS" ;;
+    invalid) warn "$ZED_SETTINGS is not valid JSON — left alone" ;;
+  esac
+fi
+
 echo "==> claude code"
 # The rice owns Claude Code's theme and statusline; the rest of that file is
 # the user's own, so this patches two keys rather than linking over it.
