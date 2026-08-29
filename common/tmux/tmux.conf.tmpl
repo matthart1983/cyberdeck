@@ -1,6 +1,7 @@
 # ---------------------------------------------------------------------------
 # Cyberpunk rice — tmux
 # ~/.dotfiles/common/tmux/tmux.conf  ->  ~/.config/tmux/tmux.conf
+# Rendered from themes/__CP_THEME_SLUG__.sh by `theme` — edit the .tmpl, not this.
 # ---------------------------------------------------------------------------
 
 # --- Core ------------------------------------------------------------------
@@ -54,9 +55,10 @@ if-shell 'command -v wl-copy' {
 }
 
 # ---------------------------------------------------------------------------
-# Cyberpunk Neon theme  (literal hex: tmux has no shell variables)
+# __CP_THEME_NAME__  (literal hex: tmux has no shell variables — which is
+# why this file is rendered rather than written)
 # ---------------------------------------------------------------------------
-# --- Panes: magenta glow on the active one --------------------------------
+# --- Panes: the accent colour on the active one ---------------------------
 set -g pane-border-style "fg=__CP_PURPLE__"
 set -g pane-active-border-style "fg=__CP_MAGENTA__"
 set -g pane-border-lines heavy

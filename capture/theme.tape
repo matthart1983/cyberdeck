@@ -1,4 +1,5 @@
 # Shared look for every rice capture. Sourced by the other tapes.
+# Rendered from themes/cyberpunk-neon.sh by `theme` — edit the .tmpl, not this.
 Set Shell "zsh"
 Set FontFamily "JetBrainsMono Nerd Font Mono"
 Set FontSize 18

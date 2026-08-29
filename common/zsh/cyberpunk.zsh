@@ -3,7 +3,7 @@
 # Sourced from ~/.zshrc AFTER powerlevel10k, so the p10k overrides below win.
 # ---------------------------------------------------------------------------
 
-# --- Palette (mirrors ~/.dotfiles/palette.sh) ------------------------------
+# --- Palette (rendered from the active theme) ------------------------------
 CP_BG="#000b1e";      CP_BG_ALT="#091833";  CP_FG="#0abdc6"
 CP_FG_DIM="#0f7d84";  CP_MAGENTA="#ea00d9"; CP_PURPLE="#711c91"
 CP_BLUE="#133e7c";    CP_ORANGE="#f57800";  CP_RED="#ff0055"

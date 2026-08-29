@@ -1,6 +1,7 @@
 /* ---------------------------------------------------------------------------
    Cyberpunk rice — Waybar stylesheet
    ~/.dotfiles/linux/waybar/style.css  ->  ~/.config/waybar/style.css
+   Rendered from themes/cyberpunk-neon.sh by `theme` — edit the .tmpl, not this.
 
    Mirrors sketchybar/colors.sh by hand. GTK CSS has @define-color, so unlike
    the macOS bar this one at least gets named colours instead of raw 0xAARRGGBB

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Cyberpunk Neon in SketchyBar's 0xAARRGGBB form. Mirrors ~/.dotfiles/palette.sh.
+# Cyberpunk Neon in SketchyBar's 0xAARRGGBB form.
+# Rendered from themes/cyberpunk-neon.sh by `theme` — edit the .tmpl, not this.
 
 export BAR_BG=0xe6000b1e      # near-black navy, ~90% opaque
 export BAR_BORDER=0xff133e7c

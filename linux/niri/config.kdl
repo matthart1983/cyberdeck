@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // Cyberpunk rice — niri (Wayland tiling compositor)
 // ~/.dotfiles/linux/niri/config.kdl  ->  ~/.config/niri/config.kdl
-// Palette: see ~/.dotfiles/palette.sh
+// Palette: see ~/.dotfiles/themes/. Rendered from themes/cyberpunk-neon.sh by `theme` — edit the .tmpl, not this.
 //
 // This is the Linux stand-in for aerospace/aerospace.toml. Two deliberate
 // divergences from the macOS side, both forced by the platform:

@@ -1,5 +1,6 @@
 # Cyberpunk rice — Ghostty
 # Managed in ~/.dotfiles/common/ghostty/config, symlinked to ~/.config/ghostty/config
+# Rendered from themes/cyberpunk-neon.sh by `theme` — edit the .tmpl, not this.
 
 theme = cyberdeck
 

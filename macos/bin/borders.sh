@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# JankyBorders — magenta glow on the focused window, dim purple on the rest.
+# JankyBorders — the accent colour on the focused window, the inactive-border
+# colour on the rest.
+# Rendered from themes/cyberpunk-neon.sh by `theme` — edit the .tmpl, not this.
 # Launched by AeroSpace's after-startup-command.
 exec /opt/homebrew/bin/borders \
   active_color=0xffea00d9 \
