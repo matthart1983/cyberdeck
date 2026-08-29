@@ -149,10 +149,10 @@ else
 fi
 
 # --- app layer -------------------------------------------------------------
-if [ -L "$HOME/.config/zed/themes/cyberpunk-neon.json" ] \
-   && grep -qE '"(theme|dark)"[[:space:]]*:[[:space:]]*"Cyberpunk Neon"' \
+if [ -L "$HOME/.config/zed/themes/cyberdeck.json" ] \
+   && grep -qE "\"(theme|dark)\"[[:space:]]*:[[:space:]]*\"${CP_THEME_NAME:-Cyberpunk Neon}\"" \
         "$HOME/.config/zed/settings.json" 2>/dev/null; then
-  pass "zed" "theme linked and selected"
+  pass "zed" "${CP_THEME_NAME:-theme} linked and selected"
 else
   fail "zed" "theme missing or not selected in settings.json"
 fi
@@ -169,10 +169,22 @@ else
   fail "claude code" "theme=${cc_theme:-unset} statusline=${cc_sl:-unset}"
 fi
 
-if grep -q 'name = "cyberpunk-neon"' "$HOME/.config/atuin/config.toml" 2>/dev/null; then
+if grep -q 'name = "cyberdeck"' "$HOME/.config/atuin/config.toml" 2>/dev/null; then
   pass "atuin" "theme enabled"
 else
   fail "atuin" "theme not enabled in config.toml"
+fi
+
+# --- theme -----------------------------------------------------------------
+# Thirteen surfaces are rendered from themes/<active>.sh. Hand-editing one is
+# the failure this catches: the edit survives until the next `theme` run and
+# then vanishes, which is a miserable thing to debug from the colours alone.
+if theme_out=$("$HOME/.dotfiles/common/bin/theme" --check 2>&1); then
+  pass "theme" "${CP_THEME_NAME:-?} · 13 surfaces match their templates"
+else
+  fail "theme" "rendered surfaces have drifted from their templates —
+                         $(printf '%s' "$theme_out" | sed -n 's/.*drifted: //p' | tr '\n' ' ')
+                         re-render with: theme --render"
 fi
 
 # --- secret hygiene --------------------------------------------------------

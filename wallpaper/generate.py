@@ -1,20 +1,37 @@
 #!/usr/bin/env python3
-"""Cyberpunk Neon wallpaper generator.
+"""Wallpaper generator for whichever theme is active.
 
 Deliberately low-contrast: this sits behind tiled windows and shows through
 gaps, so it has to read as atmosphere, not as a poster competing with text.
-Palette matches ~/.dotfiles/palette.sh.
+
+The other thirteen themed surfaces are rendered from a template by `theme`.
+This one is a program, so it reads the palette instead — same seven colours,
+same source of truth, no third copy of the numbers.
 """
+import os
+import re
 import sys
 from PIL import Image, ImageDraw, ImageFilter, ImageChops
 
-BLACK   = (0x04, 0x07, 0x13)
-BG      = (0x00, 0x0b, 0x1e)
-BG_ALT  = (0x09, 0x18, 0x33)
-BLUE    = (0x13, 0x3e, 0x7c)
-CYAN    = (0x0a, 0xbd, 0xc6)
-MAGENTA = (0xea, 0x00, 0xd9)
-PURPLE  = (0x71, 0x1c, 0x91)
+D = os.environ.get("D") or os.path.expanduser("~/.dotfiles")
+_active = os.path.join(D, "themes/active.sh")
+_palette = _active if os.path.exists(_active) else os.path.join(D, "themes/cyberpunk-neon.sh")
+_slots = dict(re.findall(r'^(CP_[A-Z0-9_]+)="(#[0-9a-f]{6})"',
+                         open(_palette).read(), re.M))
+
+
+def _c(slot):
+    h = _slots[slot].lstrip("#")
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+BLACK   = _c("CP_BLACK")
+BG      = _c("CP_BG")
+BG_ALT  = _c("CP_BG_ALT")
+BLUE    = _c("CP_BG_HI")
+CYAN    = _c("CP_FG")
+MAGENTA = _c("CP_MAGENTA")
+PURPLE  = _c("CP_PURPLE")
 
 
 def lerp(a, b, t):

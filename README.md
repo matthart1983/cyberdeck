@@ -177,14 +177,47 @@ chooser, and it comes up with Waybar already running.
 ## Making it yours
 
 This is one person's setup, published because the parts are worth stealing.
-Fork it and edit `palette.sh` — it's the single source of truth, and every
-themed surface mirrors it. The pieces are independent: take the bar without the
-tiling, the HUD without either, or just the Ghostty theme.
+The pieces are independent: take the bar without the tiling, the HUD without
+either, or just the Ghostty theme.
+
+## Themes
+
+Eight of them. One command moves all thirteen themed surfaces at once:
+
+```sh
+theme                 # what's active, and what else there is
+theme blade           # tiling, bar, terminal, shell, tmux, editor, HUD
+install.sh            # re-link, then restart the bar and the terminal
+```
+
+| Theme | Character |
+|---|---|
+| `cyberpunk-neon` | The rice as shipped. Cyan on navy, magenta accent. |
+| `blood-dragon` | Hot pink on deep violet. Loudest of the eight. |
+| `terminal-green` | Green phosphor, amber for bold. Closest to the metal. |
+| `deep-sea` | Indigo hull, aqua readouts. Dark without the shouting. |
+| `amber-crt` | One phosphor, one hue family. Red is the only outsider. |
+| `ice` | Low chroma, cold whites. Instrumentation, not neon. |
+| `blade` | Desaturated teal, rust accent. Built for eight-hour days. |
+| `paper` | Warm off-white, ink foreground. The only light one. |
+
+A palette is 41 colour slots of literal hex in `themes/<slug>.sh` — data, read
+rather than sourced. Each themed surface is a `.tmpl` beside its output;
+`theme` renders them. Nothing is mirrored by hand any more, which is the point:
+eight themes across thirteen surfaces is 104 files that would drift with
+nothing to catch it.
+
+The rendered surfaces are tracked, so `theme blade && git diff` shows you
+every surface that moved. Which theme you run is not: `themes/active.sh` is a
+gitignored symlink, and a fresh clone falls back to the default.
+
+**Full contract, and the two rules that matter — [`themes/README.md`](themes/README.md).**
 
 ## Palette
 
-`palette.sh` is the single source of truth. Every other themed surface
-mirrors it by hand, because none of them can read shell variables.
+The default. `themes/cyberpunk-neon.sh` is the whole of it; `palette.sh` now
+points at whichever theme is active, for the scripts that can read a shell
+variable. The surfaces cannot, which is why they are rendered instead.
 
 | Role | Hex |
 |---|---|
@@ -204,20 +237,27 @@ mirror each other, and each holds its own `install.sh` and `bin/rice-doctor`.
 
 | Path | What |
 |---|---|
-| `palette.sh` | the single source of truth, shared |
+| `palette.sh` | points at the active theme — what scripts source |
+| **`themes/`** | |
+| `themes/<slug>.sh` | one palette per theme: 41 slots of literal hex, no logic |
+| `themes/README.md` | the slot contract, the contrast floors, and how to add one |
+| `themes/active.sh` | gitignored symlink to whichever is in use |
 | `install.sh` | dispatcher — runs `common/` then the platform half |
 | `test/idempotent.sh` | runs the installer twice against a throwaway `$HOME` and fails if the second run writes anything |
+| `test/theme.sh` | renders all 8 themes across all 13 surfaces and checks the contract, the drift and the contrast floors |
 | **`common/`** | |
 | `common/install.sh` | the symlinks and settings both platforms share |
 | `common/lib.sh` | `link` / `copy` / `render` — the helpers that make a re-run a no-op |
-| `common/ghostty/` | terminal config + `themes/cyberpunk-neon`, plus `platform-{macos,linux}.conf` |
+| `common/ghostty/` | terminal config + `themes/cyberdeck`, plus `platform-{macos,linux}.conf` |
 | `common/zsh/cyberpunk.zsh` | aliases, tool init, PATH, p10k colour overrides |
 | `common/tmux/tmux.conf` | neon status bar, vim nav, tpm plugins |
-| `common/bat/` | `cyberpunk-neon.tmTheme` — also drives delta and fzf previews |
+| `common/bat/` | `cyberdeck.tmTheme` — also drives delta and fzf previews |
 | `common/btop/themes/` | btop theme — btop is still themed, just not in the HUD |
 | `common/fastfetch/` | config + ASCII logo |
 | `common/zed/themes/` | Zed theme — neon chrome, desaturated syntax |
 | `common/atuin/themes/` | atuin (ctrl-R) theme |
+| `common/bin/theme` | the switcher — renders every themed surface from one palette |
+| `common/bin/theme-render` | expands one `.tmpl` against one palette; four colour notations |
 | `common/claude-settings.py` | patches Claude Code's theme + statusline, leaving your other settings alone |
 | `common/zed-settings.py` | selects the Zed theme in `settings.json`, preserving its comments |
 | `common/bin/hud` | four-pane dashboard |
@@ -264,6 +304,21 @@ byte-identical tree. Three fixtures: a fresh machine, one whose `~/.config`
 already holds real directories where the rice wants symlinks, and one still on
 the pre-restructure layout.
 
+The themes have their own:
+
+```sh
+test/theme.sh
+```
+
+Eight palettes across thirteen surfaces is 104 renders nobody is going to check
+by eye. It proves each palette actually *sets* its variables (a space before the
+`=` makes it a command, which `bash -n` passes and which sets nothing), that
+every palette fills the same contract in the same order, that every surface
+renders with no unknown placeholder and no literal colour left behind, that the
+tracked surfaces are exactly what the templates produce, that switching through
+all eight themes and back restores the tree byte for byte, and that every slot
+carrying text clears its contrast floor.
+
 Nothing is ever overwritten in place. Whatever the installer displaces is moved
 to `attic/<timestamp>/`, mirroring its path under `$HOME`.
 
@@ -277,6 +332,7 @@ to `attic/<timestamp>/`, mirroring its path under `$HOME`.
 | `prefix` = `C-a` | tmux prefix; `\|` and `-` split, `hjkl` navigate |
 | `rice-doctor` | verify aerospace, borders, bar, netwatch feed, configs, secrets |
 | `rice-capture` | render demo GIFs (`rice-capture hud` for just one) |
+| `theme [slug]` | show or switch the palette, across all 13 themed surfaces |
 | `open`/`xdg-open docs/cyberdeck-manual.html` | the [field manual](https://matthart1983.github.io/cyberdeck/) — every key and command for both platforms, searchable |
 
 ## Window management
@@ -362,11 +418,16 @@ was always the part worth having.
 ## App layer
 
 Zed keeps the neon UI chrome but uses **desaturated syntax colours** — code is
-read for hours, chrome is glanced at. Both palettes live in `palette.sh`.
+read for hours, chrome is glanced at. Both halves are in every palette: the
+chrome slots, and the thirteen `CP_SOFT_*` ones that only syntax uses. The
+installer selects the theme in Zed's `settings.json` too — linking the file
+only puts it in Zed's picker.
 
 Claude Code is set to the `dark-ansi` theme so it inherits the Ghostty ANSI
 palette rather than duplicating it, plus a neon statusline from
-`bin/cc-statusline`.
+`common/bin/cc-statusline`. That is also why every palette authors a full ANSI
+bright half: `theme blade` has to move Claude Code with everything else, and it
+only ever sees the terminal's sixteen colours.
 
 ## Captures
 

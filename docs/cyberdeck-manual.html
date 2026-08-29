@@ -585,7 +585,7 @@
     <nav class="nav" id="nav" aria-label="Layers"></nav>
 
     <div class="rail-foot">
-      <b>Palette</b> palette.sh<br>
+      <b>Theme</b> theme &lt;slug&gt;<br>
       <b>Health</b> rice-doctor<br>
       <b>Re-link</b> install.sh
     </div>
@@ -1073,7 +1073,7 @@
 
         <div class="note">
           <span class="tag">Two palettes</span>
-          <p>Both live in <code>palette.sh</code>: the neon set, and <code>CP_SOFT_*</code> for the desaturated syntax. Anything new should pull from one of them rather than inventing a colour.</p>
+          <p>Both live in every palette: the chrome slots, and the thirteen <code>CP_SOFT_*</code> that only syntax uses. Anything new should pull from a slot rather than inventing a colour — <code>test/theme.sh</code> fails on a literal hex left in a template, because a literal is a colour that stops following the theme.</p>
         </div>
       </section>
 
@@ -1159,7 +1159,7 @@
       <section class="panel" data-title="Upkeep">
         <p class="eyebrow">Layer 09 · Maintenance</p>
         <h1>Keeping it honest</h1>
-        <p class="lede">Four scripts cover everything: one checks the rice is actually running, one re-links it onto a fresh machine, one proves that re-linking is a no-op, and one records what it looks like. All exit non-zero when something is genuinely wrong.</p>
+        <p class="lede">A handful of scripts cover everything: one checks the rice is actually running, one re-links it onto a fresh machine, two prove the claims the repo makes about itself, one switches the palette everywhere at once, and one records what it all looks like. All exit non-zero when something is genuinely wrong.</p>
 
         <div class="meta">
           <span class="chip"><b>Repo</b> ~/.dotfiles</span>
@@ -1167,12 +1167,20 @@
           <span class="chip"><b>Tapes</b> 4</span>
         </div>
 
-        <h2>The four</h2>
+        <h2>The scripts</h2>
         <div class="cmds">
           <div class="cmd"><code>rice-doctor</code><span>Check every layer; exits non-zero if one is down</span></div>
           <div class="cmd"><code>install.sh</code><span>Re-link every config. Idempotent</span></div>
+          <div class="cmd"><code>theme</code><span>Which palette is active, and what else there is</span></div>
+          <div class="cmd"><code>theme blade</code><span>Re-render all 13 themed surfaces from that palette</span></div>
           <div class="cmd"><code>test/idempotent.sh</code><span>Run the real installer twice against a throwaway $HOME and fail if the second run writes anything</span></div>
+          <div class="cmd"><code>test/theme.sh</code><span>Render 8 themes × 13 surfaces and check the contract, the drift and the contrast floors</span></div>
           <div class="cmd"><code>rice-capture</code><span>Render all demo GIFs — <code>rice-capture hud</code> for just one</span></div>
+        </div>
+
+        <div class="note good">
+          <span class="tag">One palette</span>
+          <p>Thirteen surfaces mirror the colours, in nine different notations — Ghostty's <code>#rrggbb</code>, SketchyBar's <code>0xAARRGGBB</code>, Zed's <code>#rrggbbaa</code>, CSS, ANSI truecolor triplets. They were mirrored <em>by hand</em> until the themes landed, which made eight palettes 104 files that could drift with nothing to catch it. Each one is a <code>.tmpl</code> beside its output now; <code>theme</code> renders them and <code>test/theme.sh</code> fails if a rendered file stops matching its template.</p>
         </div>
 
         <h2>What the doctor looks at</h2>
@@ -1184,6 +1192,7 @@
           <div class="row"><div class="kseq"><kbd>netwatch feed</kbd></div><div class="act">Service loaded and :9464 answering with live RTT</div></div>
           <div class="row"><div class="kseq"><kbd>ghostty · tmux</kbd></div><div class="act">Configs linked and parsing</div></div>
           <div class="row"><div class="kseq"><kbd>zed · claude · atuin</kbd></div><div class="act">Themes linked and selected</div></div>
+          <div class="row"><div class="kseq"><kbd class="accent">theme</kbd></div><div class="act">All 13 rendered surfaces still match their templates <em>a hand-edit here survives until the next `theme` run and then vanishes</em></div></div>
           <div class="row only-linux"><div class="kseq"><kbd>power · suspend</kbd></div><div class="act">A ppd-service is up, and mem_sleep is s2idle — the correct one for Framework AMD</div></div>
           <div class="row only-linux"><div class="kseq"><kbd>firmware</kbd></div><div class="act">No LVFS updates pending</div></div>
           <div class="row"><div class="kseq"><kbd class="accent">secrets</kbd></div><div class="act">No API key inlined in ~/.zshrc</div></div>

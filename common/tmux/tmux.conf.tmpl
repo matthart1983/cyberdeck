@@ -1,0 +1,110 @@
+# ---------------------------------------------------------------------------
+# Cyberpunk rice — tmux
+# ~/.dotfiles/common/tmux/tmux.conf  ->  ~/.config/tmux/tmux.conf
+# ---------------------------------------------------------------------------
+
+# --- Core ------------------------------------------------------------------
+set -g default-terminal "tmux-256color"
+set -ga terminal-overrides ",xterm-ghostty:Tc,foot:Tc,*256col*:Tc"
+set -g mouse on
+set -g escape-time 0
+set -g history-limit 100000
+set -g focus-events on
+set -g base-index 1
+setw -g pane-base-index 1
+set -g renumber-windows on
+set -g set-titles on
+set -g set-titles-string "#S · #W"
+
+# --- Prefix: C-a, easier to reach than C-b --------------------------------
+unbind C-b
+set -g prefix C-a
+bind C-a send-prefix
+
+# --- Splits that keep the cwd ---------------------------------------------
+bind | split-window -h -c "#{pane_current_path}"
+bind - split-window -v -c "#{pane_current_path}"
+bind c new-window -c "#{pane_current_path}"
+unbind '"'
+unbind %
+
+# --- Vim-style navigation and resize --------------------------------------
+bind h select-pane -L
+bind j select-pane -D
+bind k select-pane -U
+bind l select-pane -R
+bind -r H resize-pane -L 5
+bind -r J resize-pane -D 5
+bind -r K resize-pane -U 5
+bind -r L resize-pane -R 5
+bind r source-file ~/.config/tmux/tmux.conf \; display-message "  config reloaded"
+
+# --- Copy mode -------------------------------------------------------------
+setw -g mode-keys vi
+bind -T copy-mode-vi v send -X begin-selection
+
+# The clipboard command is the only platform-dependent line in this file.
+# wl-copy on Wayland, pbcopy on macOS; if-shell picks at config-load time.
+if-shell 'command -v wl-copy' {
+  bind -T copy-mode-vi y send -X copy-pipe-and-cancel "wl-copy"
+  bind -T copy-mode-vi MouseDragEnd1Pane send -X copy-pipe-and-cancel "wl-copy"
+} {
+  bind -T copy-mode-vi y send -X copy-pipe-and-cancel "pbcopy"
+  bind -T copy-mode-vi MouseDragEnd1Pane send -X copy-pipe-and-cancel "pbcopy"
+}
+
+# ---------------------------------------------------------------------------
+# Cyberpunk Neon theme  (literal hex: tmux has no shell variables)
+# ---------------------------------------------------------------------------
+# --- Panes: magenta glow on the active one --------------------------------
+set -g pane-border-style "fg=__CP_PURPLE__"
+set -g pane-active-border-style "fg=__CP_MAGENTA__"
+set -g pane-border-lines heavy
+set -g display-panes-colour "__CP_PURPLE__"
+set -g display-panes-active-colour "__CP_MAGENTA__"
+
+# --- Messages / copy mode --------------------------------------------------
+set -g message-style "fg=__CP_BG__,bg=__CP_MAGENTA__,bold"
+set -g message-command-style "fg=__CP_FG__,bg=__CP_BG_ALT__"
+setw -g mode-style "fg=__CP_BG__,bg=__CP_FG__"
+
+# --- Status bar ------------------------------------------------------------
+set -g status on
+set -g status-interval 5
+set -g status-position bottom
+set -g status-justify left
+set -g status-style "fg=__CP_FG_DIM__,bg=__CP_BG__"
+
+# Left: session name in a magenta block, powerline-capped.
+set -g status-left-length 40
+set -g status-left "#[fg=__CP_BG__,bg=__CP_MAGENTA__,bold]  #S #[fg=__CP_MAGENTA__,bg=__CP_BG__,nobold]"
+
+# Right: host, battery, clock — each in its own dim/neon step.
+set -g status-right-length 90
+set -g status-right "#[fg=__CP_PURPLE__,bg=__CP_BG__]#[fg=__CP_FG__,bg=__CP_PURPLE__] 󰇅 #h #[fg=__CP_BG_ALT__,bg=__CP_PURPLE__]#[fg=__CP_FG__,bg=__CP_BG_ALT__] #(~/.dotfiles/common/bin/tmux-battery) #[fg=__CP_MAGENTA__,bg=__CP_BG_ALT__]#[fg=__CP_BG__,bg=__CP_MAGENTA__,bold] %H:%M "
+
+# Windows: inactive dim cyan, active hot magenta.
+setw -g window-status-format "#[fg=__CP_FG_DIM__,bg=__CP_BG__]  #I·#W  "
+setw -g window-status-current-format "#[fg=__CP_BG_ALT__,bg=__CP_BG__]#[fg=__CP_MAGENTA__,bg=__CP_BG_ALT__,bold]  #I·#W  #[fg=__CP_BG_ALT__,bg=__CP_BG__]"
+setw -g window-status-separator ""
+setw -g window-status-bell-style "fg=__CP_RED__,bg=__CP_BG__,bold"
+setw -g window-status-activity-style "fg=__CP_GREEN__,bg=__CP_BG__"
+
+# --- Clock mode ------------------------------------------------------------
+setw -g clock-mode-colour "__CP_MAGENTA__"
+setw -g clock-mode-style 24
+
+# ---------------------------------------------------------------------------
+# Plugins (tpm) — keep this block last
+# ---------------------------------------------------------------------------
+set -g @plugin 'tmux-plugins/tpm'
+set -g @plugin 'tmux-plugins/tmux-sensible'
+set -g @plugin 'tmux-plugins/tmux-resurrect'
+set -g @plugin 'tmux-plugins/tmux-continuum'
+
+set -g @resurrect-capture-pane-contents 'on'
+set -g @resurrect-strategy-nvim 'session'
+set -g @continuum-restore 'on'
+set -g @continuum-save-interval '15'
+
+run '~/.config/tmux/plugins/tpm/tpm'

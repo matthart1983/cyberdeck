@@ -1,24 +1,27 @@
 #!/usr/bin/env bash
-# Cyberpunk Neon — single source of truth for every themed surface in this rice.
-# Sourced by generators; mirrored by hand into configs that can't read shell vars.
+# The single source of truth for every themed surface — now a pointer to one.
+#
+# The colours moved to themes/<slug>.sh, one file per theme, all filling the
+# same 41 slots. themes/active.sh is a symlink to whichever is in use and is
+# deliberately untracked: which theme you run is a property of your machine,
+# not of the repo. A fresh clone has no symlink and falls back to the default,
+# so nothing has to exist for this to work.
+#
+# The themed surfaces do not read this at runtime — none of them can source a
+# shell variable, which is the whole reason they are rendered from templates
+# by `theme` instead. This file is for the things that can: rice-doctor, and
+# anything you write yourself.
+#
+#   theme                 what's active
+#   theme blade           switch
+#   themes/README.md      what the 41 slots mean
 
-CP_BG="#000b1e"        # near-black navy   — primary background
-CP_BG_ALT="#091833"    # raised panel      — bar, popups, inactive splits
-CP_BG_HI="#133e7c"     # blue              — selection, active fill
-CP_FG="#0abdc6"        # cyan              — primary foreground
-CP_FG_DIM="#0f7d84"    # dim cyan          — comments, inactive text
-CP_MAGENTA="#ea00d9"   # magenta           — accent 1, active window, prompt
-CP_PURPLE="#711c91"    # purple            — accent 2, borders inactive
-CP_BLUE="#133e7c"      # blue              — accent 3
-CP_ORANGE="#f57800"    # orange            — warnings
-CP_RED="#ff0055"       # hot red           — errors, exit codes
-CP_YELLOW="#f3e600"    # acid yellow       — highlights
-CP_GREEN="#00ff9f"     # neon green        — success, git clean
-CP_WHITE="#d7d7d7"     # near-white        — bright fg
-CP_BLACK="#040713"     # deepest           — true black surfaces
-
-# Desaturated variant — used for Zed syntax only, where 8h/day readability wins.
-CP_SOFT_FG="#7fb8bd"
-CP_SOFT_MAGENTA="#c46bbd"
-CP_SOFT_GREEN="#6bc9a0"
-CP_SOFT_ORANGE="#c98a4b"
+_cp_root="${D:-$HOME/.dotfiles}"
+if [ -e "$_cp_root/themes/active.sh" ]; then
+  # shellcheck source=/dev/null
+  source "$_cp_root/themes/active.sh"
+else
+  # shellcheck source=themes/cyberpunk-neon.sh
+  source "$_cp_root/themes/cyberpunk-neon.sh"
+fi
+unset _cp_root

@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+"""Expand one templated surface against one palette.
+
+    theme-render <palette.sh> <template> [output]
+
+Templates hold __CP_SLOT__ placeholders. Every themed surface in this repo is
+a template plus a palette, and `theme` renders all of them; this is the piece
+that does one.
+
+The palette is read, not sourced. A palette is data — giving it the power to
+run commands buys nothing and means `theme` can never be pointed at a file
+someone sent you.
+
+Four forms per slot, because the surfaces don't agree on how to write a colour
+and none of them is going to start:
+
+    __CP_FG__        #0abdc6      most things
+    __CP_FG_RAW__    0abdc6       sketchybar's 0xAARRGGBB, and #rrggbbaa
+    __CP_FG_RGB__    10, 189, 198 CSS rgb()/rgba()
+    __CP_FG_SEMI__   10;189;198   ANSI truecolor (EZA_COLORS, LS_COLORS)
+
+Plus __CP_THEME_NAME__, __CP_THEME_SLUG__ and __CP_THEME_LIGHT__.
+
+Unknown placeholders are an error, not a passthrough: a surviving __CP_TYPO__
+in a rendered config is a colour that silently never gets applied.
+"""
+import re
+import sys
+
+USAGE = "usage: theme-render <palette.sh> <template> [output]"
+
+HEX = re.compile(r'^(CP_[A-Z0-9_]+)="(#[0-9a-fA-F]{6})"\s*(?:#.*)?$')
+META = re.compile(r'^(CP_THEME_[A-Z]+)="?([^"\n#]*?)"?\s*(?:#.*)?$')
+PLACEHOLDER = re.compile(r"__(CP_[A-Z0-9_]+?)(_RAW|_RGB|_SEMI)?__")
+
+
+def load(path):
+    """slot -> value. Anything that is not an assignment is ignored."""
+    slots = {}
+    with open(path) as fh:
+        for n, line in enumerate(fh, 1):
+            line = line.rstrip("\n")
+            if not line.strip() or line.lstrip().startswith("#"):
+                continue
+            m = HEX.match(line.strip())
+            if m:
+                slots[m.group(1)] = m.group(2).lower()
+                continue
+            m = META.match(line.strip())
+            if m:
+                slots[m.group(1)] = m.group(2)
+                continue
+            # A padded assignment (CP_BG ="#000b1e") is bash's most quietly
+            # broken line: it parses as a command, so `bash -n` passes and the
+            # variable is simply never set. Refuse it here rather than render
+            # a surface with a hole in it.
+            if re.match(r"^CP_[A-Z0-9_]+\s+=", line.strip()):
+                sys.exit(f"{path}:{n}: space before '=' — this is a command, "
+                         f"not an assignment:\n    {line.strip()}")
+            sys.exit(f"{path}:{n}: not a palette assignment:\n    {line.strip()}")
+    return slots
+
+
+def forms(value):
+    if not value.startswith("#"):
+        return {None: value}
+    raw = value[1:]
+    r, g, b = (int(raw[i:i + 2], 16) for i in (0, 2, 4))
+    return {
+        None: value,
+        "_RAW": raw,
+        "_RGB": f"{r}, {g}, {b}",
+        "_SEMI": f"{r};{g};{b}",
+    }
+
+
+def render(text, slots, where):
+    missing = []
+
+    def one(m):
+        slot, form = m.group(1), m.group(2)
+        if slot not in slots:
+            missing.append(m.group(0))
+            return m.group(0)
+        f = forms(slots[slot])
+        if form not in f:
+            missing.append(m.group(0) + " (not a colour)")
+            return m.group(0)
+        return f[form]
+
+    out = PLACEHOLDER.sub(one, text)
+    if missing:
+        sys.exit(f"{where}: unknown placeholder(s): " + ", ".join(sorted(set(missing))))
+    return out
+
+
+def main(argv):
+    if not 3 <= len(argv) <= 4:
+        sys.exit(USAGE)
+    palette, template = argv[1], argv[2]
+    out = render(open(template).read(), load(palette), template)
+    if len(argv) == 4:
+        with open(argv[3], "w") as fh:
+            fh.write(out)
+    else:
+        sys.stdout.write(out)
+
+
+if __name__ == "__main__":
+    main(sys.argv)

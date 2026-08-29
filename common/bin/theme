@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+# Switch the rice's palette, everywhere, in one command.
+#
+#   theme                 what's active, and what else there is
+#   theme blade           render every surface from themes/blade.sh
+#   theme --render        re-render the active theme (install.sh calls this)
+#   theme --check         render to a temp tree and report drift, writing nothing
+#
+# Thirteen surfaces mirror the palette, in nine different colour notations.
+# They were mirrored by hand until now, which meant eight themes would have
+# been 104 files that could drift with nothing to catch it. Each one is a
+# .tmpl beside its output; this renders them.
+#
+# Which theme you run is a property of your machine, so themes/active.sh is a
+# symlink and is not tracked. The rendered surfaces ARE tracked, on purpose:
+# `theme blade && git diff` shows you every surface that moved, and the repo
+# stays something you can read and steal one file out of.
+set -euo pipefail
+D="${D:-$HOME/.dotfiles}"
+# shellcheck source=common/lib.sh
+source "$D/common/lib.sh"
+
+RENDER="$D/common/bin/theme-render"
+
+# template (relative to $D)                     output (relative to $D)
+SURFACES=(
+  "common/ghostty/config.tmpl                   common/ghostty/config"
+  "common/ghostty/themes/theme.tmpl             common/ghostty/themes/cyberdeck"
+  "common/tmux/tmux.conf.tmpl                   common/tmux/tmux.conf"
+  "common/bat/themes/theme.tmTheme.tmpl         common/bat/themes/cyberdeck.tmTheme"
+  "common/btop/themes/theme.theme.tmpl          common/btop/themes/cyberdeck.theme"
+  "common/zed/themes/theme.json.tmpl            common/zed/themes/cyberdeck.json"
+  "common/atuin/themes/theme.toml.tmpl          common/atuin/themes/cyberdeck.toml"
+  "common/zsh/cyberpunk.zsh.tmpl                common/zsh/cyberpunk.zsh"
+  "linux/waybar/style.css.tmpl                  linux/waybar/style.css"
+  "linux/niri/config.kdl.tmpl                   linux/niri/config.kdl"
+  "macos/sketchybar/colors.sh.tmpl              macos/sketchybar/colors.sh"
+  "macos/bin/borders.sh.tmpl                    macos/bin/borders.sh"
+  "capture/theme.tape.tmpl                      capture/theme.tape"
+)
+
+active_slug() {
+  local a="$D/themes/active.sh"
+  [ -e "$a" ] || { echo "cyberpunk-neon"; return; }
+  sed -n 's/^CP_THEME_SLUG="\(.*\)"$/\1/p' "$a" | head -1
+}
+
+palette_for() { printf '%s/themes/%s.sh' "$D" "$1"; }
+
+list() {
+  local cur; cur="$(active_slug)"
+  printf '\n  %sactive%s  %s\n\n' "$_c_chg" "$_c_off" "$cur"
+  local f slug name
+  for f in "$D"/themes/*.sh; do
+    slug="$(basename "$f" .sh)"
+    [ "$slug" = active ] && continue
+    name="$(sed -n 's/^CP_THEME_NAME="\(.*\)"$/\1/p' "$f" | head -1)"
+    if [ "$slug" = "$cur" ]; then
+      printf '    %s●%s %-16s %s\n' "$_c_chg" "$_c_off" "$slug" "$name"
+    else
+      printf '      %-16s %s\n' "$slug" "$name"
+    fi
+  done
+  printf '\n  theme <slug> to switch\n\n'
+}
+
+# render_all PALETTE DESTROOT — DESTROOT empty means "in place, over the repo".
+# Only writes on difference, so a re-render of an unchanged theme leaves the
+# working tree clean and install.sh reports nothing.
+render_all() {
+  local palette="$1" destroot="${2:-}" row tpl out dest tmp
+  for row in "${SURFACES[@]}"; do
+    read -r tpl out <<<"$row"
+    [ -f "$D/$tpl" ] || { warn "missing template: $tpl"; continue; }
+    if [ -n "$destroot" ]; then dest="$destroot/$out"; else dest="$D/$out"; fi
+    mkdir -p "$(dirname "$dest")"
+    tmp="$(mktemp)"
+    "$RENDER" "$palette" "$D/$tpl" "$tmp"
+    if [ -f "$dest" ] && cmp -s "$tmp" "$dest"; then
+      rm -f "$tmp"; same "$out"
+    else
+      mv "$tmp" "$dest"
+      # mktemp is 600 and two of the outputs are run, not read. chmod --reference
+      # would be tidier and is GNU-only; this repo also has to work on macOS.
+      case "$out" in
+        *.sh) chmod 755 "$dest" ;;
+        *)    chmod 644 "$dest" ;;
+      esac
+      chg "$out"
+    fi
+  done
+}
+
+case "${1:-}" in
+  ""|-l|--list)
+    list
+    ;;
+
+  --check)
+    # What test/theme.sh runs: prove the tracked surfaces are exactly what the
+    # templates produce, without touching them.
+    tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
+    slug="$(active_slug)"
+    render_all "$(palette_for "$slug")" "$tmp" >/dev/null
+    drift=0
+    for row in "${SURFACES[@]}"; do
+      read -r tpl out <<<"$row"
+      if ! cmp -s "$tmp/$out" "$D/$out"; then
+        warn "drifted: $out"; drift=1
+      fi
+    done
+    if [ "$drift" -eq 0 ]; then
+      printf '  %s=%s 13 surfaces match themes/%s.sh\n' "$_c_ok" "$_c_off" "$slug"
+    fi
+    exit "$drift"
+    ;;
+
+  --render)
+    echo "==> theme"
+    render_all "$(palette_for "$(active_slug)")"
+    summary "theme"
+    ;;
+
+  -h|--help)
+    sed -n '2,12p' "$0" | sed 's/^# \?//'
+    ;;
+
+  -*)
+    echo "theme: unknown option $1" >&2; exit 2
+    ;;
+
+  *)
+    slug="$1"
+    palette="$(palette_for "$slug")"
+    if [ ! -f "$palette" ]; then
+      echo "theme: no such theme '$slug'" >&2
+      echo "       have: $(cd "$D/themes" && ls *.sh | sed 's/\.sh$//' | grep -v '^active$' | tr '\n' ' ')" >&2
+      exit 1
+    fi
+    echo "==> $slug"
+    render_all "$palette"
+    ln -sfn "$slug.sh" "$D/themes/active.sh"
+    summary "theme"
+    echo "    'install.sh' to re-link, then restart the bar and the terminal."
+    ;;
+esac

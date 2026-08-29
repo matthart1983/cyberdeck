@@ -18,7 +18,7 @@ Sleep 3s
 
 Type "clear" Enter
 Sleep 300ms
-Type "bat --paging=never palette.sh"
+Type "bat --paging=never themes/cyberpunk-neon.sh"
 Sleep 400ms
 Enter
 Sleep 4s

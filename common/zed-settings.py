@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Select the rice's theme in Zed.
 
+    zed-settings.py <settings.json> <theme name>
+
 common/install.sh links the theme *file* into ~/.config/zed/themes, which makes
-"Cyberpunk Neon" appear in Zed's theme picker and does nothing else. Zed only
-uses a theme once settings.json names it, so this sets that one key.
+it appear in Zed's theme picker and does nothing else. Zed only uses a theme
+once settings.json names it, so this sets that one key.
 
 settings.json is the user's file and Zed writes it as JSONC — with comments,
 which Zed's own default settings are almost entirely made of. json.dump would
@@ -17,9 +19,9 @@ import os
 import re
 import sys
 
-THEME = "Cyberpunk Neon"
-
-path = sys.argv[1]
+# The display name comes from the active palette — `theme blade` has to move
+# Zed with everything else, and Zed's picker shows this string.
+path, THEME = sys.argv[1], sys.argv[2]
 
 try:
     with open(path) as fh:

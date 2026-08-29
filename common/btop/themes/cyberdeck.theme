@@ -1,4 +1,4 @@
-# Cyberpunk Neon for btop — matches ~/.dotfiles/palette.sh
+# Cyberpunk Neon for btop — rendered from themes/cyberpunk-neon.sh. Do not edit.
 theme[main_bg]="#000b1e"
 theme[main_fg]="#0abdc6"
 theme[title]="#d7d7d7"
