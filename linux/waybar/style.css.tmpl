@@ -44,6 +44,25 @@ window#waybar {
 window#waybar.hidden { opacity: 0.2; }
 
 /* --- Left ---------------------------------------------------------------- */
+/* The launcher button. Magenta like the active workspace and the clock, so the
+   two ends of the bar carry the same accent. */
+#custom-launcher {
+  color: @magenta;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0 10px;
+  margin: 3px 1px 3px 3px;
+  font-size: 15px;
+  transition: color 120ms ease, background 120ms ease;
+}
+
+#custom-launcher:hover {
+  color: @bg;
+  background: @magenta;
+  border-color: @magenta;
+}
+
 #workspaces { padding: 0 4px; }
 
 #workspaces button {

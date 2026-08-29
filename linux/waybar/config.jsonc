@@ -22,9 +22,19 @@
   "margin-right": 8,
   "spacing": 2,
 
-  "modules-left":   ["niri/workspaces", "custom/sep", "niri/window"],
+  "modules-left":   ["custom/launcher", "niri/workspaces", "custom/sep", "niri/window"],
   "modules-center": [],
   "modules-right":  ["custom/link", "custom/net", "cpu", "memory", "disk", "battery", "clock"],
+
+  // --- Left: the launcher button ------------------------------------------
+  // Mod+Space does the same thing; this is the discoverable half of it.
+  // Click toggles: a second click dismisses a fuzzel that is already up.
+  "custom/launcher": {
+    "format": "󰀻",
+    "tooltip": true,
+    "tooltip-format": "Run a program  (Mod+Space)",
+    "on-click": "pkill fuzzel || fuzzel"
+  },
 
   // --- Left: niri workspaces, named exactly as the compositor names them ---
   "niri/workspaces": {
