@@ -4,9 +4,17 @@ Eight palettes, one contract, thirteen surfaces rendered from it.
 
 ```sh
 theme                 # what's active, and what else there is
-theme blade           # render every surface from themes/blade.sh
-install.sh            # re-link, then restart the bar and the terminal
+theme blade           # switch — that's the whole command
 ```
+
+`theme <slug>` renders all thirteen surfaces, runs `install.sh` to re-link them,
+reloads everything that can be reloaded from outside (the bar, tmux, the
+wallpaper), and then names the two or three things that genuinely cannot be —
+Ghostty has no reload-from-CLI, and a shell's exported colours are fixed when it
+starts. niri watches its own config file and Zed watches its themes directory,
+so both have already caught up by the time it prints.
+
+Add `--render-only` to rewrite the files and stop.
 
 | Theme | Slug | Character |
 |---|---|---|

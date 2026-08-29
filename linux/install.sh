@@ -8,6 +8,9 @@ set -euo pipefail
 D="${D:-$HOME/.dotfiles}"
 # shellcheck source=common/lib.sh
 source "$D/common/lib.sh"
+# CP_THEME_SLUG — the wallpaper is drawn from the active palette.
+# shellcheck source=palette.sh
+source "$D/palette.sh"
 
 echo "==> Linux configs"
 link "$D/common/ghostty/platform-linux.conf" "$HOME/.config/ghostty/platform.conf"
@@ -44,18 +47,31 @@ echo "==> wallpaper"
 # generate.py takes an output DIRECTORY and writes one file per panel size, so
 # check for all of them rather than assuming this machine's is the only one.
 WP_DIR="$HOME/.local/share/wallpapers"
-WP_MISSING=0
+WP_STALE=0
+# generate.py reads the active palette, so a `theme` switch has to reach the
+# wallpaper too — it is as much a themed surface as the bar is. Which theme it
+# was drawn from is recorded beside it: mtimes cannot answer this, because
+# switching back to a theme whose palette file has not been touched since the
+# clone would look older than the PNGs and never redraw.
+WP_STAMP="$WP_DIR/.cyberdeck-theme"
 for f in cyberpunk-mbp.png cyberpunk-fw13.png cyberpunk-4k.png; do
-  [ -f "$WP_DIR/$f" ] || WP_MISSING=1
+  if [ ! -f "$WP_DIR/$f" ]; then WP_STALE=1; break; fi
 done
-if [ "$WP_MISSING" -eq 0 ]; then
+if [ "$(cat "$WP_STAMP" 2>/dev/null || true)" != "$CP_THEME_SLUG" ]; then
+  WP_STALE=1
+fi
+if [ "$WP_STALE" -eq 0 ]; then
   same "$WP_DIR"
 elif ! python3 -c 'import PIL' 2>/dev/null; then
   warn "python3-pillow not installed — skipped (run linux/packages.sh)"
 else
   mkdir -p "$WP_DIR"
-  python3 "$D/wallpaper/generate.py" "$WP_DIR" >/dev/null 2>&1 \
-    && chg "$WP_DIR" || warn "generator failed — see wallpaper/generate.py"
+  if D="$D" python3 "$D/wallpaper/generate.py" "$WP_DIR" >/dev/null 2>&1; then
+    printf '%s\n' "$CP_THEME_SLUG" > "$WP_STAMP"
+    chg "$WP_DIR ($CP_THEME_SLUG)"
+  else
+    warn "generator failed — see wallpaper/generate.py"
+  fi
 fi
 
 echo "==> waybar"

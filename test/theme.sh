@@ -89,12 +89,14 @@ fi
 # usable record of what a theme changed.
 printf '\n\033[38;5;201m▐ round trip\033[0m\n'
 tmp="$(mktemp -d)"; cp -a "$REPO" "$tmp/repo"; rm -rf "$tmp/repo/.git"
+# --render-only, emphatically: a bare `theme <slug>` now runs install.sh, and a
+# test has no business linking into the real ~/.config.
 before="$(cd "$tmp/repo" && find . -type f -not -path './themes/active.sh' | LC_ALL=C sort | xargs cksum | cksum)"
 for t in "${THEMES[@]}"; do
   [ "$t" = cyberpunk-neon ] && continue
-  D="$tmp/repo" bash "$tmp/repo/common/bin/theme" "$t" >/dev/null 2>&1
+  D="$tmp/repo" bash "$tmp/repo/common/bin/theme" "$t" --render-only >/dev/null 2>&1
 done
-D="$tmp/repo" bash "$tmp/repo/common/bin/theme" cyberpunk-neon >/dev/null 2>&1
+D="$tmp/repo" bash "$tmp/repo/common/bin/theme" cyberpunk-neon --render-only >/dev/null 2>&1
 after="$(cd "$tmp/repo" && find . -type f -not -path './themes/active.sh' | LC_ALL=C sort | xargs cksum | cksum)"
 if [ "$before" = "$after" ]; then
   c_pass "all ${#THEMES[@]} themes applied, then back — tree identical"

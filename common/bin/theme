@@ -2,7 +2,9 @@
 # Switch the rice's palette, everywhere, in one command.
 #
 #   theme                 what's active, and what else there is
-#   theme blade           render every surface from themes/blade.sh
+#   theme blade           switch: render all 13 surfaces, re-link, reload what
+#                         is running, and name what you still have to restart
+#   theme blade --render-only   rewrite the files and stop
 #   theme --render        re-render the active theme (install.sh calls this)
 #   theme --check         render to a temp tree and report drift, writing nothing
 #
@@ -21,6 +23,8 @@ D="${D:-$HOME/.dotfiles}"
 source "$D/common/lib.sh"
 
 RENDER="$D/common/bin/theme-render"
+
+die() { printf '  %s✘%s %s\n' "$_c_warn" "$_c_off" "$*" >&2; exit 1; }
 
 # template (relative to $D)                     output (relative to $D)
 SURFACES=(
@@ -137,10 +141,60 @@ case "${1:-}" in
       echo "       have: $(cd "$D/themes" && ls *.sh | sed 's/\.sh$//' | grep -v '^active$' | tr '\n' ' ')" >&2
       exit 1
     fi
-    echo "==> $slug"
-    render_all "$palette"
+
+    # --render-only exists for test/theme.sh, which switches through all eight
+    # themes in a throwaway copy of the repo and must not touch a real ~/.config.
+    if [ "${2:-}" = --render-only ]; then
+      echo "==> $slug (render only)"
+      render_all "$palette"
+      ln -sfn "$slug.sh" "$D/themes/active.sh"
+      summary "theme"
+      exit 0
+    fi
+
+    CP_THEME_NAME_NEW="$(sed -n 's/^CP_THEME_NAME="\(.*\)"$/\1/p' "$palette" | head -1)"
     ln -sfn "$slug.sh" "$D/themes/active.sh"
-    summary "theme"
-    echo "    'install.sh' to re-link, then restart the bar and the terminal."
+
+    # install.sh renders (via --render) and re-links, and reloads the bar if it
+    # wrote anything. Going through it rather than repeating it here means there
+    # is one path onto the machine, not two that can disagree.
+    #
+    # Its full output is forty lines of "= already correct", which is the right
+    # thing for install.sh to print and the wrong thing for this. Keep the
+    # writes and the warnings, drop the rest — and dump everything if it fails,
+    # because then the forty lines are exactly what you want.
+    echo "==> $slug"
+    if ! install_out="$(CYBERDECK_PLAIN=1 bash "$D/install.sh" 2>&1)"; then
+      printf '%s\n' "$install_out"
+      die "install.sh failed — the palette is switched but the links are not"
+    fi
+    printf '%s\n' "$install_out" | grep -E '^  [+!]' || true
+
+    # tmux holds its colours in a running server, so it needs telling. niri
+    # watches its own config file and Zed watches its themes directory; both
+    # have already picked this up by now.
+    echo "==> live surfaces"
+    if tmux list-sessions >/dev/null 2>&1; then
+      tmux source-file "$HOME/.config/tmux/tmux.conf" >/dev/null 2>&1 \
+        && chg "tmux reloaded" || warn "tmux is running but would not reload"
+    else
+      same "tmux (not running)"
+    fi
+
+    # What is left is what genuinely cannot be reloaded from outside: Ghostty
+    # has no reload-from-CLI, and a shell's exported colours are fixed at start.
+    printf '\n  %snow on %s%s\n' "$_c_chg" "$CP_THEME_NAME_NEW" "$_c_off"
+    left=""
+    pgrep -x ghostty >/dev/null 2>&1 && left="$left
+    ghostty   ctrl+shift+, to reload — colours apply to new windows"
+    [ -n "${TMUX:-}${ZSH_VERSION:-}" ] && left="$left
+    zsh       exec zsh (this shell's exported colours are fixed at start)"
+    pgrep -x btop >/dev/null 2>&1 && left="$left
+    btop      restart it"
+    if [ -n "$left" ]; then
+      printf '  still to do:%s\n\n' "$left"
+    else
+      printf '  nothing left to restart.\n\n'
+    fi
     ;;
 esac

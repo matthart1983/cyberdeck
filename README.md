@@ -186,9 +186,12 @@ Eight of them. One command moves all thirteen themed surfaces at once:
 
 ```sh
 theme                 # what's active, and what else there is
-theme blade           # tiling, bar, terminal, shell, tmux, editor, HUD
-install.sh            # re-link, then restart the bar and the terminal
+theme blade           # tiling, bar, terminal, shell, tmux, editor, HUD, wallpaper
 ```
+
+One command. It renders the thirteen surfaces, re-links them, reloads what can
+be reloaded from outside, and tells you the two or three things that can't be —
+Ghostty has no reload-from-CLI, and a shell's colours are fixed at start.
 
 | Theme | Character |
 |---|---|
@@ -332,7 +335,7 @@ to `attic/<timestamp>/`, mirroring its path under `$HOME`.
 | `prefix` = `C-a` | tmux prefix; `\|` and `-` split, `hjkl` navigate |
 | `rice-doctor` | verify aerospace, borders, bar, netwatch feed, configs, secrets |
 | `rice-capture` | render demo GIFs (`rice-capture hud` for just one) |
-| `theme [slug]` | show or switch the palette, across all 13 themed surfaces |
+| `theme [slug]` | show or switch the palette — renders, re-links and reloads in one |
 | `open`/`xdg-open docs/cyberdeck-manual.html` | the [field manual](https://matthart1983.github.io/cyberdeck/) — every key and command for both platforms, searchable |
 
 ## Window management
