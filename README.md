@@ -12,7 +12,7 @@ btop, bat, delta, fastfetch and Zed — from one palette, in one repo.
 ![tour](capture/out/tour.gif)
 
 **[📖 Read the Field Manual](https://matthart1983.github.io/cyberdeck/)** — every
-key, command and surface in one searchable page.
+key, command and surface in one searchable page, macOS and Fedora side by side.
 
 </div>
 
@@ -46,6 +46,12 @@ RTT, packet loss and live connection count** — diagnostics, not decoration. Se
 Everything this rice binds, in one page you can search: the tiling keys, the
 bar's items and where each one gets its data, the Ghostty and tmux bindings,
 the shell aliases, and how to undo any of it.
+
+It documents both platforms from one page. The **macOS / Fedora** switch in the
+sidebar (or `t`) swaps AeroSpace for niri, SketchyBar for Waybar, and `cmd` for
+`ctrl+shift` — everything the two halves genuinely share is written once, and
+the `/` filter only ever searches the platform you're on. Your choice is
+remembered.
 
 **→ [matthart1983.github.io/cyberdeck](https://matthart1983.github.io/cyberdeck/)**
 
@@ -259,7 +265,7 @@ to `attic/<timestamp>/`, mirroring its path under `$HOME`.
 | `prefix` = `C-a` | tmux prefix; `\|` and `-` split, `hjkl` navigate |
 | `rice-doctor` | verify aerospace, borders, bar, netwatch feed, configs, secrets |
 | `rice-capture` | render demo GIFs (`rice-capture hud` for just one) |
-| `open`/`xdg-open docs/cyberdeck-manual.html` | the [field manual](https://matthart1983.github.io/cyberdeck/) — every key and command, searchable |
+| `open`/`xdg-open docs/cyberdeck-manual.html` | the [field manual](https://matthart1983.github.io/cyberdeck/) — every key and command for both platforms, searchable |
 
 ## Window management
 

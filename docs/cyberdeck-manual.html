@@ -68,6 +68,14 @@
   }
 
   a { color: var(--fg-mid); }
+
+  /* ---------------- the platform switch ----------------
+     Every divergent block is tagged .only-macos or .only-linux; anything
+     untagged is true on both and renders once. This pair of rules is the
+     whole mechanism — the rest is one attribute on <html>. */
+  html[data-os="macos"] .only-linux,
+  html[data-os="linux"] .only-macos { display: none !important; }
+
   :focus-visible {
     outline: 2px solid var(--magenta);
     outline-offset: 2px;
@@ -122,6 +130,42 @@
     text-transform: uppercase;
     color: var(--fg-faint);
     margin: 0;
+  }
+
+  .osbar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    margin: 0 22px 22px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .osbtn {
+    all: unset;
+    cursor: pointer;
+    text-align: center;
+    padding: 6px 0;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+    transition: color .12s, background .12s;
+  }
+  .osbtn:hover { color: var(--fg-mid); background: rgba(19, 62, 124, 0.2); }
+  .osbtn[aria-pressed="true"] {
+    color: var(--deepest);
+    background: var(--magenta);
+    font-weight: 700;
+  }
+
+  /* A key that exists on one platform only, shown inline next to its
+     counterpart rather than in a note nobody reads. */
+  .xplat {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--fg-faint);
+    white-space: nowrap;
   }
 
   .rail-label {
@@ -532,6 +576,11 @@
       <p class="brand-sub">Field manual · ~/.dotfiles</p>
     </div>
 
+    <div class="osbar" role="group" aria-label="Platform">
+      <button type="button" class="osbtn" data-set-os="macos">macOS</button>
+      <button type="button" class="osbtn" data-set-os="linux">Fedora</button>
+    </div>
+
     <p class="rail-label">The tour</p>
     <nav class="nav" id="nav" aria-label="Layers"></nav>
 
@@ -560,12 +609,15 @@
 
       <!-- ---------------- 1 · WINDOWS ---------------- -->
       <section class="panel" data-title="Windows">
+
+        <!-- .......... macOS .......... -->
+        <div class="only-macos">
         <p class="eyebrow">Layer 01 · AeroSpace</p>
         <h1>Windows tile themselves</h1>
         <p class="lede">AeroSpace tiles every window into workspaces. It runs with <strong>SIP intact</strong> — that's why it was chosen over yabai, whose best features need SIP disabled. Gaps are 10px, except 42px at the top where the bar sits.</p>
 
         <div class="meta">
-          <span class="chip"><b>Config</b> aerospace/aerospace.toml</span>
+          <span class="chip"><b>Config</b> macos/aerospace/aerospace.toml</span>
           <span class="chip"><b>Layout</b> tiles, auto orientation</span>
           <span class="chip"><b>Starts</b> at login</span>
         </div>
@@ -602,7 +654,7 @@
           <div class="row"><div class="kseq"><kbd>alt</kbd><span class="plus">+</span><kbd>,</kbd></div><div class="act">Accordion layout</div></div>
           <div class="row"><div class="kseq"><kbd>alt</kbd><span class="plus">+</span><kbd>f</kbd></div><div class="act">Float this window out of the tiler</div></div>
           <div class="row"><div class="kseq"><kbd>alt</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>f</kbd></div><div class="act">Fullscreen</div></div>
-          <div class="row"><div class="kseq"><kbd>alt</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>'</kbd></div><div class="act">Join this window with the one to its right</div></div>
+          <div class="row"><div class="kseq"><kbd>alt</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>&#39;</kbd></div><div class="act">Join this window with the one to its right</div></div>
         </div>
 
         <h2>Modes — hands stay on the keys</h2>
@@ -615,16 +667,96 @@
           <span class="tag">Blocked</span>
           <p>If the CLI says it can't connect while AeroSpace is clearly running, Accessibility permission hasn't been granted. Open <code>System Settings ▸ Privacy &amp; Security ▸ Accessibility</code> and enable AeroSpace. This is the one step that can't be scripted.</p>
         </div>
+        </div>
+
+        <!-- .......... Fedora .......... -->
+        <div class="only-linux">
+        <p class="eyebrow">Layer 01 · niri</p>
+        <h1>Windows scroll, they don't stack</h1>
+        <p class="lede">niri is a <strong>scrollable</strong> tiler: workspaces are an endless row of columns you scroll along, not a tree you subdivide. Gaps are 10px and the top strut is nobody's problem — Waybar declares its own exclusive zone, so niri gets out of its way without a hand-counted offset.</p>
+
+        <div class="meta">
+          <span class="chip"><b>Config</b> linux/niri/config.kdl</span>
+          <span class="chip"><b>Layout</b> scrolling columns</span>
+          <span class="chip"><b>Modifier</b> Super, not Alt</span>
+        </div>
+
+        <div class="note">
+          <span class="tag">Why Super</span>
+          <p>Every <kbd>alt</kbd> bind from the macOS side is <kbd>Mod</kbd> (Super) here. On Linux <code>alt+&lt;letter&gt;</code> is the GTK mnemonic accelerator — binding it would make every application's menu bar unreachable.</p>
+        </div>
+
+        <h2>Focus and move</h2>
+        <div class="keys">
+          <div class="row"><div class="kseq"><kbd class="accent">Mod</kbd><span class="plus">+</span><kbd class="accent">h j k l</kbd></div><div class="act">Focus the column left / window down / window up / column right <em>Arrow keys work too. h and l cross columns; j and k move inside one</em></div></div>
+          <div class="row"><div class="kseq"><kbd>Mod</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>h j k l</kbd></div><div class="act">Move this column or window in that direction</div></div>
+          <div class="row"><div class="kseq"><kbd>Mod</kbd><span class="plus">+</span><kbd>tab</kbd></div><div class="act">Jump back to the last workspace</div></div>
+          <div class="row"><div class="kseq"><kbd>Mod</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>tab</kbd></div><div class="act">Throw this workspace to the next monitor</div></div>
+          <div class="row"><div class="kseq"><kbd>Mod</kbd><span class="plus">+</span><kbd>PgUp</kbd> / <kbd>PgDn</kbd></div><div class="act">Focus the workspace above or below</div></div>
+        </div>
+
+        <h2>Workspaces</h2>
+        <div class="keys">
+          <div class="row"><div class="kseq"><kbd class="accent">Mod</kbd><span class="plus">+</span><kbd class="accent">1</kbd>–<kbd class="accent">9</kbd></div><div class="act">Switch to that workspace <em>1–6 are named and permanent; 7–9 stay dynamic scratch space</em></div></div>
+          <div class="row"><div class="kseq"><kbd>Mod</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>1</kbd>–<kbd>9</kbd></div><div class="act">Send this column there</div></div>
+        </div>
+
+        <h2>Where apps land on their own</h2>
+        <div class="wsmap">
+          <div class="ws"><div class="n">1 · term</div><div class="apps">Ghostty</div></div>
+          <div class="ws"><div class="n">2 · code</div><div class="apps">Zed, RustRover, VS Code</div></div>
+          <div class="ws"><div class="n">3 · web</div><div class="apps">Chrome, Brave, Firefox</div></div>
+          <div class="ws"><div class="n">4 · chat</div><div class="apps">WhatsApp, Claude, Slack</div></div>
+          <div class="ws"><div class="n">5 · notes</div><div class="apps">Obsidian</div></div>
+          <div class="ws"><div class="n">6 · infra</div><div class="apps">Wireshark</div></div>
+        </div>
+
+        <h2>Shape the layout</h2>
+        <div class="keys">
+          <div class="row"><div class="kseq"><kbd>Mod</kbd><span class="plus">+</span><kbd>-</kbd> / <kbd>=</kbd></div><div class="act">Narrow or widen this column by 10%</div></div>
+          <div class="row"><div class="kseq"><kbd>Mod</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>-</kbd> / <kbd>=</kbd></div><div class="act">Shorten this window, or reset its height</div></div>
+          <div class="row"><div class="kseq"><kbd>Mod</kbd><span class="plus">+</span><kbd>/</kbd></div><div class="act">Cycle the preset column widths <em>⅓ → ½ → ⅔</em></div></div>
+          <div class="row"><div class="kseq"><kbd>Mod</kbd><span class="plus">+</span><kbd>,</kbd></div><div class="act">Tabbed column — the nearest thing to accordion</div></div>
+          <div class="row"><div class="kseq"><kbd>Mod</kbd><span class="plus">+</span><kbd>f</kbd></div><div class="act">Float this window out of the tiler</div></div>
+          <div class="row"><div class="kseq"><kbd>Mod</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>f</kbd></div><div class="act">Fullscreen</div></div>
+          <div class="row"><div class="kseq"><kbd>Mod</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>m</kbd></div><div class="act">Maximize this column</div></div>
+          <div class="row"><div class="kseq"><kbd>Mod</kbd><span class="plus">+</span><kbd>[</kbd> / <kbd>]</kbd></div><div class="act">Pull the neighbouring window into this column, or push one out</div></div>
+        </div>
+
+        <h2>Launch and leave</h2>
+        <div class="keys">
+          <div class="row"><div class="kseq"><kbd class="accent">Mod</kbd><span class="plus">+</span><kbd class="accent">return</kbd></div><div class="act">New Ghostty window <em>This is the global terminal key — see Terminal</em></div></div>
+          <div class="row"><div class="kseq"><kbd>Mod</kbd><span class="plus">+</span><kbd>space</kbd></div><div class="act">fuzzel — the application launcher</div></div>
+          <div class="row"><div class="kseq"><kbd>Mod</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>d</kbd></div><div class="act">Open the HUD in its own window</div></div>
+          <div class="row"><div class="kseq"><kbd>Mod</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>q</kbd></div><div class="act">Close this window</div></div>
+          <div class="row"><div class="kseq"><kbd>Mod</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>/</kbd></div><div class="act">niri's own hotkey overlay — every bind, live from the config</div></div>
+          <div class="row"><div class="kseq"><kbd>Mod</kbd><span class="plus">+</span><kbd>print</kbd></div><div class="act">Screenshot this window <em>add shift for the whole screen · ~/Pictures/Screenshots</em></div></div>
+          <div class="row"><div class="kseq"><kbd>Mod</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>e</kbd></div><div class="act">Quit niri and go back to the session chooser</div></div>
+        </div>
+
+        <div class="note good">
+          <span class="tag">No grant</span>
+          <p>There is no Accessibility permission on this side, and nothing to click through. Log out, pick <b>niri</b> at the session chooser, and it comes up with Waybar already running — <code>spawn-at-startup</code> handles the bar and the wallpaper.</p>
+        </div>
+
+        <div class="note">
+          <span class="tag">No tree</span>
+          <p>AeroSpace's <code>balance-sizes</code> and <code>flatten-workspace-tree</code> have no counterpart, because there is no tree: columns scroll instead of nesting. <kbd>Mod</kbd>+<kbd>shift</kbd>+<kbd>r</kbd> cycles the preset widths, which is the nearest thing to "reset the layout".</p>
+        </div>
+        </div>
       </section>
 
       <!-- ---------------- 2 · THE BAR ---------------- -->
       <section class="panel" data-title="The bar">
+
+        <!-- .......... macOS .......... -->
+        <div class="only-macos">
         <p class="eyebrow">Layer 02 · SketchyBar + JankyBorders</p>
         <h1>The bar reads your own network</h1>
         <p class="lede">macOS's menu bar is hidden; SketchyBar replaces it with 18 items. The interesting part: the <strong>net</strong> and <strong>link</strong> items aren't shelling out to netstat and ping — they scrape <strong>netwatch's own daemon</strong>.</p>
 
         <div class="meta">
-          <span class="chip"><b>Config</b> sketchybar/sketchybarrc</span>
+          <span class="chip"><b>Config</b> macos/sketchybar/sketchybarrc</span>
           <span class="chip"><b>Feed</b> 127.0.0.1:9464</span>
           <span class="chip"><b>Cost</b> 0.4% CPU · 15MB</span>
         </div>
@@ -633,7 +765,7 @@
         <div class="keys">
           <div class="row"><div class="kseq"><kbd>spaces</kbd></div><div class="act">Live AeroSpace workspaces — the focused one glows magenta</div></div>
           <div class="row"><div class="kseq"><kbd>front_app</kbd></div><div class="act">Whatever app currently has focus</div></div>
-          <div class="row"><div class="kseq"><kbd>cpu · mem · disk</kbd></div><div class="act">System vitals</div></div>
+          <div class="row"><div class="kseq"><kbd>cpu · mem · disk</kbd></div><div class="act">System vitals <em>a shell plugin each — top, memory_pressure and df have to be parsed</em></div></div>
           <div class="row"><div class="kseq"><kbd class="accent">net</kbd></div><div class="act">Throughput up and down <em>from netwatch, not netstat</em></div></div>
           <div class="row"><div class="kseq"><kbd class="accent">link</kbd></div><div class="act">Gateway RTT, DNS RTT, loss ratio, live connection count</div></div>
           <div class="row"><div class="kseq"><kbd>battery · clock</kbd></div><div class="act">The usual suspects, in the palette</div></div>
@@ -654,7 +786,50 @@
 
         <div class="note good">
           <span class="tag">Borders</span>
-          <p>JankyBorders draws the magenta glow on the focused window and a dim purple on the rest. It's launched by <code>bin/borders.sh</code> and needs no permissions.</p>
+          <p>JankyBorders draws the magenta glow on the focused window and a dim purple on the rest. It's launched by <code>macos/bin/borders.sh</code> and needs no permissions.</p>
+        </div>
+        </div>
+
+        <!-- .......... Fedora .......... -->
+        <div class="only-linux">
+        <p class="eyebrow">Layer 02 · Waybar</p>
+        <h1>The bar reads your own network</h1>
+        <p class="lede">Same claim, seven items instead of eighteen, and <strong>only two of them need a script</strong>. cpu, memory, disk and battery each wanted a shell plugin on macOS purely because <code>top</code>, <code>memory_pressure</code> and <code>pmset</code> have to be parsed; Waybar reads all four out of <code>/proc</code> and <code>/sys</code> itself. What's left in <code>scripts/</code> is <strong>link</strong> and <strong>net</strong> — the netwatch-fed pair, which was always the part worth having.</p>
+
+        <div class="meta">
+          <span class="chip"><b>Config</b> linux/waybar/config.jsonc</span>
+          <span class="chip"><b>Feed</b> 127.0.0.1:9464</span>
+          <span class="chip"><b>Scripts</b> 2 of 7</span>
+        </div>
+
+        <h2>What's up there</h2>
+        <div class="keys">
+          <div class="row"><div class="kseq"><kbd>niri/workspaces</kbd></div><div class="act">The six named workspaces, numbered — the focused one glows magenta <em>click to switch</em></div></div>
+          <div class="row"><div class="kseq"><kbd>niri/window</kbd></div><div class="act">Title of the focused window, capped at 48 characters</div></div>
+          <div class="row"><div class="kseq"><kbd>cpu · memory · disk</kbd></div><div class="act">System vitals, straight from the kernel <em>click any of them to open btop</em></div></div>
+          <div class="row"><div class="kseq"><kbd class="accent">net</kbd></div><div class="act">Throughput up and down <em>from netwatch, not /proc/net/dev</em></div></div>
+          <div class="row"><div class="kseq"><kbd class="accent">link</kbd></div><div class="act">Gateway RTT, DNS RTT, loss ratio, live connection count <em>click to open netwatch</em></div></div>
+          <div class="row"><div class="kseq"><kbd>battery · clock</kbd></div><div class="act">BAT1 with time-to-empty and draw in watts, then the clock</div></div>
+        </div>
+
+        <h2>Driving it</h2>
+        <div class="cmds">
+          <div class="cmd"><code>pkill -USR2 waybar</code><span>Reload config and stylesheet in place — no restart</span></div>
+          <div class="cmd"><code>waybar</code><span>Run it in a terminal to see why it won't start</span></div>
+          <div class="cmd"><code>curl -s 127.0.0.1:9464/metrics</code><span>Read the raw feed the bar is drinking from</span></div>
+          <div class="cmd"><code>systemctl --user restart netwatch-metrics</code><span>Restart the netwatch daemon behind it</span></div>
+          <div class="cmd"><code>journalctl --user -u netwatch-metrics -f</code><span>Follow that daemon's log</span></div>
+        </div>
+
+        <div class="note">
+          <span class="tag">Reload</span>
+          <p>Waybar reloads on <code>SIGUSR2</code>, and <code>install.sh</code> sends it only on a run that actually rewrote something under <code>~/.config/waybar</code>. A re-link that changed nothing leaves the bar alone.</p>
+        </div>
+
+        <div class="note good">
+          <span class="tag">No borders daemon</span>
+          <p>JankyBorders has no counterpart here and needs none: niri draws its own <code>focus-ring</code>, magenta on focus and purple at rest, from the same two palette entries. That is one fewer daemon on this side, not a missing feature.</p>
+        </div>
         </div>
       </section>
 
@@ -662,20 +837,36 @@
       <section class="panel" data-title="Terminal">
         <p class="eyebrow">Layer 03 · Ghostty</p>
         <h1>One terminal, always a keystroke away</h1>
-        <p class="lede">Ghostty at 88% opacity with a 26px blur — the translucency is most of what makes the rice read as cyberpunk. The <strong>quick terminal</strong> drops down over any app, from anywhere.</p>
+        <p class="lede">Ghostty at 88% opacity with a 26px blur — the translucency is most of what makes the rice read as cyberpunk. Everything above the keybinds is one shared config; <code>common/ghostty/platform-{macos,linux}.conf</code> holds the half that can't be.</p>
 
         <div class="meta">
-          <span class="chip"><b>Config</b> ghostty/config</span>
+          <span class="chip"><b>Config</b> common/ghostty/config</span>
           <span class="chip"><b>Font</b> JetBrainsMono NF 14</span>
           <span class="chip"><b>Window</b> 200 × 52 cells</span>
         </div>
 
         <h2>Keys</h2>
+        <div class="only-macos">
         <div class="keys">
           <div class="row"><div class="kseq"><kbd class="accent">cmd</kbd><span class="plus">+</span><kbd class="accent">`</kbd></div><div class="act">Drop the quick terminal over whatever you're in <em>Global — works from any app</em></div></div>
           <div class="row"><div class="kseq"><kbd>cmd</kbd><span class="plus">+</span><kbd>d</kbd></div><div class="act">Split right</div></div>
           <div class="row"><div class="kseq"><kbd>cmd</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>d</kbd></div><div class="act">Split down</div></div>
           <div class="row"><div class="kseq"><kbd>cmd</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>h j k l</kbd></div><div class="act">Move between splits <em>Unfocused splits dim to 72%</em></div></div>
+        </div>
+        </div>
+        <div class="only-linux">
+        <div class="keys">
+          <div class="row"><div class="kseq"><kbd class="accent">Mod</kbd><span class="plus">+</span><kbd class="accent">return</kbd></div><div class="act">New Ghostty window, from anywhere <em>The compositor's bind, not Ghostty's — see the note below</em></div></div>
+          <div class="row"><div class="kseq"><kbd>ctrl</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>`</kbd></div><div class="act">Toggle the quick terminal <em>Only from inside Ghostty</em></div></div>
+          <div class="row"><div class="kseq"><kbd>ctrl</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>d</kbd></div><div class="act">Split right</div></div>
+          <div class="row"><div class="kseq"><kbd>ctrl</kbd><span class="plus">+</span><kbd>alt</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>d</kbd></div><div class="act">Split down</div></div>
+          <div class="row"><div class="kseq"><kbd>ctrl</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>h j k l</kbd></div><div class="act">Move between splits <em>Unfocused splits dim to 72%</em></div></div>
+        </div>
+
+        <div class="note">
+          <span class="tag">Why shift</span>
+          <p>Every <kbd>cmd</kbd> bind from the macOS half becomes <kbd>ctrl</kbd>+<kbd>shift</kbd> here. The shift is not decoration: plain <code>ctrl+d</code> is EOF and <code>ctrl+c</code> is SIGINT, and a terminal that eats either one is broken.</p>
+        </div>
         </div>
 
         <h2>Checking it</h2>
@@ -685,9 +876,27 @@
           <div class="cmd"><code>ghostty +list-fonts</code><span>Confirm a font is visible to Ghostty</span></div>
         </div>
 
-        <div class="note">
+        <div class="note only-macos">
           <span class="tag">First run</span>
           <p>The quick terminal is a <em>global</em> hotkey, so macOS asks for Accessibility permission the first time you press it. Grant it once and it stays.</p>
+        </div>
+
+        <div class="only-linux">
+        <h2>Getting it installed</h2>
+        <div class="cmds">
+          <div class="cmd"><code>linux/ghostty.sh</code><span>Build the pinned release from upstream's signed tarball into ~/.local</span></div>
+          <div class="cmd"><code>GHOSTTY_VERSION=1.3.2 linux/ghostty.sh</code><span>Move to a different release</span></div>
+        </div>
+
+        <div class="note">
+          <span class="tag">Not packaged</span>
+          <p>Fedora doesn't ship Ghostty and its filtered Flathub doesn't carry it, so the only prebuilt binaries are third-party COPRs — which <code>packages.sh</code> refuses to pick for you. <code>linux/ghostty.sh</code> checks the tarball's minisign signature before unpacking it, and reads the required Zig version out of the source it just verified: Fedora ships two Zig minors and only one of them can build Ghostty.</p>
+        </div>
+
+        <div class="note">
+          <span class="tag">No global hotkey</span>
+          <p>GTK has no system-wide hotkey API, so <code>global:</code> binds don't work on this side. The compositor owns that job instead — <kbd>Mod</kbd>+<kbd>return</kbd> in <code>config.kdl</code> spawns Ghostty. The dropdown itself still works, from inside the terminal.</p>
+        </div>
         </div>
       </section>
 
@@ -698,7 +907,7 @@
         <p class="lede">p10k keeps its original pure-style layout — only the colours were overridden, so nothing you'd configured was lost. Around it sits a modern CLI layer. Startup still costs <strong>330ms</strong>, hidden behind instant prompt.</p>
 
         <div class="meta">
-          <span class="chip"><b>Config</b> zsh/cyberpunk.zsh</span>
+          <span class="chip"><b>Config</b> common/zsh/cyberpunk.zsh</span>
           <span class="chip"><b>Prompt</b> p10k, colours only</span>
           <span class="chip"><b>Secrets</b> ~/.config/secrets.zsh</span>
         </div>
@@ -726,6 +935,11 @@
           <span class="tag">One theme</span>
           <p>The <code>cyberpunk-neon.tmTheme</code> written for bat also drives <strong>delta</strong> (git diffs) and every fzf preview — one file, three surfaces. Rebuild it with <code>bat cache --build</code>.</p>
         </div>
+
+        <div class="note only-linux">
+          <span class="tag">Not packaged</span>
+          <p>powerlevel10k isn't in Fedora's repos, and the prompt is the one part of this layer the rice only recolours rather than installs. <code>git clone --depth=1 https://github.com/romkatv/powerlevel10k ~/.local/share/powerlevel10k</code>, then source it at the <em>top</em> of <code>~/.zshrc</code>. Everything else on this page is a <code>dnf install</code>.</p>
+        </div>
       </section>
 
       <!-- ---------------- 5 · TMUX ---------------- -->
@@ -735,7 +949,7 @@
         <p class="lede">The prefix is <strong>ctrl+a</strong>, not ctrl+b. Splits keep the current directory, panes navigate like vim, and continuum saves the whole session every 15 minutes and restores it on launch.</p>
 
         <div class="meta">
-          <span class="chip"><b>Config</b> tmux/tmux.conf</span>
+          <span class="chip"><b>Config</b> common/tmux/tmux.conf</span>
           <span class="chip"><b>Prefix</b> ctrl+a</span>
           <span class="chip"><b>Mouse</b> on</span>
         </div>
@@ -755,8 +969,14 @@
         <div class="keys">
           <div class="row"><div class="kseq"><kbd>[</kbd></div><div class="act">Enter copy mode — vim keys from here</div></div>
           <div class="row"><div class="kseq"><kbd>v</kbd></div><div class="act">Start the selection</div></div>
-          <div class="row"><div class="kseq"><kbd>y</kbd></div><div class="act">Yank straight to the macOS clipboard</div></div>
+          <div class="row only-macos"><div class="kseq"><kbd>y</kbd></div><div class="act">Yank straight to the macOS clipboard <em>pbcopy</em></div></div>
+          <div class="row only-linux"><div class="kseq"><kbd>y</kbd></div><div class="act">Yank straight to the Wayland clipboard <em>wl-copy</em></div></div>
           <div class="row"><div class="kseq"><kbd>drag</kbd></div><div class="act">Mouse-select also copies to the clipboard</div></div>
+        </div>
+
+        <div class="note good">
+          <span class="tag">One config</span>
+          <p>There is no platform half of <code>tmux.conf</code>. It picks the clipboard with <code>if-shell 'command -v wl-copy'</code> at config-load time, so the same file yanks to pbcopy on one machine and wl-copy on the other.</p>
         </div>
 
         <div class="note">
@@ -768,21 +988,32 @@
       <!-- ---------------- 6 · HUD ---------------- -->
       <section class="panel" data-title="The HUD">
         <p class="eyebrow">Layer 06 · hud</p>
-        <h1>Four tools, one screen</h1>
-        <p class="lede">One command tiles all four <strong>*Watch</strong> tools into a grid — audio, network, system and disk. Every pane is live; the magenta border marks the focused one.</p>
+        <h1 class="only-macos">Four tools, one screen</h1>
+        <h1 class="only-linux">Three tools, one screen</h1>
+        <p class="lede">One command tiles the <strong>*Watch</strong> tools into a grid<span class="only-macos"> — audio, network, system and disk</span><span class="only-linux"> — network, system and disk</span>. Every pane is live; the magenta border marks the focused one.</p>
 
         <div class="meta">
-          <span class="chip"><b>Script</b> bin/hud</span>
+          <span class="chip"><b>Script</b> common/bin/hud</span>
           <span class="chip"><b>Needs</b> 160 × 50 cells</span>
           <span class="chip"><b>Session</b> tmux "hud"</span>
         </div>
 
         <h2>The grid</h2>
-        <div class="hudgrid">
+        <div class="hudgrid only-macos">
           <div class="hudpane"><div class="t">soundwatch</div><div class="d">output and input levels, streams, latency, xruns</div></div>
           <div class="hudpane"><div class="t">syswatch</div><div class="d">Load, thermals, power draw, process table</div></div>
           <div class="hudpane"><div class="t">netwatch</div><div class="d">Throughput, gateway and DNS RTT, live connections</div></div>
           <div class="hudpane"><div class="t">diskwatch</div><div class="d">Read/write throughput, capacity, busiest files</div></div>
+        </div>
+        <div class="hudgrid only-linux">
+          <div class="hudpane"><div class="t">netwatch</div><div class="d">Throughput, gateway and DNS RTT, live connections</div></div>
+          <div class="hudpane"><div class="t">syswatch</div><div class="d">Load, thermals, power draw, process table</div></div>
+          <div class="hudpane" style="grid-column: span 2"><div class="t">diskwatch</div><div class="d">Read/write throughput, capacity, busiest files</div></div>
+        </div>
+
+        <div class="note only-linux">
+          <span class="tag">Three, not four</span>
+          <p><strong>soundwatch is macOS-only</strong> — it binds a CoreAudio tap, and there is no Linux build. <code>hud</code> checks for it and builds a three-pane grid when it's absent, rather than opening a fourth pane that dies immediately. That's the same degradation any missing tool gets.</p>
         </div>
 
         <h2>Launching</h2>
@@ -806,7 +1037,7 @@
 
         <div class="note">
           <span class="tag">Sizing</span>
-          <p>All four refuse to draw below 80×24, and each gets a quarter of the window — so the terminal has to clear roughly 160×50 cells or the panes show a "terminal too small" message instead.</p>
+          <p>All of them refuse to draw below 80×24, and each gets a quarter of the window — so the terminal has to clear roughly 160×50 cells or the panes show a "terminal too small" message instead.</p>
         </div>
       </section>
 
@@ -817,7 +1048,7 @@
         <p class="lede">Zed keeps the neon chrome but its <strong>syntax colours are deliberately desaturated</strong>. Chrome is glanced at; code is read for hours, and full-saturation magenta on black is exhausting at that duration.</p>
 
         <div class="meta">
-          <span class="chip"><b>Zed</b> zed/themes/cyberpunk-neon.json</span>
+          <span class="chip"><b>Zed</b> common/zed/themes/cyberpunk-neon.json</span>
           <span class="chip"><b>Scopes</b> 35</span>
           <span class="chip"><b>Claude</b> dark-ansi</span>
         </div>
@@ -827,12 +1058,17 @@
           <div class="cmd"><code>Zed</code><span>Custom theme — neon UI, calm syntax, JetBrainsMono buffers</span></div>
           <div class="cmd"><code>Claude Code</code><span>dark-ansi theme, so it inherits Ghostty's palette instead of duplicating it</span></div>
           <div class="cmd"><code>atuin</code><span>Themed history UI, since ctrl+r takes over the whole screen</span></div>
-          <div class="cmd"><code>bin/cc-statusline</code><span>Model ▸ directory ▸ git branch ▸ context pressure</span></div>
+          <div class="cmd"><code>common/bin/cc-statusline</code><span>Model ▸ directory ▸ git branch ▸ context pressure</span></div>
         </div>
 
         <div class="note good">
           <span class="tag">Why ANSI</span>
           <p>Setting Claude Code to <code>dark-ansi</code> means it renders through the terminal's own 16 colours. Change the Ghostty theme and Claude follows automatically — there's no second palette to keep in sync.</p>
+        </div>
+
+        <div class="note good">
+          <span class="tag">Selected, not just linked</span>
+          <p>Linking a theme into <code>~/.config/zed/themes</code> only puts it in Zed's picker — Zed keeps rendering One Dark until <code>settings.json</code> names it. <code>install.sh</code> now writes that key. It splices the value into the file's text rather than re-serialising it, because Zed's settings are JSONC and a <code>json.dump</code> round-trip would hand you back your settings with every comment deleted.</p>
         </div>
 
         <div class="note">
@@ -843,6 +1079,9 @@
 
       <!-- ---------------- 8 · SYSTEM ---------------- -->
       <section class="panel" data-title="System">
+
+        <!-- .......... macOS .......... -->
+        <div class="only-macos">
         <p class="eyebrow">Layer 08 · macOS</p>
         <h1>Everything here is reversible</h1>
         <p class="lede">The system layer is the only part that reaches outside the dotfiles, so it was built undo-first: <strong>snapshot before apply</strong>, and a restore script that replays the snapshot back into the defaults system.</p>
@@ -858,7 +1097,7 @@
           <div class="cmd"><code>macos/snapshot.sh</code><span>Record the current state first — always</span></div>
           <div class="cmd"><code>macos/defaults.sh</code><span>Apply the rice. Idempotent; safe to re-run</span></div>
           <div class="cmd"><code>macos/restore.sh</code><span>Put everything back from the snapshot</span></div>
-          <div class="cmd"><code>wallpaper/generate.py</code><span>Regenerate both wallpapers with PIL</span></div>
+          <div class="cmd"><code>wallpaper/generate.py</code><span>Regenerate every wallpaper with PIL</span></div>
         </div>
 
         <h2>What changed</h2>
@@ -874,36 +1113,85 @@
           <span class="tag">Order matters</span>
           <p>The menu-bar line stayed commented out until SketchyBar existed. Hiding it first would have left no clock and nothing to replace it — apply chrome removal only once the replacement is running.</p>
         </div>
+        </div>
+
+        <!-- .......... Fedora .......... -->
+        <div class="only-linux">
+        <p class="eyebrow">Layer 08 · Fedora</p>
+        <h1>There is nothing to put back</h1>
+        <p class="lede">The macOS half needs a snapshot because <code>defaults write</code> mutates settings you can't otherwise recover. This side has <strong>no equivalent to undo</strong>: the Fedora layer installs packages and enables two services, and that is the whole of its reach. Uninstalling is <code>dnf remove</code>.</p>
+
+        <div class="meta">
+          <span class="chip"><b>Scripts</b> linux/</span>
+          <span class="chip"><b>Needs sudo</b> packages only</span>
+          <span class="chip"><b>Wallpaper</b> generated, not downloaded</span>
+        </div>
+
+        <h2>The opt-in layer</h2>
+        <div class="cmds">
+          <div class="cmd"><code>linux/packages.sh</code><span>Compositor, bar, shell, CLI tools, power and firmware</span></div>
+          <div class="cmd"><code>linux/ghostty.sh</code><span>Build Ghostty from upstream's signed tarball into ~/.local</span></div>
+          <div class="cmd"><code>wallpaper/generate.py</code><span>Regenerate every wallpaper with PIL</span></div>
+        </div>
+
+        <h2>What it touches</h2>
+        <div class="keys">
+          <div class="row"><div class="kseq"><kbd>dnf</kbd></div><div class="act">niri, waybar, swaybg, fuzzel, zsh and the CLI layer — all from Fedora's own repos</div></div>
+          <div class="row"><div class="kseq"><kbd>tuned-ppd</kbd></div><div class="act">Enabled, for the power profiles GNOME reads <em>see the note below</em></div></div>
+          <div class="row"><div class="kseq"><kbd>fwupd</kbd></div><div class="act">Refreshed and checked — Framework ships BIOS over LVFS, so this is the whole update path</div></div>
+          <div class="row"><div class="kseq"><kbd>systemd --user</kbd></div><div class="act">One unit: the netwatch daemon that feeds the bar</div></div>
+          <div class="row"><div class="kseq"><kbd>Desktop</kbd></div><div class="act">Nothing. niri replaces GNOME at the session chooser rather than reconfiguring it</div></div>
+        </div>
+
+        <div class="note">
+          <span class="tag">Conflict</span>
+          <p><code>packages.sh</code> deliberately does <em>not</em> install <code>power-profiles-daemon</code>. Fedora 44 ships <code>tuned-ppd</code>, which provides the same <code>ppd-service</code> and the same <code>net.hadess.PowerProfiles</code> D-Bus interface GNOME talks to, and the two packages conflict outright. The only thing lost is the <code>powerprofilesctl</code> CLI; <code>tuned-adm</code> is the equivalent.</p>
+        </div>
+
+        <div class="note">
+          <span class="tag">Not automatic</span>
+          <p>Three things Fedora doesn't package, and the script won't install behind your back: <strong>Ghostty</strong> (built by <code>linux/ghostty.sh</code>), <strong>powerlevel10k</strong> (a git clone), and <strong>JetBrainsMono Nerd Font</strong> (a release zip into <code>~/.local/share/fonts</code>, then <code>fc-cache -f</code>).</p>
+        </div>
+        </div>
       </section>
 
       <!-- ---------------- 9 · UPKEEP ---------------- -->
       <section class="panel" data-title="Upkeep">
         <p class="eyebrow">Layer 09 · Maintenance</p>
         <h1>Keeping it honest</h1>
-        <p class="lede">Three scripts cover everything: one checks the rice is actually running, one re-links it onto a fresh machine, one records what it looks like. All exit non-zero when something is genuinely wrong.</p>
+        <p class="lede">Four scripts cover everything: one checks the rice is actually running, one re-links it onto a fresh machine, one proves that re-linking is a no-op, and one records what it looks like. All exit non-zero when something is genuinely wrong.</p>
 
         <div class="meta">
           <span class="chip"><b>Repo</b> ~/.dotfiles</span>
-          <span class="chip"><b>Layers checked</b> 12</span>
-          <span class="chip"><b>Tapes</b> 3</span>
+          <span class="chip"><b>Platforms</b> macOS + Fedora</span>
+          <span class="chip"><b>Tapes</b> 4</span>
         </div>
 
-        <h2>The three</h2>
+        <h2>The four</h2>
         <div class="cmds">
           <div class="cmd"><code>rice-doctor</code><span>Check every layer; exits non-zero if one is down</span></div>
           <div class="cmd"><code>install.sh</code><span>Re-link every config. Idempotent</span></div>
-          <div class="cmd"><code>rice-capture</code><span>Render all demo GIFs</span></div>
-          <div class="cmd"><code>rice-capture hud</code><span>Render just one tape</span></div>
+          <div class="cmd"><code>test/idempotent.sh</code><span>Run the real installer twice against a throwaway $HOME and fail if the second run writes anything</span></div>
+          <div class="cmd"><code>rice-capture</code><span>Render all demo GIFs — <code>rice-capture hud</code> for just one</span></div>
         </div>
 
         <h2>What the doctor looks at</h2>
         <div class="keys">
-          <div class="row"><div class="kseq"><kbd>aerospace</kbd></div><div class="act">Running <em>and</em> the CLI can actually reach it</div></div>
-          <div class="row"><div class="kseq"><kbd>sketchybar</kbd></div><div class="act">Alive, with its item count</div></div>
+          <div class="row only-macos"><div class="kseq"><kbd>aerospace</kbd></div><div class="act">Running <em>and</em> the CLI can actually reach it</div></div>
+          <div class="row only-macos"><div class="kseq"><kbd>sketchybar</kbd></div><div class="act">Alive, with its item count</div></div>
+          <div class="row only-linux"><div class="kseq"><kbd>niri</kbd></div><div class="act">Running, the socket answers, and the config validates</div></div>
+          <div class="row only-linux"><div class="kseq"><kbd>waybar</kbd></div><div class="act">Alive, with config, stylesheet and scripts linked</div></div>
           <div class="row"><div class="kseq"><kbd>netwatch feed</kbd></div><div class="act">Service loaded and :9464 answering with live RTT</div></div>
           <div class="row"><div class="kseq"><kbd>ghostty · tmux</kbd></div><div class="act">Configs linked and parsing</div></div>
           <div class="row"><div class="kseq"><kbd>zed · claude · atuin</kbd></div><div class="act">Themes linked and selected</div></div>
+          <div class="row only-linux"><div class="kseq"><kbd>power · suspend</kbd></div><div class="act">A ppd-service is up, and mem_sleep is s2idle — the correct one for Framework AMD</div></div>
+          <div class="row only-linux"><div class="kseq"><kbd>firmware</kbd></div><div class="act">No LVFS updates pending</div></div>
           <div class="row"><div class="kseq"><kbd class="accent">secrets</kbd></div><div class="act">No API key inlined in ~/.zshrc</div></div>
+        </div>
+
+        <div class="note">
+          <span class="tag">Two halves</span>
+          <p><code>rice-doctor</code> is a dispatcher: <code>common/bin/rice-doctor</code> picks <code>macos/bin/</code> or <code>linux/bin/</code>. The output shape is identical on both; the checks underneath share almost nothing, because the layers don't.</p>
         </div>
 
         <div class="note good">
@@ -928,8 +1216,10 @@
     <span><kbd>←</kbd> <kbd>→</kbd> <b>step</b></span>
     <span><kbd>1</kbd>–<kbd>9</kbd> <b>jump</b></span>
     <span><kbd>/</kbd> <b>find a key</b></span>
+    <span><kbd>t</kbd> <b>platform</b></span>
     <span><kbd>esc</kbd> <b>close</b></span>
   </div>
+  <div class="sb-right" id="sbOs">MACOS</div>
   <div class="sb-right" id="sbRight">01 / 09</div>
 </div>
 
@@ -945,9 +1235,12 @@
   var wrap    = document.getElementById("searchwrap");
   var input   = document.getElementById("q");
   var results = document.getElementById("results");
+  var sbOs    = document.getElementById("sbOs");
+  var root    = document.documentElement;
 
   var current = 0;
   var total   = panels.length;
+  var os      = "macos";
 
   function pad(n) { return (n < 10 ? "0" : "") + n; }
 
@@ -956,6 +1249,31 @@
   function esc(s) {
     return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
+
+  /* ---- platform ----
+     The switch sets one attribute on <html>; CSS does the rest. The choice is
+     remembered, because someone reading this on a Fedora laptop should not
+     have to re-pick macOS-or-not on every visit. localStorage is wrapped:
+     it throws outright in a browser set to block site data, and a manual that
+     will not render because of a preference toggle is a bad manual. */
+  var OS_KEY = "cyberdeck-os";
+  var osButtons = Array.prototype.slice.call(document.querySelectorAll("[data-set-os]"));
+
+  function setOS(next, remember) {
+    os = (next === "linux") ? "linux" : "macos";
+    root.setAttribute("data-os", os);
+    osButtons.forEach(function (b) {
+      b.setAttribute("aria-pressed", b.getAttribute("data-set-os") === os ? "true" : "false");
+    });
+    sbOs.textContent = (os === "linux") ? "FEDORA" : "MACOS";
+    if (remember) { try { localStorage.setItem(OS_KEY, os); } catch (e) {} }
+    /* The filter is showing rows for the platform we just left. */
+    if (!wrap.hidden) { render(input.value); }
+  }
+
+  osButtons.forEach(function (b) {
+    b.addEventListener("click", function () { setOS(b.getAttribute("data-set-os"), true); });
+  });
 
   /* ---- build the rail from the panels themselves ---- */
   panels.forEach(function (p, i) {
@@ -985,6 +1303,15 @@
 
   /* ---- flat index of every key row and command, for the / filter ---- */
   var index = [];
+
+  /* null means "true on both platforms" — the common case, and the reason
+     the filter tests for a mismatch rather than for a match. */
+  function rowOS(el) {
+    if (el.closest(".only-macos")) { return "macos"; }
+    if (el.closest(".only-linux")) { return "linux"; }
+    return null;
+  }
+
   panels.forEach(function (p, i) {
     var where = p.getAttribute("data-title");
     p.querySelectorAll(".keys .row").forEach(function (row) {
@@ -993,6 +1320,7 @@
       if (!k || !a) { return; }
       index.push({
         panel: i,
+        os: rowOS(row),
         where: where,
         keyHTML: k.innerHTML,
         act: esc((a.childNodes[0] ? a.childNodes[0].textContent : a.textContent).trim()),
@@ -1005,6 +1333,7 @@
       if (!c || !s) { return; }
       index.push({
         panel: i,
+        os: rowOS(row),
         where: where,
         keyHTML: "<kbd>" + esc(c.textContent) + "</kbd>",
         act: esc(s.textContent.trim()),
@@ -1015,13 +1344,15 @@
 
   function render(q) {
     var needle = q.trim().toLowerCase();
+    var here = index.filter(function (it) { return it.os === null || it.os === os; });
     results.innerHTML = "";
     if (!needle) {
-      results.innerHTML = '<div class="noresult">' + index.length +
-        " keys and commands indexed. Start typing.</div>";
+      results.innerHTML = '<div class="noresult">' + here.length +
+        " keys and commands indexed for " + (os === "linux" ? "Fedora" : "macOS") +
+        ". Start typing.</div>";
       return;
     }
-    var hits = index.filter(function (it) { return it.hay.indexOf(needle) !== -1; });
+    var hits = here.filter(function (it) { return it.hay.indexOf(needle) !== -1; });
     if (!hits.length) {
       results.innerHTML = '<div class="noresult">Nothing matches &ldquo;' +
         needle.replace(/[<>&]/g, "") + '&rdquo;.</div>';
@@ -1062,6 +1393,11 @@
       return;
     }
     if (e.key === "/") { e.preventDefault(); openSearch(); return; }
+    if (e.key === "t" || e.key === "T") {
+      e.preventDefault();
+      setOS(os === "macos" ? "linux" : "macos", true);
+      return;
+    }
     if (e.key === "ArrowRight" || e.key === "j") { e.preventDefault(); show(Math.min(current + 1, total - 1)); return; }
     if (e.key === "ArrowLeft"  || e.key === "k") { e.preventDefault(); show(Math.max(current - 1, 0)); return; }
     if (e.key >= "1" && e.key <= "9") {
@@ -1070,6 +1406,14 @@
       return;
     }
   });
+
+  /* ---- first paint ----
+     A remembered choice wins; failing that, guess from the machine actually
+     reading the page. Getting it wrong costs one keystroke. */
+  var stored = null;
+  try { stored = localStorage.getItem(OS_KEY); } catch (e) {}
+  setOS(stored || (/Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent)
+                   ? "macos" : "linux"), false);
 
   /* ---- deep link ---- */
   var start = parseInt((location.hash || "").replace("#", ""), 10);
