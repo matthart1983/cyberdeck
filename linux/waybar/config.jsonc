@@ -243,8 +243,11 @@
   // them is the slot name. `probe` runs ONCE at startup and prints the glyph,
   // or prints nothing when nothing in that slot is installed — waybar hides an
   // item with no text, so the dock is exactly as wide as this machine's
-  // software. Install something and re-signal the bar (SIGRTMIN+7) rather than
-  // having it poll twelve commands forever.
+  // software. Install something and reload the bar rather than having it poll
+  // twelve commands forever — `pkill -USR2 waybar`, or just run install.sh,
+  // which sends that itself. SIGRTMIN+7 re-runs a probe more cheaply, but it
+  // only refreshes text: a slot that resolved nothing at startup is a widget
+  // the drawer is already hiding, and a reload is what brings it back.
   //
   // Exclusive, like the top bar: a dock that windows can slide under is a dock
   // you have to move windows out of, which is the opposite of one click.

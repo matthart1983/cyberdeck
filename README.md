@@ -367,6 +367,7 @@ to `attic/<timestamp>/`, mirroring its path under `$HOME`.
 | `cmd + \`` | Ghostty quick-terminal dropdown |
 | `prefix` = `C-a` | tmux prefix; `\|` and `-` split, `hjkl` navigate |
 | `dock list` | Linux: every dock slot and what it resolved to here (`dock check` for drift) |
+| `pkill -USR2 waybar` | reload both bars — what makes a newly installed app's dock icon appear |
 | `rice-doctor` | verify aerospace, borders, bar, netwatch feed, configs, secrets |
 | `rice-capture` | render demo GIFs (`rice-capture hud` for just one) |
 | `theme [slug]` | show or switch the palette — renders, re-links and reloads in one |

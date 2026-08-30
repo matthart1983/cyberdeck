@@ -56,7 +56,13 @@ echo
 echo "==> dock"
 if "$HOME/.dotfiles/linux/bin/dock" list | grep -q '^editor *ok'; then
   "$HOME/.dotfiles/linux/bin/dock" list | grep '^editor'
-  pkill -RTMIN+7 waybar 2>/dev/null && echo "    bar re-probed — the icon is there now"
+  # SIGUSR2, not the lighter SIGRTMIN+7 re-probe. The dock's slots live inside
+  # a group drawer, and a module that resolved nothing at startup is a widget
+  # the drawer is already hiding — re-running its probe gives it text without
+  # necessarily bringing the widget back. A full reload rebuilds both bars from
+  # the config and cannot be stale, which is what you want on the one command
+  # whose entire job was to make a new icon appear.
+  pkill -USR2 waybar 2>/dev/null && echo "    bar reloaded — the icon is there now"
 else
   echo "    editor still resolves nothing; 'dock list' says what it looked for"
 fi
