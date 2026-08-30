@@ -115,17 +115,8 @@ done
 unset _cp_p
 
 # --- PATH -------------------------------------------------------------------
-# Three dirs, each here for a reason — none of them is incidental:
-#   ~/.cargo/bin        the HUD's panes (netwatch, syswatch, diskwatch) are
-#                       cargo installs, and cargo does not put its bin dir on
-#                       PATH for you. Fedora's packaged cargo writes no
-#                       ~/.cargo/env either — only rustup does.
-#   ~/.local/bin        where the Claude Code installer puts `claude`, as a
-#                       symlink into ~/.local/share/claude/versions/.
-#   ~/.dotfiles/common/bin  the rice's own executables: hud, rice-doctor,
-#                       rice-capture, cc-statusline, tmux-battery.
-# Guarded so re-sourcing this file doesn't stack duplicates.
-for _cp_d in "$HOME/.cargo/bin" "$HOME/.local/bin" "$HOME/.dotfiles/common/bin"; do
-  [[ -d $_cp_d ]] && [[ ":$PATH:" != *":$_cp_d:"* ]] && export PATH="$_cp_d:$PATH"
-done
-unset _cp_d
+# The shell is one of three callers of this list — the other two are `hud` and
+# the dock, both of which the compositor spawns without a login shell ever
+# running. It moved into common/lib-path.sh at the third caller rather than
+# being kept in step by hand in three places.
+source "$HOME/.dotfiles/common/lib-path.sh"

@@ -25,6 +25,12 @@ key, command and surface in one searchable page, macOS and Fedora side by side.
 and [diskwatch](https://github.com/matthart1983/diskwatch): audio, network, system and disk,
 all themed from the same palette. Four panes, one author.
 
+`C-a z` zooms the selected pane to the whole window and back — tmux's own
+binding, left alone. Worth knowing because a pane in the grid is about 115×26,
+which is why `hud` starts each tool in `--lite`; zoomed it is the full 232×53,
+so `L` (or `V` in syswatch and diskwatch) gives you the full view instead of a
+"terminal too small" line.
+
 ![hud](capture/out/hud.gif)
 
 ## The shell
@@ -250,12 +256,14 @@ mirror each other, and each holds its own `install.sh` and `bin/rice-doctor`.
 | `test/theme.sh` | renders all 8 themes across all 16 surfaces and checks the contract, the drift and the contrast floors |
 | **`common/`** | |
 | `common/install.sh` | the symlinks and settings both platforms share |
-| `common/lib.sh` | `link` / `copy` / `render` — the helpers that make a re-run a no-op |
+| `common/lib.sh` | `link` / `copy` / `render` / `seed` — the helpers that make a re-run a no-op |
+| `common/lib-path.sh` | the three bin dirs the rice adds to PATH — sourced by the shell, `hud` and the dock |
 | `common/ghostty/` | terminal config + `themes/cyberdeck`, plus `platform-{macos,linux}.conf` |
 | `common/zsh/cyberpunk.zsh` | aliases, tool init, PATH, p10k colour overrides |
 | `common/tmux/tmux.conf` | neon status bar, vim nav, tpm plugins |
 | `common/bat/` | `cyberdeck.tmTheme` — also drives delta and fzf previews |
 | `common/btop/themes/` | btop theme — btop is still themed, just not in the HUD |
+| `common/syswatch/` | one line, seeded once: `theme = "terminal"`, so the HUD's middle pane matches the other two |
 | `common/fastfetch/` | config + ASCII logo |
 | `common/zed/themes/` | Zed theme — neon chrome, desaturated syntax |
 | `common/atuin/themes/` | atuin (ctrl-R) theme |
@@ -281,11 +289,12 @@ mirror each other, and each holds its own `install.sh` and `bin/rice-doctor`.
 | `linux/niri/` | tiling compositor config — the AeroSpace counterpart |
 | `linux/waybar/` | the bar: `config.jsonc`, `style.css`, `scripts/` |
 | `linux/nwg-drawer/` | the launcher panel's stylesheet — a themed surface like the bar's |
-| `linux/systemd/` | user unit for the netwatch daemon |
+| `linux/systemd/` | user unit for the netwatch daemon, and the session's PATH (`environment.d/`) |
 | `linux/packages.sh` | package + firmware layer (opt-in, needs sudo) |
 | `linux/ghostty.sh` | builds Ghostty from upstream's signed tarball into `~/.local` (opt-in) |
 | `linux/bin/rice-doctor` | the Fedora half of the health check |
 | `linux/bin/drawer` | sizes the launcher panel to the focused output and toggles it |
+| `linux/bin/dock` | the dock's slot table — resolves each one, focuses or launches it |
 | **root** | |
 | `capture/` | VHS tapes; GIFs land in `capture/out/` (gitignored) |
 | `wallpaper/generate.py` | wallpaper generator (PIL, no numpy) |
@@ -335,6 +344,7 @@ to `attic/<timestamp>/`, mirroring its path under `$HOME`.
 | `fetch` | fastfetch with the CYBERDECK logo |
 | `cmd + \`` | Ghostty quick-terminal dropdown |
 | `prefix` = `C-a` | tmux prefix; `\|` and `-` split, `hjkl` navigate |
+| `dock list` | Linux: every dock slot and what it resolved to here (`dock check` for drift) |
 | `rice-doctor` | verify aerospace, borders, bar, netwatch feed, configs, secrets |
 | `rice-capture` | render demo GIFs (`rice-capture hud` for just one) |
 | `theme [slug]` | show or switch the palette — renders, re-links and reloads in one |
@@ -397,14 +407,78 @@ each needed a shell plugin on macOS only because `top`, `memory_pressure` and
 itself, so `linux/waybar/scripts/` holds just the two netwatch ones — which
 was always the part worth having.
 
+## The dock
+
+Fedora only, and a second bar out of the same Waybar process — `config.jsonc`
+is an array, so one reload and one stylesheet move both.
+
+There were already two launchers, answering two different questions: fuzzel
+(`Mod+Space`) for when you can name the thing, the app panel (`Mod+A`) for when
+you can't. The dock is the third question — the handful you open every day,
+where naming and browsing are both slower than a target that is always in the
+same place. Applications left of the divider, the terminal toolbelt right of
+it; hover them and they answer magenta and blue respectively.
+
+| Slot | Resolves to, in order |
+|---|---|
+| term · editor · browser | ghostty · zed → code → rustrover → nvim · chrome → brave → firefox |
+| claude · notes · chat · files | claude-desktop → `claude` in a terminal · obsidian · slack → discord → whatsapp · nautilus → thunar → dolphin |
+| hud · git · containers | the HUD · lazygit → tig · lazydocker → ctop |
+| k8s · net | k9s · wireshark → termshark |
+
+The list lives in `linux/bin/dock`, and **a slot that resolves nothing is not
+drawn**: the dock is exactly as wide as the software this machine actually has
+and grows an icon the day you install the next thing. `dock list` shows what
+resolved, `dock check` reports drift between that table and the bar, and
+`rice-doctor` reports both. Clicking focuses a window that is already open —
+cycling, if there is more than one — before it starts a second copy.
+
+Everything right of the divider runs in a terminal, and each of those gets its
+own GTK app-id — `ghostty --class=com.mitchellh.ghostty-<slot>`, derived from
+the slot name so the flag and the window rule cannot drift apart. Two things
+depend on it, and both look like a dead button without it. niri files every
+plain `com.mitchellh.ghostty` window on the `term` workspace, so a tool you
+opened by clicking would appear somewhere you are not looking; and an
+un-addressable window means the second click starts a second one, which for the
+HUD is worse than nothing — both terminals attach to the same tmux session, and
+tmux clamps a shared session to its smallest client.
+
+One number in there is load-bearing: the HUD opens at `--font-size=10`, not the
+configured 14. netwatch, syswatch and diskwatch each refuse to draw below
+80×24, and `hud` tiles three of them into one window. A maximised column on a
+1920×1280 output is 168×38 cells at 14 — 83×18 per pane, and all three print an
+apology instead of a graph. At 10 it is 232×52, and every pane clears the floor.
+
 ## Notes
 
 - Secrets live in `~/.config/secrets.zsh` (chmod 600), never in this repo.
+- **The HUD's palette** arrives through the terminal, not through a config each
+  tool ships. netwatch and diskwatch read the sixteen ANSI colours and so
+  inherit whatever Ghostty is set to. syswatch is the exception: it defaults to
+  its own `dark`, a good palette that is not this one, and in a HUD pane it
+  reads as the tile with the wrong greens. `install.sh` seeds
+  `theme = "terminal"` — **seeded, not linked**, because syswatch writes that
+  file back when you change a setting in its own UI (`T` cycles the theme), and
+  a symlink would put those writes in this repo. `rice-doctor` reports what the
+  file actually says rather than what was installed.
 - **macOS:** the menu bar is hidden now that SketchyBar replaces it. Undo with
   `defaults delete NSGlobalDomain _HIHideMenuBar`, or `macos/restore.sh`.
 - **Fedora:** nothing equivalent to hide. Waybar declares its own exclusive
   zone, so niri gets out of its way — unlike AeroSpace's `outer.top`, which
-  has to be hand-counted to clear the menu bar plus the bar.
+  has to be hand-counted to clear the menu bar plus the bar. Both bars do,
+  including the dock along the bottom.
+- **Fedora:** Firefox reports `org.mozilla.firefox` as its Wayland app-id, not
+  `firefox` — the bare name is the X11 `WM_CLASS`. The `open-on-workspace "web"`
+  rule matched only the latter, so Firefox had been opening wherever you were
+  standing rather than on `web`. Both are matched now.
+- **Fedora, the session PATH:** niri runs under `systemd --user`, whose PATH is
+  `/usr/local/bin:/usr/bin`. Everything the compositor spawns inherits it — and
+  because Ghostty is single-instance, that one process is what runs every
+  `ghostty -e <tool>` on the machine. So `ghostty -e btop` works and
+  `ghostty -e hud` opens a window that dies, with nothing anywhere to say why.
+  `linux/systemd/environment.d/cyberdeck.conf` is the fix, and it is read at
+  login: `rice-doctor` checks the running compositor rather than trusting that
+  linking the file was enough.
 - **Framework 13:** `linux/packages.sh` also installs `power-profiles-daemon`
   and refreshes firmware through `fwupd` — Framework ships BIOS over LVFS, so
   `sudo fwupdmgr update` is the whole update path. `rice-doctor` checks both,

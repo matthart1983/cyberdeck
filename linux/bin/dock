@@ -1,0 +1,229 @@
+#!/usr/bin/env bash
+# The application dock — the bar's second row, pinned to the bottom edge.
+#
+#   dock probe <slot>   one waybar item, as JSON      (the bar, once at startup)
+#   dock open  <slot>   focus it if it is up, else launch it   (a click)
+#   dock list           every slot and what it resolved to
+#   dock check          doctor lines: resolution, and drift against the bar
+#
+# Two launchers already exist: fuzzel for when you can name the thing, the
+# drawer for when you cannot. This is the third question — the six or seven
+# applications you open every day, where naming and browsing are both slower
+# than a target that is always in the same place.
+#
+# So the dock is CURATED, not a taskbar. Everything in it is here because it
+# was chosen, and the table below is the whole of that choice.
+#
+# A slot whose candidates are all uninstalled prints nothing, and waybar hides
+# an item with no text — the dock is as wide as what this machine actually has,
+# and grows when you install the next thing. That is deliberate: a dock full of
+# dead icons teaches you to stop aiming at it.
+set -euo pipefail
+
+# waybar is spawned by the compositor, not by a login shell, so it inherits
+# PATH=/usr/local/bin:/usr/bin and nothing else — the one environment in which
+# this rice looks like it is not installed. Without this, `term` resolves to
+# whatever terminal the distro happened to package instead of Ghostty, and the
+# whole toolbelt reads as missing software. lib-path.sh exports, so a slot that
+# opens `ghostty -e hud` hands the terminal a PATH that can find `hud`.
+# shellcheck source=common/lib-path.sh
+. "$HOME/.dotfiles/common/lib-path.sh"
+
+# --- the table --------------------------------------------------------------
+#   slot | glyph | label | app-id regex ... | candidate ; candidate ; ...
+#
+# Candidates are tried left to right and the first runnable one wins, so the
+# order is a preference: `zed` before `code` before "nvim in a terminal".
+#
+# The app-id column is what `dock open` matches against niri's window list to
+# focus something already running instead of starting a second copy. It is
+# EMPTY for everything hosted in a terminal — every one of those is a ghostty
+# window, and focusing "a ghostty" when you asked for the HUD would just hand
+# you whichever terminal happened to be nearest. Those always spawn.
+#
+# Those regexes are SPACE-separated and joined into one alternation at use,
+# rather than written as `^(a|b)$` — a pipe inside a field would be eaten by
+# the field separator, and the failure is silent: the row still parses, just
+# with everything after it shifted one column left.
+#
+# Glyphs are Material Design, the same set the bar's workspaces use. Fields are
+# not quoted or escaped anywhere below; keep the table free of " and \.
+SLOTS=(
+  # --- the applications ---
+  'term|󰆍|Terminal||ghostty;alacritty;foot;kitty'
+  'editor|󰅩|Editor|^dev\.zed\.Zed$ ^jetbrains- ^codium?$|zed;code;rustrover;ghostty -e nvim'
+  'browser|󰖟|Browser|^google-chrome$ ^brave-browser$ ^firefox$|google-chrome;brave-browser;firefox'
+  'claude|󰚩|Claude|^claude$|claude-desktop;ghostty -e claude'
+  'notes|󰎚|Notes|^obsidian$|obsidian'
+  'chat|󰭹|Chat|^Slack$ ^discord$ ^[Ww]hats[Aa]pp|slack;discord;whatsapp-for-linux'
+  'files|󰉋|Files|^org\.gnome\.Nautilus$ ^[Tt]hunar$ ^org\.kde\.dolphin$|nautilus;thunar;dolphin'
+  # --- the toolbelt: everything here opens in a terminal ---
+  # --font-size, and it is not a preference. netwatch, syswatch and diskwatch
+  # each refuse to draw below 80x24, and `hud` tiles three of them into one
+  # window: a maximised column on a 1920x1280 output is 168x38 cells at the
+  # configured 14, which is 83x18 per pane and three apologies. At 10 it is
+  # 232x52, so every pane clears the floor with room over.
+  'hud|󰕰|HUD||ghostty --font-size=10 -e hud'
+  'git|󰊢|Git||ghostty -e lazygit;ghostty -e tig'
+  'containers|󰡨|Containers||ghostty -e lazydocker;ghostty -e ctop'
+  'k8s|󱃾|Cluster||ghostty -e k9s'
+  'net|󰌘|Packet capture|^wireshark$ ^org\.wireshark\.Wireshark$|wireshark;ghostty -e termshark'
+)
+
+die() { printf 'dock: %s\n' "$*" >&2; exit 2; }
+
+row() {  # slot -> the table line, or nothing
+  local s
+  for s in "${SLOTS[@]}"; do
+    [ "${s%%|*}" = "$1" ] && { printf '%s\n' "$s"; return 0; }
+  done
+  return 1
+}
+
+# Is this candidate runnable? argv[0] has to be on PATH — and so does the
+# argument to -e, because `ghostty -e k9s` on a machine with no k9s is a
+# terminal that opens and closes again before you can read the error.
+runnable() {
+  local -a a=()
+  read -r -a a <<<"$1"
+  command -v "${a[0]}" >/dev/null 2>&1 || return 1
+  local i
+  for ((i = 1; i < ${#a[@]} - 1; i++)); do
+    if [ "${a[i]}" = "-e" ]; then
+      command -v "${a[i + 1]}" >/dev/null 2>&1 || return 1
+      return 0
+    fi
+  done
+}
+
+resolve() {  # candidate list -> the first runnable one, or nothing
+  local c
+  while IFS= read -r c; do
+    [ -n "$c" ] || continue
+    runnable "$c" && { printf '%s\n' "$c"; return 0; }
+  done <<<"${1//;/$'\n'}"
+  return 1
+}
+
+# --- probe: one item for the bar --------------------------------------------
+probe() {
+  local line glyph label cmds
+  line="$(row "$1")" || die "no such slot: $1"
+  IFS='|' read -r _ glyph label _ cmds <<<"$line"
+  if cmd="$(resolve "$cmds")"; then
+    printf '{"text":"%s","tooltip":"%s  ·  %s","class":["app","present"]}\n' \
+      "$glyph" "$label" "$cmd"
+  else
+    # Empty text, and a class that zeroes the item even on a waybar that draws
+    # the empty label anyway. Belt and braces: this has to leave no gap.
+    printf '{"text":"","tooltip":"","class":["app","absent"]}\n'
+  fi
+}
+
+# --- open: focus what is up, else launch ------------------------------------
+open_slot() {
+  local line slot label appid cmds cmd id
+  slot="$1"
+  line="$(row "$slot")" || die "no such slot: $slot"
+  IFS='|' read -r _ _ label appid cmds <<<"$line"
+  cmd="$(resolve "$cmds")" || die "$label: none of these are installed: ${cmds//;/, }"
+
+  # A terminal-hosted slot gets its own GTK app-id, and this is the difference
+  # between the dock working and the dock appearing to do nothing. Two things
+  # go wrong without it, and both look like a broken click:
+  #
+  #   niri files every `com.mitchellh.ghostty` window on the `term` workspace,
+  #   so the HUD you asked for opens somewhere you are not looking — or, if you
+  #   are already there, scrolls off the side of a column you did not ask to
+  #   grow. `--class` is not matched by that rule, so the window opens where
+  #   the click happened.
+  #
+  #   And the window becomes addressable, so the second click focuses the HUD
+  #   you already have. Spawning a second one is worse than a no-op: both
+  #   terminals attach to the same tmux session, and tmux clamps a shared
+  #   session to its smallest client, so the grid you were reading shrinks.
+  #
+  # Derived from the slot name rather than written into the table, so the
+  # regex and the flag cannot drift apart.
+  # `-e CMD` is what makes a slot terminal-hosted; a bare `ghostty` is the
+  # terminal slot itself, which wants a NEW window every time and so is left
+  # alone here.
+  case " $cmd " in
+    *" -e "*)
+      appid="${appid:+$appid }^com\\.mitchellh\\.ghostty-$slot\$"
+      cmd="ghostty --class=com.mitchellh.ghostty-$slot ${cmd#ghostty }"
+      ;;
+  esac
+
+  if [ -n "$appid" ] && command -v niri >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+    appid="${appid// /|}"
+    # Clicking a slot whose window already has focus moves to the NEXT window
+    # matching it, so three browser windows cycle instead of the click being a
+    # no-op. Ordered by id, which is niri's creation order — stable, unlike
+    # anything derived from focus, which would reshuffle under the cycle.
+    id=$(niri msg --json windows 2>/dev/null \
+         | jq -r --arg re "$appid" '
+             [.[] | select((.app_id // "") | test($re))] | sort_by(.id)
+             | if length == 0 then empty
+               else . as $m
+                    | (map(.is_focused) | index(true)) as $i
+                    | if $i == null then $m[0].id
+                      else $m[($i + 1) % ($m | length)].id end
+               end' 2>/dev/null) || id=""
+    if [ -n "$id" ]; then
+      exec niri msg action focus-window --id "$id"
+    fi
+  fi
+
+  # shellcheck disable=SC2086 # word splitting is the point: $cmd is a command
+  setsid $cmd >/dev/null 2>&1 &
+}
+
+# --- list / check -----------------------------------------------------------
+list() {
+  local line slot label cmds cmd
+  for line in "${SLOTS[@]}"; do
+    IFS='|' read -r slot _ label _ cmds <<<"$line"
+    if cmd="$(resolve "$cmds")"; then
+      printf '%-11s %-8s %s\n' "$slot" "ok" "$cmd"
+    else
+      printf '%-11s %-8s %s\n' "$slot" "-" "${cmds//;/ / }"
+    fi
+  done
+}
+
+# The bar names its items and this file names its slots, which is two places
+# one list is written. `theme --check` exists for exactly this reason, so the
+# dock gets the same treatment: report the drift rather than trusting that a
+# slot added here was also added there.
+check() {
+  local bar="${1:-$HOME/.config/waybar/config.jsonc}" line slot
+  local have want missing=() orphan=()
+  for line in "${SLOTS[@]}"; do
+    slot="${line%%|*}"
+    grep -q "\"custom/dock-$slot\"" "$bar" 2>/dev/null || missing+=("$slot")
+  done
+  want=" $(printf '%s ' "${SLOTS[@]%%|*}")"
+  while read -r slot; do
+    # dock-sep is the bar's own divider between the applications and the
+    # toolbelt, not a slot — it has nothing to resolve and no table row.
+    [ -n "$slot" ] && [ "$slot" != sep ] || continue
+    case "$want" in *" $slot "*) ;; *) orphan+=("$slot") ;; esac
+  done < <(grep -o '"custom/dock-[a-z0-9]*"' "$bar" 2>/dev/null \
+           | sed 's/"custom\/dock-//; s/"//' | sort -u)
+
+  have=$(list | grep -c ' ok ' || true)
+  printf 'resolved %s of %s\n' "$have" "${#SLOTS[@]}"
+  [ ${#missing[@]} -eq 0 ] || printf 'not in the bar: %s\n' "${missing[*]}"
+  [ ${#orphan[@]} -eq 0 ]  || printf 'not in the table: %s\n' "${orphan[*]}"
+  [ ${#missing[@]} -eq 0 ] && [ ${#orphan[@]} -eq 0 ]
+}
+
+case "${1:-list}" in
+  probe) [ $# -eq 2 ] || die "usage: dock probe <slot>"; probe "$2" ;;
+  open)  [ $# -eq 2 ] || die "usage: dock open <slot>";  open_slot "$2" ;;
+  list)  list ;;
+  check) check "${2:-}" ;;
+  slots) printf '%s\n' "${SLOTS[@]%%|*}" ;;
+  *)     die "usage: dock [probe <slot>|open <slot>|list|check|slots]" ;;
+esac

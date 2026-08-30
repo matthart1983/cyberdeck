@@ -3,6 +3,15 @@
 #   hud          attach (creating the session if needed)
 #   hud -r       tear down and rebuild
 set -euo pipefail
+
+# The panes are cargo installs and this script is spawned by the compositor as
+# often as by a shell — a bar click, a keybind, a dock icon — so the PATH it
+# hands tmux has to be the rice's, not /usr/local/bin:/usr/bin. Without this
+# every pane dies on "command not found" the moment the HUD is opened from
+# anywhere but a terminal.
+# shellcheck source=common/lib-path.sh
+. "$HOME/.dotfiles/common/lib-path.sh"
+
 SESSION="hud"
 
 if [[ ${1:-} == "-r" ]]; then

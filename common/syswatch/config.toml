@@ -1,0 +1,15 @@
+# syswatch — one setting, and only the first time.
+#   ~/.dotfiles/common/syswatch/config.toml  ->  ~/.config/syswatch/config.toml
+#
+# `terminal` means "take the sixteen ANSI colours from whatever terminal you
+# are in", which is how the rest of the HUD already behaves: netwatch and
+# diskwatch read the terminal palette and inherit the theme through Ghostty.
+# syswatch ships `dark` as its default — a perfectly good palette that is not
+# this one, so in a HUD pane it reads as the odd tile out: greens where the
+# other two are cyan and blue.
+#
+# Seeded, not linked or copied: syswatch writes this file back when you change
+# a setting in its own UI (`T` cycles the theme, `,` opens the menu). A symlink
+# would put those writes in the repo; a copy would revert them on every
+# install. install.sh only writes it when it is not there.
+theme = "terminal"

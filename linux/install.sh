@@ -20,6 +20,12 @@ link "$D/linux/waybar/style.css"             "$HOME/.config/waybar/style.css"
 link "$D/linux/waybar/power.xml"             "$HOME/.config/waybar/power.xml"
 link "$D/linux/waybar/scripts"               "$HOME/.config/waybar/scripts"
 link "$D/linux/nwg-drawer/drawer.css"        "$HOME/.config/nwg-drawer/drawer.css"
+# The session's PATH. niri runs under `systemd --user`, so this is what puts
+# ~/.cargo/bin and the rice's own bin dir in front of everything the compositor
+# spawns — read at login, which is why the doctor checks the running session
+# against it rather than trusting that linking it was enough.
+link "$D/linux/systemd/environment.d/cyberdeck.conf" \
+     "$HOME/.config/environment.d/cyberdeck.conf"
 
 echo "==> netwatch metrics service (feeds the bar)"
 UNIT="$HOME/.config/systemd/user/netwatch-metrics.service"

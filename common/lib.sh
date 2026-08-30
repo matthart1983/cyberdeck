@@ -90,6 +90,27 @@ copy() {
   chg "$dst"
 }
 
+# seed SRC DST — write DST only if it is not there at all.
+#
+# For config files the TOOL itself writes back. syswatch saves its settings
+# when you change them in its own UI, so `link` would have it writing into this
+# repo and `copy` would silently revert your choice on the next install. The
+# rice's business is the value you start with, not the one you settled on.
+seed() {
+  local src="$1" dst="$2"
+  if [ ! -e "$src" ]; then
+    warn "missing source, skipped: ${src#"$D"/}"
+    return 0
+  fi
+  if [ -e "$dst" ]; then
+    same "$dst"
+    return 0
+  fi
+  mkdir -p "$(dirname "$dst")"
+  cp "$src" "$dst"
+  chg "$dst (seeded)"
+}
+
 # render TEMPLATE DST SED_ARGS... — expand a service template, but only write
 # when the result differs. The callers restart a daemon on a write, so a
 # needless write means a needless restart on every install.

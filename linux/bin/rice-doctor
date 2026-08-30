@@ -80,6 +80,54 @@ else
   fi
 fi
 
+# --- the session PATH ------------------------------------------------------
+# The failure this catches is the least legible one on the machine: niri runs
+# under `systemd --user`, whose PATH is /usr/local/bin:/usr/bin, so anything
+# the compositor spawns cannot see ~/.cargo/bin or the rice's own bin dir.
+# `ghostty -e btop` works and `ghostty -e hud` opens a window that dies, and
+# nothing anywhere says why. environment.d/cyberdeck.conf fixes it at the next
+# login, which is exactly why linking the file is not proof that it took.
+ENVD="$HOME/.config/environment.d/cyberdeck.conf"
+if [ ! -L "$ENVD" ]; then
+  fail "session PATH" "environment.d/cyberdeck.conf not linked — run install.sh"
+else
+  niri_pid=$(pgrep -x niri | head -1)
+  sess_path=$(tr '\0' '\n' < "/proc/${niri_pid:-self}/environ" 2>/dev/null \
+              | sed -n 's/^PATH=//p')
+  miss=""
+  for d in "$HOME/.cargo/bin" "$HOME/.local/bin" "$HOME/.dotfiles/common/bin"; do
+    case ":$sess_path:" in *":$d:"*) ;; *) miss="$miss ~${d#"$HOME"}" ;; esac
+  done
+  if [ -z "$niri_pid" ]; then
+    pass "session PATH" "linked (niri not running to check it against)"
+  elif [ -z "$miss" ]; then
+    pass "session PATH" "the compositor can see the rice's bin dirs"
+  else
+    fail "session PATH" "this session started before it — missing:$miss
+                         log out and back in. Until then the dock still works
+                         (it exports its own), the keybinds and bar clicks do
+                         not."
+  fi
+fi
+
+# --- the dock --------------------------------------------------------------
+# Two different failures, and only one of them is visible from the desk. A slot
+# that resolves nothing simply is not drawn, which is the design — but a slot
+# written in the table and not in the bar (or the reverse) is a list kept in
+# two places that has quietly stopped agreeing, and nothing on screen says so.
+DOCK="$HOME/.dotfiles/linux/bin/dock"
+if [ ! -x "$DOCK" ]; then
+  fail "dock" "linux/bin/dock missing or not executable"
+else
+  dock_slots=$("$DOCK" list | awk '$2 == "ok" { s = s " " $1 } END { print substr(s, 2) }')
+  if drift=$("$DOCK" check 2>&1); then
+    pass "dock" "$(printf '%s' "$drift" | head -1) · ${dock_slots:-nothing resolves}"
+  else
+    fail "dock" "$(printf '%s' "$drift" | tail -n +2 | paste -sd'; ' -) —
+                         the table and the bar disagree; run 'dock check'"
+  fi
+fi
+
 # --- the netwatch feed -----------------------------------------------------
 if systemctl --user is-active --quiet netwatch-metrics.service; then
   if body=$(curl -sf --max-time 2 http://127.0.0.1:9464/metrics 2>/dev/null); then
@@ -136,6 +184,25 @@ done
 [ -z "${hud_missing:-}" ] \
   && pass "hud panes" "netwatch, syswatch, diskwatch present" \
   || fail "hud panes" "missing: $hud_missing— cargo install netwatch-tui syswatch diskwatch"
+
+# netwatch and diskwatch read the terminal's sixteen ANSI colours and so take
+# the palette through Ghostty for free. syswatch ships its own `dark` as the
+# default, which is a good palette and not this one — in a HUD pane it is the
+# tile with the wrong greens. install.sh seeds `terminal`; syswatch can also be
+# switched from inside its own UI, so report what it actually says rather than
+# what was installed.
+SW="$HOME/.config/syswatch/config.toml"
+if ! command -v syswatch >/dev/null; then
+  :
+elif [ ! -f "$SW" ]; then
+  fail "syswatch theme" "no config — run install.sh to seed theme = \"terminal\""
+elif grep -qE '^[[:space:]]*theme[[:space:]]*=[[:space:]]*"terminal"' "$SW"; then
+  pass "syswatch theme" "terminal — inherits the palette through Ghostty"
+else
+  fail "syswatch theme" "$(sed -n 's/^[[:space:]]*theme[[:space:]]*=[[:space:]]*/theme = /p' "$SW" | head -1) —
+                         the HUD pane will not match. Press T in syswatch, or
+                         set theme = \"terminal\" in $SW"
+fi
 
 for t in eza bat fd fzf zoxide atuin delta rg fastfetch btop wl-copy; do
   command -v "$t" >/dev/null || missing="${missing:-}$t "

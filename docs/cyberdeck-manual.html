@@ -727,8 +727,8 @@
         <div class="keys">
           <div class="row"><div class="kseq"><kbd class="accent">Mod</kbd><span class="plus">+</span><kbd class="accent">return</kbd></div><div class="act">New Ghostty window <em>This is the global terminal key — see Terminal</em></div></div>
           <div class="row"><div class="kseq"><kbd>Mod</kbd><span class="plus">+</span><kbd>space</kbd></div><div class="act">fuzzel — launch by name, when you know what you want</div></div>
-          <div class="row"><div class="kseq"><kbd>Mod</kbd><span class="plus">+</span><kbd>a</kbd></div><div class="act">The app panel — launch by browsing, when you don't <em>same as the bar's launcher button · right-click it for fuzzel</em></div></div>
-          <div class="row"><div class="kseq"><kbd>Mod</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>d</kbd></div><div class="act">Open the HUD in its own window</div></div>
+          <div class="row"><div class="kseq"><kbd>Mod</kbd><span class="plus">+</span><kbd>a</kbd></div><div class="act">The app panel — launch by browsing, when you don't <em>same as the bar's launcher button · fuzzel has its own button beside it</em></div></div>
+          <div class="row"><div class="kseq"><kbd>Mod</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>d</kbd></div><div class="act">Open the HUD in its own window <em>the same code path as the dock's HUD icon</em></div></div>
           <div class="row"><div class="kseq"><kbd>Mod</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>q</kbd></div><div class="act">Close this window</div></div>
           <div class="row"><div class="kseq"><kbd>Mod</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>/</kbd></div><div class="act">niri's own hotkey overlay — every bind, live from the config</div></div>
           <div class="row"><div class="kseq"><kbd>Mod</kbd><span class="plus">+</span><kbd>print</kbd></div><div class="act">Screenshot this window <em>add shift for the whole screen · ~/Pictures/Screenshots</em></div></div>
@@ -800,7 +800,7 @@
         <div class="meta">
           <span class="chip"><b>Config</b> linux/waybar/config.jsonc</span>
           <span class="chip"><b>Feed</b> 127.0.0.1:9464</span>
-          <span class="chip"><b>Scripts</b> 2 of 7</span>
+          <span class="chip"><b>Bars</b> 2, one process</span>
         </div>
 
         <h2>What's up there</h2>
@@ -822,9 +822,31 @@
           <div class="cmd"><code>journalctl --user -u netwatch-metrics -f</code><span>Follow that daemon's log</span></div>
         </div>
 
+        <h2>The dock</h2>
+        <p>A second bar out of the same waybar, pinned to the bottom edge: the handful of applications you open every day, as a fixed target. fuzzel answers <em>I can name it</em>, the app panel answers <em>I can't</em>, and this answers <em>I open this every day and would rather not do either</em>. <code>linux/bin/dock</code> holds the list; the bar holds one item per slot.</p>
+        <div class="keys">
+          <div class="row"><div class="kseq"><kbd>󰆍 󰅩 󰖟 󰚩 󰎚 󰭹 󰉋</kbd></div><div class="act">Terminal, editor, browser, Claude, notes, chat, files <em>click to focus what is already open, or start it</em></div></div>
+          <div class="row"><div class="kseq"><kbd>󰕰 󰊢 󰡨 󱃾 󰌘</kbd></div><div class="act">HUD, git, containers, cluster, packet capture <em>everything right of the divider opens in a terminal, and answers blue</em></div></div>
+        </div>
+        <p>Everything right of the divider runs in a terminal, and gets its own app-id — <code>ghostty --class=com.mitchellh.ghostty-&lt;slot&gt;</code>, derived from the slot name. That is what keeps it out of the blanket <code>com.mitchellh.ghostty</code> rule that would file it on <code>term</code>, out of sight of the click that asked for it, and what makes the second click <em>focus</em> the HUD rather than attach a second tmux client to it and shrink the grid you were reading. Those windows open maximised, and the HUD opens at <code>--font-size=10</code>: the *watch tools each refuse to draw below 80×24, and three of them in one window at the configured 14 is 83×18 a pane.</p>
+
+        <p>Each slot names its candidates in preference order — <code>zed</code>, then <code>code</code>, then <code>rustrover</code>, then nvim in a terminal — and <strong>a slot that resolves nothing is not drawn</strong>. The dock is exactly as wide as the software this machine actually has, and grows an icon the day you install the next thing. A dock full of dead icons teaches you to stop aiming at it.</p>
+
+        <div class="cmds">
+          <div class="cmd"><code>dock list</code><span>Every slot, and what it resolved to on this machine</span></div>
+          <div class="cmd"><code>dock check</code><span>Resolution count, plus drift between the table and the bar</span></div>
+          <div class="cmd"><code>dock open &lt;slot&gt;</code><span>What a click does — focus if it is up, else launch</span></div>
+          <div class="cmd"><code>pkill -RTMIN+7 waybar</code><span>Re-probe the slots after installing something</span></div>
+        </div>
+
         <div class="note">
           <span class="tag">Reload</span>
-          <p>Waybar reloads on <code>SIGUSR2</code>, and <code>install.sh</code> sends it only on a run that actually rewrote something under <code>~/.config/waybar</code>. A re-link that changed nothing leaves the bar alone.</p>
+          <p>Waybar reloads on <code>SIGUSR2</code>, and <code>install.sh</code> sends it only on a run that actually rewrote something under <code>~/.config/waybar</code>. A re-link that changed nothing leaves the bar alone. The dock probes once at startup and then sits still — <code>SIGRTMIN+7</code> is what re-runs it, rather than twelve commands on a timer forever.</p>
+        </div>
+
+        <div class="note blocked">
+          <span class="tag">Session PATH</span>
+          <p>niri runs under <code>systemd --user</code>, whose PATH is <code>/usr/local/bin:/usr/bin</code> — and because Ghostty is single-instance, that one process runs every <code>ghostty -e &lt;tool&gt;</code> on the machine. So <code>ghostty -e btop</code> works and <code>ghostty -e hud</code> opens a window that dies, with nothing to say why. <code>linux/systemd/environment.d/cyberdeck.conf</code> puts <code>~/.cargo/bin</code>, <code>~/.local/bin</code> and the rice's own <code>common/bin</code> on the session PATH; it is read at login, so <code>rice-doctor</code> checks the running compositor rather than trusting that the link was enough.</p>
         </div>
 
         <div class="note good">
@@ -1018,9 +1040,24 @@
           <div class="hudpane" style="grid-column: span 2"><div class="t">diskwatch</div><div class="d">Read/write throughput, capacity, busiest files</div></div>
         </div>
 
+        <div class="keys">
+          <div class="row"><div class="kseq"><kbd class="accent">C-a</kbd><span class="plus">+</span><kbd class="accent">z</kbd></div><div class="act">Zoom the selected pane to the whole window — same keys again to put it back <em>tmux's own binding, unchanged</em></div></div>
+          <div class="row"><div class="kseq"><kbd>C-a</kbd><span class="plus">+</span><kbd>hjkl</kbd></div><div class="act">Move the selection between panes first</div></div>
+        </div>
+
+        <div class="note good">
+          <span class="tag">Zoom, then un-lite</span>
+          <p>Worth pairing the two: a pane in the grid is around 115×26, which is why <code>hud</code> starts every tool with <code>--lite</code>. Zoomed it is the full 232×53, so <kbd>L</kbd> (or <kbd>V</kbd> in syswatch and diskwatch) will now give you the full or dense view rather than a "terminal too small" line. Un-zoom and they go back to lite on their own.</p>
+        </div>
+
         <div class="note only-linux">
           <span class="tag">Three, not four</span>
           <p><strong>soundwatch is macOS-only</strong> — it binds a CoreAudio tap, and there is no Linux build. <code>hud</code> checks for it and builds a three-pane grid when it's absent, rather than opening a fourth pane that dies immediately. That's the same degradation any missing tool gets.</p>
+        </div>
+
+        <div class="note">
+          <span class="tag">One palette</span>
+          <p>The panes take their colours from the <em>terminal</em>, not from a theme file each tool ships — netwatch and diskwatch read the sixteen ANSI colours, so Ghostty hands them the palette for free. syswatch is the one exception: it defaults to its own <code>dark</code>, which is a good palette and not this one, and in the grid it reads as the tile with the wrong greens. <code>install.sh</code> seeds <code>theme = "terminal"</code> into <code>~/.config/syswatch/config.toml</code> — seeded rather than linked, because syswatch writes that file back when you change a setting from inside it (<kbd>T</kbd> cycles the theme). <code>rice-doctor</code> reports what the file says, not what was installed.</p>
         </div>
 
         <h2>Launching</h2>

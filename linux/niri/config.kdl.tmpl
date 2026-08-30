@@ -136,7 +136,11 @@ window-rule {
 window-rule {
     match app-id=r#"^google-chrome$"#
     match app-id=r#"^brave-browser$"#
+    // Firefox reports org.mozilla.firefox on Wayland, not "firefox" — the bare
+    // name is the X11 WM_CLASS, so on its own this rule silently never fired
+    // and Firefox opened wherever you happened to be standing.
     match app-id=r#"^firefox$"#
+    match app-id=r#"^org\.mozilla\.firefox$"#
     open-on-workspace "web"
 }
 window-rule {
@@ -153,6 +157,22 @@ window-rule {
     match app-id=r#"^wireshark$"#
     match app-id=r#"^org\.wireshark\.Wireshark$"#
     open-on-workspace "infra"
+}
+
+// The dock's terminal-hosted tools — the HUD, lazygit, k9s. linux/bin/dock
+// gives each of them its own GTK app-id (`ghostty --class=…-<slot>`), and this
+// rule is half the reason it bothers. The other half is that the first rule in
+// this file files every plain ghostty window on `term`, which for something
+// you launched by clicking means it opens where you are not looking.
+//
+// Maximized, because the HUD is what sets the floor: netwatch, syswatch and
+// diskwatch each refuse to draw below 80×24, and this rice's `hud` tiles three
+// of them into one window. At the default preset column width that is 82×19
+// per pane and all three panes print an apology instead of a graph. A
+// full-width column is 114×30 each, which clears it with room to spare.
+window-rule {
+    match app-id=r#"^com\.mitchellh\.ghostty-"#
+    open-maximized true
 }
 
 // Things that should never be tiled — the aerospace 'layout floating' rules.
@@ -270,7 +290,14 @@ binds {
     Mod+Shift+Escape { spawn "niri" "msg" "action" "quit" "--skip-confirmation"; }
 
     // --- The HUD ------------------------------------------------------------
-    Mod+Shift+D { spawn "ghostty" "-e" "hud"; }
+    // Through the dock rather than `spawn "ghostty" "-e" "hud"`, and the
+    // difference is not cosmetic: niri spawns with the systemd user manager's
+    // PATH, so ghostty — which is single-instance, and therefore the one
+    // process running every `-e` on this machine — cannot find `hud` at all
+    // until the session picks up environment.d/cyberdeck.conf at next login.
+    // linux/bin/dock resolves and exports first, so this works either way,
+    // and the keybind and the dock's own HUD icon are now the same code path.
+    Mod+Shift+D { spawn "sh" "-c" "~/.dotfiles/linux/bin/dock open hud"; }
 
     // --- Screenshots --------------------------------------------------------
     Print            { screenshot; }

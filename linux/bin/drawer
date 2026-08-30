@@ -31,20 +31,31 @@ import json, os, re, sys
 scr = json.load(sys.stdin)["logical"]
 sw, sh = scr["width"], scr["height"]
 
-bar = {}
+bars = []
 try:  # JSONC — strip the // comments before handing it to json
     src = open(os.path.expanduser("~/.config/waybar/config.jsonc")).read()
-    bar = json.loads(re.sub(r"^\s*//.*$", "", src, flags=re.M))
+    cfg = json.loads(re.sub(r"^\s*//.*$", "", src, flags=re.M))
+    bars = cfg if isinstance(cfg, list) else [cfg]
 except Exception:
-    pass                      # defaults below match the bar as committed
+    pass                      # defaults below match the bars as committed
+
+
+def pick(where):
+    return next((b for b in bars if b.get("position", "top") == where), {})
+
+
+bar, dock = pick("top"), pick("bottom")
 bar_h, bar_mt, bar_ml = (bar.get("height", 32),
                          bar.get("margin-top", 8),
                          bar.get("margin-left", 8))
+# The dock reserves its own strip along the bottom edge. nwg-drawer does not
+# get out of its way on its own, so the panel has to stop above it.
+dock_h = dock.get("height", 0) + dock.get("margin-bottom", 0) if dock else 0
 
 W, H, gap = (int(a) for a in sys.argv[1:4])
 top = bar_mt + bar_h + gap
-w = min(W, sw - 2 * bar_ml)   # clamp: a small output gets a smaller panel,
-h = min(H, sh - top - bar_mt) # never a negative margin
+w = min(W, sw - 2 * bar_ml)     # clamp: a small output gets a smaller panel,
+h = min(H, sh - top - dock_h)   # never a negative margin
 print("-mt", top, "-ml", bar_ml, "-mr", sw - bar_ml - w, "-mb", sh - top - h)
 ' "$PANEL_W" "$PANEL_H" "$GAP"
 }

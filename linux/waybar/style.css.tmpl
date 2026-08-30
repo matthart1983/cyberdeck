@@ -203,6 +203,83 @@ window#waybar.empty #window { background: transparent; }
   border-color: @red;
 }
 
+/* --- The dock (the bottom bar) ------------------------------------------- */
+/* Both bars come out of one waybar and share this sheet, so everything below
+   is scoped to .dock — the class waybar takes from the bar's "name". Without
+   that scope the rules above, written for a full-width bar, apply to a dock
+   that is deliberately not one. */
+
+/* The dock's window is invisible and full-width; the pill you can see is drawn
+   on the centre box, so it is exactly as wide as the icons in it. A dock is a
+   cluster you aim at, not a strip that spans the output — and the alternative,
+   a fixed "width" on the bar, would have to be re-guessed every time a slot
+   resolves or stops resolving. */
+window#waybar.dock {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+window#waybar.dock .modules-center {
+  background: alpha(@bg, 0.9);
+  border: 1px solid @border;
+  border-radius: 10px;
+  padding: 0 4px;
+}
+
+/* Every slot carries class "app" from `dock probe`. Bigger than anything on
+   the top bar: these are targets for the pointer, not readouts for the eye. */
+window#waybar.dock .app {
+  color: @fg_dim;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 0 10px;
+  margin: 4px 2px;
+  font-size: 20px;
+  transition: color 120ms ease, background 120ms ease;
+}
+
+/* Applications answer in magenta, the same accent the launcher button uses:
+   both of them start something you then look at. */
+window#waybar.dock .app:hover {
+  color: @bg;
+  background: @magenta;
+  border-color: @magenta;
+}
+
+/* Everything right of the separator opens in a terminal, so it answers in blue
+   instead. The separator is then doing something visible rather than just
+   spacing the row out. Two ids in each selector, which is what puts these
+   above the .app:hover rule — GTK resolves specificity the way CSS does. */
+window#waybar.dock #custom-dock-hud:hover,
+window#waybar.dock #custom-dock-git:hover,
+window#waybar.dock #custom-dock-containers:hover,
+window#waybar.dock #custom-dock-k8s:hover,
+window#waybar.dock #custom-dock-net:hover {
+  color: @bg;
+  background: @blue;
+  border-color: @blue;
+}
+
+/* Nothing in this slot is installed. Waybar hides a custom module whose text
+   is empty, so this is the second belt: if a build ever stops doing that, the
+   item still takes no space rather than leaving a hole in the row. Same trick,
+   and the same reason, as the scratch-workspace rule above — GTK CSS has no
+   `display`, so min-width is what takes the space back. */
+window#waybar.dock .app.absent {
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  border: none;
+  opacity: 0;
+}
+
+#custom-dock-sep {
+  color: @purple;
+  padding: 0 6px;
+}
+
 /* State colours — Waybar sets these classes from the "states" map. */
 #cpu.warning,
 #memory.warning,

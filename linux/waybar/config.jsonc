@@ -2,6 +2,12 @@
 // Cyberpunk rice — Waybar
 // ~/.dotfiles/linux/waybar/config.jsonc  ->  ~/.config/waybar/config.jsonc
 //
+// Two bars out of one process: the status bar along the top, and the
+// application dock along the bottom. Waybar takes an ARRAY here and gives each
+// object its own surface, which is why this is not two configs and two
+// daemons — one reload (SIGUSR2) moves both, and one stylesheet paints both,
+// with "name" as the class that tells them apart.
+//
 // The Linux stand-in for sketchybar/sketchybarrc. Read the right side
 // right-to-left: clock, battery, disk, mem, cpu, net, link — the same order
 // as the macOS bar.
@@ -13,153 +19,277 @@
 // netwatch-fed ones — link and net — because that data comes from netwatch's
 // Prometheus endpoint, not from the kernel. That was always the point.
 // ---------------------------------------------------------------------------
-{
-  "layer": "top",
-  "position": "top",
-  "height": 32,
-  "margin-top": 8,
-  "margin-left": 8,
-  "margin-right": 8,
-  "spacing": 2,
+[
+  {
+    "name": "top",
+    "layer": "top",
+    "position": "top",
+    "height": 32,
+    "margin-top": 8,
+    "margin-left": 8,
+    "margin-right": 8,
+    "spacing": 2,
 
-  "modules-left":   ["custom/launcher", "custom/run", "niri/workspaces", "custom/sep", "niri/window"],
-  "modules-center": [],
-  "modules-right":  ["custom/link", "custom/net", "cpu", "memory", "disk", "battery", "clock", "custom/power"],
+    "modules-left":   ["custom/launcher", "custom/run", "niri/workspaces", "custom/sep", "niri/window"],
+    "modules-center": [],
+    "modules-right":  ["custom/link", "custom/net", "cpu", "memory", "disk", "battery", "clock", "custom/power"],
 
-  // --- Left: the launcher button ------------------------------------------
-  // Opens nwg-drawer, not fuzzel: a button is for the times you are looking
-  // rather than typing, and the drawer is the one that answers that. It drops
-  // down from here as a panel, so the button and its menu read as one thing.
-  // linux/bin/drawer is what sizes that panel to the current output and
-  // toggles the resident copy. Typing has its own button beside this one —
-  // it used to be this button's right-click, which is no more findable than
-  // the keybind it was standing in for.
-  "custom/launcher": {
-    "format": "󰀻",
-    "tooltip": true,
-    "tooltip-format": "Browse applications  (Mod+A)",
-    "on-click": "~/.dotfiles/linux/bin/drawer"
-  },
-
-  // --- Left: the run button ------------------------------------------------
-  // The other half of the pair: fuzzel, for when you can name the thing.
-  // Toggles, so a second click dismisses a prompt that is already up rather
-  // than failing silently — fuzzel refuses to run twice.
-  "custom/run": {
-    "format": "󰍉",
-    "tooltip": true,
-    "tooltip-format": "Run a program  (Mod+Space)",
-    "on-click": "pkill fuzzel || fuzzel"
-  },
-
-  // --- Left: niri workspaces, named exactly as the compositor names them ---
-  "niri/workspaces": {
-    "format": "{icon}",
-    // Material Design glyphs, the same set the right-hand items use. The
-    // labels were "1".."6", which the six pinned workspaces would have got
-    // from {index} anyway — the map only earns its place saying something
-    // the index cannot.
-    "format-icons": {
-      "term":  "󰆍",
-      "code":  "󰅩",
-      "web":   "󰖟",
-      "chat":  "󰭹",
-      "notes": "󰎚",
-      "infra": "󰒋"
+    // --- Left: the launcher button ------------------------------------------
+    // Opens nwg-drawer, not fuzzel: a button is for the times you are looking
+    // rather than typing, and the drawer is the one that answers that. It drops
+    // down from here as a panel, so the button and its menu read as one thing.
+    // linux/bin/drawer is what sizes that panel to the current output and
+    // toggles the resident copy. Typing has its own button beside this one —
+    // it used to be this button's right-click, which is no more findable than
+    // the keybind it was standing in for.
+    "custom/launcher": {
+      "format": "󰀻",
+      "tooltip": true,
+      "tooltip-format": "Browse applications  (Mod+A)",
+      "on-click": "~/.dotfiles/linux/bin/drawer"
     },
-    "on-click": "activate"
+
+    // --- Left: the run button ------------------------------------------------
+    // The other half of the pair: fuzzel, for when you can name the thing.
+    // Toggles, so a second click dismisses a prompt that is already up rather
+    // than failing silently — fuzzel refuses to run twice.
+    "custom/run": {
+      "format": "󰍉",
+      "tooltip": true,
+      "tooltip-format": "Run a program  (Mod+Space)",
+      "on-click": "pkill fuzzel || fuzzel"
+    },
+
+    // --- Left: niri workspaces, named exactly as the compositor names them ---
+    "niri/workspaces": {
+      "format": "{icon}",
+      // Material Design glyphs, the same set the right-hand items use. The
+      // labels were "1".."6", which the six pinned workspaces would have got
+      // from {index} anyway — the map only earns its place saying something
+      // the index cannot.
+      "format-icons": {
+        "term":  "󰆍",
+        "code":  "󰅩",
+        "web":   "󰖟",
+        "chat":  "󰭹",
+        "notes": "󰎚",
+        "infra": "󰒋"
+      },
+      "on-click": "activate"
+    },
+
+    "custom/sep": {
+      "format": "│",
+      "tooltip": false
+    },
+
+    "niri/window": {
+      "format": "  {}",
+      "max-length": 48,
+      "separate-outputs": true
+    },
+
+    // --- The two netwatch-fed items -----------------------------------------
+    "custom/link": {
+      "exec": "~/.config/waybar/scripts/link.sh",
+      "return-type": "json",
+      "interval": 5,
+      "on-click": "ghostty -e netwatch"
+    },
+
+    "custom/net": {
+      "exec": "~/.config/waybar/scripts/net.sh",
+      "return-type": "json",
+      "interval": 2,
+      "on-click": "ghostty -e netwatch"
+    },
+
+    // --- Kernel-fed items ----------------------------------------------------
+    "cpu": {
+      "format": "󰻠 {usage}%",
+      "interval": 3,
+      "states": { "warning": 70, "critical": 90 },
+      "on-click": "ghostty -e btop"
+    },
+
+    "memory": {
+      "format": "󰍛 {percentage}%",
+      "interval": 5,
+      "states": { "warning": 80, "critical": 92 },
+      "tooltip-format": "{used:0.1f}G / {total:0.1f}G",
+      "on-click": "ghostty -e btop"
+    },
+
+    "disk": {
+      // On Linux `/` is the real root — no sealed-snapshot workaround needed.
+      "path": "/",
+      "format": "󰋊 {percentage_used}% · {free} free",
+      "interval": 300,
+      "states": { "warning": 85, "critical": 93 }
+    },
+
+    "battery": {
+      // Framework 13 reports as BAT1, not BAT0.
+      "bat": "BAT1",
+      "interval": 30,
+      "states": { "critical": 15, "warning": 35, "good": 85 },
+      "format": "{icon} {capacity}%",
+      "format-charging": "󰂄 {capacity}%",
+      "format-plugged": "󰚥 {capacity}%",
+      "format-icons": ["󰁺", "󰁽", "󰂀", "󰂂", "󰁹"],
+      "tooltip-format": "{timeTo} · {power:0.1f}W"
+    },
+
+    "clock": {
+      "interval": 10,
+      "format": "󰥔 {:%H:%M}",
+      "format-alt": "󰃭 {:%a %d %b}",
+      "tooltip-format": "<tt><small>{calendar}</small></tt>"
+    },
+
+    // --- Right: the session menu ---------------------------------------------
+    // A GTK menu rather than a script driving fuzzel or a wlogout overlay:
+    // waybar builds the popup from power.xml itself and styles it with THIS
+    // bar's stylesheet, so the menu takes the palette without a seventeenth
+    // themed surface and without a package that is not already installed.
+    //
+    // The ids here are power.xml's ids. Log out goes through niri rather than
+    // loginctl so it uses the compositor's own confirmation dialog — the same
+    // one Mod+Shift+E raises — instead of ending the session on one click.
+    "custom/power": {
+      "format": "󰐥",
+      "tooltip": true,
+      "tooltip-format": "Session",
+      "menu": "on-click",
+      "menu-file": "$HOME/.config/waybar/power.xml",
+      "menu-actions": {
+        "lock": "swaylock -f",
+        "logout": "niri msg action quit",
+        "suspend": "systemctl suspend",
+        "reboot": "systemctl reboot",
+        "poweroff": "systemctl poweroff"
+      }
+    }
   },
 
-  "custom/sep": {
-    "format": "│",
-    "tooltip": false
-  },
-
-  "niri/window": {
-    "format": "  {}",
-    "max-length": 48,
-    "separate-outputs": true
-  },
-
-  // --- The two netwatch-fed items -----------------------------------------
-  "custom/link": {
-    "exec": "~/.config/waybar/scripts/link.sh",
-    "return-type": "json",
-    "interval": 5,
-    "on-click": "ghostty -e netwatch"
-  },
-
-  "custom/net": {
-    "exec": "~/.config/waybar/scripts/net.sh",
-    "return-type": "json",
-    "interval": 2,
-    "on-click": "ghostty -e netwatch"
-  },
-
-  // --- Kernel-fed items ----------------------------------------------------
-  "cpu": {
-    "format": "󰻠 {usage}%",
-    "interval": 3,
-    "states": { "warning": 70, "critical": 90 },
-    "on-click": "ghostty -e btop"
-  },
-
-  "memory": {
-    "format": "󰍛 {percentage}%",
-    "interval": 5,
-    "states": { "warning": 80, "critical": 92 },
-    "tooltip-format": "{used:0.1f}G / {total:0.1f}G",
-    "on-click": "ghostty -e btop"
-  },
-
-  "disk": {
-    // On Linux `/` is the real root — no sealed-snapshot workaround needed.
-    "path": "/",
-    "format": "󰋊 {percentage_used}% · {free} free",
-    "interval": 300,
-    "states": { "warning": 85, "critical": 93 }
-  },
-
-  "battery": {
-    // Framework 13 reports as BAT1, not BAT0.
-    "bat": "BAT1",
-    "interval": 30,
-    "states": { "critical": 15, "warning": 35, "good": 85 },
-    "format": "{icon} {capacity}%",
-    "format-charging": "󰂄 {capacity}%",
-    "format-plugged": "󰚥 {capacity}%",
-    "format-icons": ["󰁺", "󰁽", "󰂀", "󰂂", "󰁹"],
-    "tooltip-format": "{timeTo} · {power:0.1f}W"
-  },
-
-  "clock": {
-    "interval": 10,
-    "format": "󰥔 {:%H:%M}",
-    "format-alt": "󰃭 {:%a %d %b}",
-    "tooltip-format": "<tt><small>{calendar}</small></tt>"
-  },
-
-  // --- Right: the session menu ---------------------------------------------
-  // A GTK menu rather than a script driving fuzzel or a wlogout overlay:
-  // waybar builds the popup from power.xml itself and styles it with THIS
-  // bar's stylesheet, so the menu takes the palette without a seventeenth
-  // themed surface and without a package that is not already installed.
+  // =========================================================================
+  // The dock — the bottom bar
   //
-  // The ids here are power.xml's ids. Log out goes through niri rather than
-  // loginctl so it uses the compositor's own confirmation dialog — the same
-  // one Mod+Shift+E raises — instead of ending the session on one click.
-  "custom/power": {
-    "format": "󰐥",
-    "tooltip": true,
-    "tooltip-format": "Session",
-    "menu": "on-click",
-    "menu-file": "$HOME/.config/waybar/power.xml",
-    "menu-actions": {
-      "lock": "swaylock -f",
-      "logout": "niri msg action quit",
-      "suspend": "systemctl suspend",
-      "reboot": "systemctl reboot",
-      "poweroff": "systemctl poweroff"
+  // fuzzel is for when you can name the thing, the drawer for when you cannot,
+  // and this is for the handful you open every day, where a fixed target beats
+  // both. linux/bin/dock holds the list; each item here is one slot of it.
+  //
+  // Every module is the same five lines because the only difference between
+  // them is the slot name. `probe` runs ONCE at startup and prints the glyph,
+  // or prints nothing when nothing in that slot is installed — waybar hides an
+  // item with no text, so the dock is exactly as wide as this machine's
+  // software. Install something and re-signal the bar (SIGRTMIN+7) rather than
+  // having it poll twelve commands forever.
+  //
+  // Exclusive, like the top bar: a dock that windows can slide under is a dock
+  // you have to move windows out of, which is the opposite of one click.
+  // =========================================================================
+  {
+    "name": "dock",
+    "layer": "top",
+    "position": "bottom",
+    "height": 44,
+    "margin-bottom": 8,
+    "spacing": 0,
+
+    // Centred, and the window itself is transparent: the pill you can see is
+    // drawn on .modules-center, so it is as wide as its contents instead of
+    // stretching the full output the way the top bar does.
+    "modules-left":   [],
+    "modules-center": [
+      "custom/dock-term", "custom/dock-editor", "custom/dock-browser",
+      "custom/dock-claude", "custom/dock-notes", "custom/dock-chat",
+      "custom/dock-files",
+      "custom/dock-sep",
+      "custom/dock-hud", "custom/dock-git", "custom/dock-containers",
+      "custom/dock-k8s", "custom/dock-net"
+    ],
+    "modules-right":  [],
+
+    "custom/dock-term": {
+      "exec": "~/.dotfiles/linux/bin/dock probe term",
+      "on-click": "~/.dotfiles/linux/bin/dock open term",
+      "return-type": "json", "interval": "once", "signal": 7
+    },
+
+    "custom/dock-editor": {
+      "exec": "~/.dotfiles/linux/bin/dock probe editor",
+      "on-click": "~/.dotfiles/linux/bin/dock open editor",
+      "return-type": "json", "interval": "once", "signal": 7
+    },
+
+    "custom/dock-browser": {
+      "exec": "~/.dotfiles/linux/bin/dock probe browser",
+      "on-click": "~/.dotfiles/linux/bin/dock open browser",
+      "return-type": "json", "interval": "once", "signal": 7
+    },
+
+    "custom/dock-claude": {
+      "exec": "~/.dotfiles/linux/bin/dock probe claude",
+      "on-click": "~/.dotfiles/linux/bin/dock open claude",
+      "return-type": "json", "interval": "once", "signal": 7
+    },
+
+    "custom/dock-notes": {
+      "exec": "~/.dotfiles/linux/bin/dock probe notes",
+      "on-click": "~/.dotfiles/linux/bin/dock open notes",
+      "return-type": "json", "interval": "once", "signal": 7
+    },
+
+    "custom/dock-chat": {
+      "exec": "~/.dotfiles/linux/bin/dock probe chat",
+      "on-click": "~/.dotfiles/linux/bin/dock open chat",
+      "return-type": "json", "interval": "once", "signal": 7
+    },
+
+    "custom/dock-files": {
+      "exec": "~/.dotfiles/linux/bin/dock probe files",
+      "on-click": "~/.dotfiles/linux/bin/dock open files",
+      "return-type": "json", "interval": "once", "signal": 7
+    },
+
+    // Applications to the left of this, the terminal toolbelt to the right.
+    "custom/dock-sep": {
+      "format": "│",
+      "tooltip": false
+    },
+
+    "custom/dock-hud": {
+      "exec": "~/.dotfiles/linux/bin/dock probe hud",
+      "on-click": "~/.dotfiles/linux/bin/dock open hud",
+      "return-type": "json", "interval": "once", "signal": 7
+    },
+
+    "custom/dock-git": {
+      "exec": "~/.dotfiles/linux/bin/dock probe git",
+      "on-click": "~/.dotfiles/linux/bin/dock open git",
+      "return-type": "json", "interval": "once", "signal": 7
+    },
+
+    "custom/dock-containers": {
+      "exec": "~/.dotfiles/linux/bin/dock probe containers",
+      "on-click": "~/.dotfiles/linux/bin/dock open containers",
+      "return-type": "json", "interval": "once", "signal": 7
+    },
+
+    // Nothing on this machine answers to k9s yet. That is the point of the
+    // hide-when-absent rule: the slot is written down now, and the dock grows
+    // an item the day the ops layer lands rather than needing a config edit.
+    "custom/dock-k8s": {
+      "exec": "~/.dotfiles/linux/bin/dock probe k8s",
+      "on-click": "~/.dotfiles/linux/bin/dock open k8s",
+      "return-type": "json", "interval": "once", "signal": 7
+    },
+
+    "custom/dock-net": {
+      "exec": "~/.dotfiles/linux/bin/dock probe net",
+      "on-click": "~/.dotfiles/linux/bin/dock open net",
+      "return-type": "json", "interval": "once", "signal": 7
     }
   }
-}
+]
