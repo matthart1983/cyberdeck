@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Cyberpunk rice — the bar's session menu
+  ~/.dotfiles/linux/waybar/power.xml  ->  ~/.config/waybar/power.xml
+
+  Structure only. What each item DOES is "menu-actions" in config.jsonc, keyed
+  by the ids below, and what each item LOOKS like is style.css — waybar renders
+  this as an ordinary GTK menu, so the bar's own stylesheet reaches it.
+
+  Lock is first on purpose: it is the one entry that costs nothing if you land
+  on it by accident, and it puts the three that end a session furthest from
+  where the pointer arrives.
+-->
+<interface>
+  <object class="GtkMenu" id="menu">
+
+    <child>
+      <object class="GtkMenuItem" id="lock">
+        <property name="visible">True</property>
+        <property name="label">󰌾   Lock</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="logout">
+        <property name="visible">True</property>
+        <property name="label">󰍃   Log out</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkSeparatorMenuItem" id="sep">
+        <property name="visible">True</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="suspend">
+        <property name="visible">True</property>
+        <property name="label">󰤄   Suspend</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="reboot">
+        <property name="visible">True</property>
+        <property name="label">󰜉   Restart</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="poweroff">
+        <property name="visible">True</property>
+        <property name="label">󰐥   Power off</property>
+      </object>
+    </child>
+
+  </object>
+</interface>

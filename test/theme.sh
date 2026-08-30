@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Prove the theme system, instead of asserting it in a header comment.
 #
-# Thirteen surfaces mirror the palette in nine colour notations, and eight
-# themes fill it. That is 104 renders nobody is going to check by eye, which is
+# Sixteen surfaces mirror the palette in nine colour notations, and eight
+# themes fill it. That is 128 renders nobody is going to check by eye, which is
 # exactly the situation that produced the hand-mirroring this replaces.
 #
 #   test/theme.sh

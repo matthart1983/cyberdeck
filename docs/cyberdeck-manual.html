@@ -850,6 +850,8 @@
         <div class="only-macos">
         <div class="keys">
           <div class="row"><div class="kseq"><kbd class="accent">cmd</kbd><span class="plus">+</span><kbd class="accent">`</kbd></div><div class="act">Drop the quick terminal over whatever you're in <em>Global — works from any app</em></div></div>
+          <div class="row"><div class="kseq"><kbd>cmd</kbd><span class="plus">+</span><kbd>t</kbd></div><div class="act">New tab</div></div>
+          <div class="row"><div class="kseq"><kbd>cmd</kbd><span class="plus">+</span><kbd>n</kbd></div><div class="act">New window</div></div>
           <div class="row"><div class="kseq"><kbd>cmd</kbd><span class="plus">+</span><kbd>d</kbd></div><div class="act">Split right</div></div>
           <div class="row"><div class="kseq"><kbd>cmd</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>d</kbd></div><div class="act">Split down</div></div>
           <div class="row"><div class="kseq"><kbd>cmd</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>h j k l</kbd></div><div class="act">Move between splits <em>Unfocused splits dim to 72%</em></div></div>
@@ -859,6 +861,10 @@
         <div class="keys">
           <div class="row"><div class="kseq"><kbd class="accent">Mod</kbd><span class="plus">+</span><kbd class="accent">return</kbd></div><div class="act">New Ghostty window, from anywhere <em>The compositor's bind, not Ghostty's — see the note below</em></div></div>
           <div class="row"><div class="kseq"><kbd>ctrl</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>`</kbd></div><div class="act">Toggle the quick terminal <em>Only from inside Ghostty</em></div></div>
+          <div class="row"><div class="kseq"><kbd>ctrl</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>t</kbd></div><div class="act">New tab</div></div>
+          <div class="row"><div class="kseq"><kbd>ctrl</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>n</kbd></div><div class="act">New window <em>Ghostty&#39;s own — Mod+return asks the compositor for one instead</em></div></div>
+          <div class="row"><div class="kseq"><kbd>ctrl</kbd><span class="plus">+</span><kbd>tab</kbd></div><div class="act">Next tab <em>ctrl+shift+tab for the previous one</em></div></div>
+          <div class="row"><div class="kseq"><kbd>alt</kbd><span class="plus">+</span><kbd>1</kbd></div><div class="act">Jump to tab 1 <em>through alt+9 · alt is free here, since the tiler is on Mod</em></div></div>
           <div class="row"><div class="kseq"><kbd>ctrl</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>d</kbd></div><div class="act">Split right</div></div>
           <div class="row"><div class="kseq"><kbd>ctrl</kbd><span class="plus">+</span><kbd>alt</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>d</kbd></div><div class="act">Split down</div></div>
           <div class="row"><div class="kseq"><kbd>ctrl</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>h j k l</kbd></div><div class="act">Move between splits <em>Unfocused splits dim to 72%</em></div></div>
@@ -1173,15 +1179,15 @@
           <div class="cmd"><code>rice-doctor</code><span>Check every layer; exits non-zero if one is down</span></div>
           <div class="cmd"><code>install.sh</code><span>Re-link every config. Idempotent</span></div>
           <div class="cmd"><code>theme</code><span>Which palette is active, and what else there is</span></div>
-          <div class="cmd"><code>theme blade</code><span>Switch — renders all 13 surfaces, re-links them, reloads what it can, and names what it can't</span></div>
+          <div class="cmd"><code>theme blade</code><span>Switch — renders all 16 surfaces, re-links them, reloads what it can, and names what it can't</span></div>
           <div class="cmd"><code>test/idempotent.sh</code><span>Run the real installer twice against a throwaway $HOME and fail if the second run writes anything</span></div>
-          <div class="cmd"><code>test/theme.sh</code><span>Render 8 themes × 13 surfaces and check the contract, the drift and the contrast floors</span></div>
+          <div class="cmd"><code>test/theme.sh</code><span>Render 8 themes × 16 surfaces and check the contract, the drift and the contrast floors</span></div>
           <div class="cmd"><code>rice-capture</code><span>Render all demo GIFs — <code>rice-capture hud</code> for just one</span></div>
         </div>
 
         <div class="note good">
           <span class="tag">One palette</span>
-          <p>Thirteen surfaces mirror the colours, in nine different notations — Ghostty's <code>#rrggbb</code>, SketchyBar's <code>0xAARRGGBB</code>, Zed's <code>#rrggbbaa</code>, CSS, ANSI truecolor triplets. They were mirrored <em>by hand</em> until the themes landed, which made eight palettes 104 files that could drift with nothing to catch it. Each one is a <code>.tmpl</code> beside its output now; <code>theme</code> renders them and <code>test/theme.sh</code> fails if a rendered file stops matching its template.</p>
+          <p>Sixteen surfaces mirror the colours, in nine different notations — Ghostty's <code>#rrggbb</code>, SketchyBar's <code>0xAARRGGBB</code>, Zed's <code>#rrggbbaa</code>, CSS, ANSI truecolor triplets. They were mirrored <em>by hand</em> until the themes landed, which made eight palettes 128 files that could drift with nothing to catch it. Each one is a <code>.tmpl</code> beside its output now; <code>theme</code> renders them and <code>test/theme.sh</code> fails if a rendered file stops matching its template.</p>
         </div>
 
         <h2>What the doctor looks at</h2>

@@ -12,6 +12,7 @@
 CP_THEME_NAME="Cyberpunk Neon"
 CP_THEME_SLUG="cyberpunk-neon"
 CP_THEME_LIGHT=0
+CP_THEME_BASE="dark"
 
 # --- surfaces --------------------------------------------------------------
 CP_BG="#000b1e"          # primary background
@@ -67,3 +68,16 @@ CP_SOFT_YELLOW="#cfc06a" # constants
 CP_SOFT_CYAN="#5fa8b0"   # functions
 CP_SOFT_RED="#b0708f"    # errors, deletions
 CP_SOFT_BLUE="#8fb7d9"   # tags, attributes
+
+# --- diff ---------------------------------------------------------------------
+# Claude Code paints diffs as filled lines, which no other surface does and no
+# other slot answers: a diff background is CP_GREEN sunk most of the way into
+# CP_BG, and nothing in the accent half is that. Derived once from CP_GREEN,
+# CP_RED and CP_BG, then authored here like the bright half — edit any line and
+# re-run `theme <slug>`.
+CP_DIFF_ADD_BG="#003c38"      # added line — whole-line fill
+CP_DIFF_DEL_BG="#330929"      # removed line
+CP_DIFF_ADD_BG_DIM="#00232b"  # added line, outside the focused hunk
+CP_DIFF_DEL_BG_DIM="#1a0a24"  # removed line, outside it
+CP_DIFF_ADD_WORD="#009165"    # the changed words inside an added line
+CP_DIFF_DEL_WORD="#8c053c"    # and inside a removed one

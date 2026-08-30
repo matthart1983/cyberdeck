@@ -1,26 +1,26 @@
-# Cyberpunk Neon — rendered from themes/cyberpunk-neon.sh. Do not edit.
-background = #000b1e
-foreground = #0abdc6
+# Deep Sea — rendered from themes/deep-sea.sh. Do not edit.
+background = #060b16
+foreground = #7fd1d6
 
-cursor-color = #ea00d9
-cursor-text = #000b1e
+cursor-color = #5d86ff
+cursor-text = #060b16
 
-selection-background = #133e7c
-selection-foreground = #d7d7d7
+selection-background = #1e3a5f
+selection-foreground = #e6f2f5
 
-palette = 0=#040713
-palette = 1=#ff0055
-palette = 2=#00ff9f
-palette = 3=#f3e600
-palette = 4=#133e7c
-palette = 5=#ea00d9
-palette = 6=#0abdc6
-palette = 7=#d7d7d7
-palette = 8=#1c2541
-palette = 9=#ff4d7e
-palette = 10=#5cffc4
-palette = 11=#fff45c
-palette = 12=#2d6bd4
-palette = 13=#ff4de0
-palette = 14=#4dd9e0
+palette = 0=#030710
+palette = 1=#e05a6b
+palette = 2=#4fc9a0
+palette = 3=#d9c46a
+palette = 4=#245c8f
+palette = 5=#5d86ff
+palette = 6=#7fd1d6
+palette = 7=#e6f2f5
+palette = 8=#1e333c
+palette = 9=#eb919d
+palette = 10=#8adcc1
+palette = 11=#e7d99c
+palette = 12=#4f95d4
+palette = 13=#94afff
+palette = 14=#aae1e5
 palette = 15=#ffffff

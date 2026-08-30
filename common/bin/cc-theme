@@ -1,0 +1,261 @@
+#!/usr/bin/env bash
+# Switch Claude Code's theme, and see what you are switching to.
+#
+#   cc-theme                what's active, and what else there is
+#   cc-theme dark           switch
+#   cc-theme next | prev    step through them in listed order
+#   cc-theme demo           the swatch board, and where to look inside Claude
+#   cc-theme --all          walk them all, demo each, then put it back
+#   cc-theme --check        settings.json and themes/claude-theme agree
+#
+# Claude Code's theme lives in ~/.claude/settings.json, which is its file and
+# holds your other preferences — so this patches the one key through
+# common/claude-settings.py rather than writing that file twice from two places.
+#
+# The choice is recorded in themes/claude-theme, which install.sh reads. That
+# is what stops `theme blade` from reverting it: the rice owns the key, and
+# this owns what the rice puts in it.
+set -euo pipefail
+D="${D:-$HOME/.dotfiles}"
+# shellcheck source=common/lib.sh
+source "$D/common/lib.sh"
+
+LIST="$D/common/claude/themes.psv"
+PREF="$D/themes/claude-theme"
+SETTINGS="$HOME/.claude/settings.json"
+WRITER="$D/common/claude-settings.py"
+STATUSLINE="$D/common/bin/cc-statusline"
+DEMO="$D/common/claude/demo.md"
+DEFAULT="dark-ansi"
+
+die() { printf '  %s✘%s %s\n' "$_c_warn" "$_c_off" "$*" >&2; exit 1; }
+
+[ -r "$LIST" ] || die "missing $LIST"
+
+# value|label|character, comments stripped. The one place the built-ins are named.
+rows() { grep -v '^[[:space:]]*#' "$LIST" | grep -v '^[[:space:]]*$'; }
+builtins() { rows | cut -d'|' -f1; }
+
+# Claude Code also reads loose .json files out of ~/.claude/themes/ and selects
+# one with "custom:<slug>". cyberdeck.json is the rice's fourteenth surface and
+# lands there as a link, but anything else you drop in shows up here too — this
+# lists what is on the machine rather than what this repo shipped.
+CUSTOM_DIR="$HOME/.claude/themes"
+customs() {
+  local f slug
+  [ -d "$CUSTOM_DIR" ] || return 0
+  for f in "$CUSTOM_DIR"/*.json; do
+    [ -e "$f" ] || continue
+    slug="$(basename "$f" .json)"
+    printf 'custom:%s\n' "$slug"
+  done
+}
+
+values() { builtins; customs; }
+
+# A custom theme names itself inside its own file, and says which built-in it
+# is layered over — which is the only interesting thing about it from here.
+custom_meta() {
+  python3 - "$CUSTOM_DIR/${1#custom:}.json" <<'PY' 2>/dev/null || printf '%s|\n' "${1#custom:}"
+import json, sys
+try:
+    with open(sys.argv[1]) as fh:
+        d = json.load(fh)
+except Exception:
+    d = {}
+print("%s|%s" % (d.get("name") or "custom", d.get("base") or "dark"))
+PY
+}
+
+label_for() {
+  case "$1" in
+    custom:*) custom_meta "$1" | cut -d'|' -f1 ;;
+    *)        rows | awk -F'|' -v v="$1" '$1==v{print $2}' ;;
+  esac
+}
+
+char_for() {
+  case "$1" in
+    custom:*) printf 'A custom theme in ~/.claude/themes/, layered over %s.\n' \
+                "$(custom_meta "$1" | cut -d'|' -f2)" ;;
+    *)        rows | awk -F'|' -v v="$1" '$1==v{print $3}' ;;
+  esac
+}
+
+# Deliberately not `values | grep -qx`: grep -q exits on the first match, the
+# producer takes SIGPIPE, and `set -o pipefail` reports that as failure — so
+# matching the FIRST value in the list failed while matching the last one
+# worked. No pipe, no race.
+is_theme() {
+  local v
+  while read -r v; do [ "$v" = "$1" ] && return 0; done < <(values)
+  return 1
+}
+
+# What Claude Code will actually use, which is settings.json and not our
+# preference file — they can disagree if someone edits either by hand, and
+# --check is how you find out.
+active() {
+  python3 - "$SETTINGS" "$DEFAULT" <<'PY' 2>/dev/null || echo "$DEFAULT"
+import json, sys
+try:
+    with open(sys.argv[1]) as fh:
+        print(json.load(fh).get("theme") or sys.argv[2])
+except Exception:
+    print(sys.argv[2])
+PY
+}
+
+preferred() {
+  if [ -r "$PREF" ]; then
+    local p; p="$(tr -d '[:space:]' <"$PREF")"
+    [ -n "$p" ] && { printf '%s\n' "$p"; return; }
+  fi
+  printf '%s\n' "$DEFAULT"
+}
+
+list() {
+  local cur; cur="$(active)"
+  printf '\n  %sactive%s  %s\n\n' "$_c_chg" "$_c_off" "$cur"
+  local v
+  while read -r v; do
+    if [ "$v" = "$cur" ]; then
+      printf '    %s●%s %-18s %s\n' "$_c_chg" "$_c_off" "$v" "$(label_for "$v")"
+    else
+      printf '      %-18s %s\n' "$v" "$(label_for "$v")"
+    fi
+  done < <(values)
+  printf '\n  cc-theme <value> to switch, cc-theme demo to see one\n\n'
+}
+
+# set_theme VALUE — record the choice, then patch the one key.
+set_theme() {
+  local v="$1"
+  is_theme "$v" || {
+    printf '  %s✘%s cc-theme: no such theme '"'"'%s'"'"'\n' "$_c_warn" "$_c_off" "$v" >&2
+    printf '       have: %s\n' "$(values | tr '\n' ' ')" >&2
+    exit 1
+  }
+  # Patch first, record second. A writer that refuses — settings.json
+  # hand-edited into invalid JSON — must not leave the preference file
+  # claiming a theme that never reached Claude Code.
+  local result
+  result="$(python3 "$WRITER" "$SETTINGS" "$STATUSLINE" "$v")"
+  case "$result" in
+    changed|same) : ;;
+    invalid)       die "$SETTINGS is not valid JSON — left alone" ;;
+    invalid-theme) die "$WRITER rejected '$v'" ;;
+    *)             die "$WRITER said nothing useful" ;;
+  esac
+  mkdir -p "$(dirname "$PREF")"
+  printf '%s\n' "$v" >"$PREF"
+  case "$result" in
+    changed) chg  "$v — $(label_for "$v")" ;;
+    same)    same "$v — already active" ;;
+  esac
+}
+
+# step OFFSET — next (+1) or prev (-1), wrapping.
+step() {
+  local cur n i=0 idx=0
+  cur="$(active)"
+  mapfile -t n < <(values)
+  for i in "${!n[@]}"; do [ "${n[$i]}" = "$cur" ] && idx=$i; done
+  idx=$(( (idx + $1 + ${#n[@]}) % ${#n[@]} ))
+  set_theme "${n[$idx]}"
+}
+
+# The half of the demo this script can actually draw. For dark-ansi and
+# light-ansi these sixteen ARE the theme — Claude Code asks the terminal for
+# them and the terminal answers with the rice palette — so this is not a
+# stand-in, it is the thing itself. For the other five it is context: those
+# ship fixed RGB and ignore every colour below.
+swatches() {
+  local i
+  printf '\n  %sthe terminal'"'"'s sixteen%s   what the two -ansi themes resolve to\n\n' \
+    "$_c_chg" "$_c_off"
+  printf '    normal  '
+  for i in 0 1 2 3 4 5 6 7; do printf '\033[4%sm   \033[0m' "$i"; done
+  printf '   black red green yellow blue magenta cyan white\n'
+  printf '    bright  '
+  for i in 0 1 2 3 4 5 6 7; do printf '\033[10%sm   \033[0m' "$i"; done
+  printf '\n\n    text    '
+  for i in 1 2 3 4 5 6; do printf '\033[3%sm██\033[0m' "$i"; done
+  printf '  \033[1;37mbold\033[0m \033[2mdim\033[0m \033[3mitalic\033[0m \033[4munderline\033[0m\n'
+}
+
+# The half it cannot: Claude Code paints its own chrome, and nothing outside
+# it can reproduce that. So the demo ends by pointing at something to read
+# inside Claude Code, which is the only place the rest of a theme exists.
+where_to_look() {
+  printf '\n  %sinside Claude Code%s   everything but the sixteen lives there\n\n' \
+    "$_c_chg" "$_c_off"
+  if [ -r "$DEMO" ]; then
+    printf '    ask Claude to read this, and watch the diff and code blocks:\n'
+    printf '      %s\n' "${DEMO/#$HOME/\~}"
+  else
+    warn "missing $DEMO"
+  fi
+  printf '    diffs are where themes diverge most — the reason the two\n'
+  printf '    colorblind-friendly ones exist, and the reason the palette\n'
+  printf '    grew six CP_DIFF_* slots for custom:cyberdeck.\n\n'
+}
+
+case "${1:-}" in
+  ""|-l|--list)
+    list
+    ;;
+
+  demo)
+    cur="$(active)"
+    printf '\n  %s%s%s  %s\n  %s\n' "$_c_chg" "$cur" "$_c_off" "$(label_for "$cur")" "$(char_for "$cur")"
+    swatches
+    where_to_look
+    ;;
+
+  --check)
+    a="$(active)"; p="$(preferred)"
+    if [ "$a" = "$p" ]; then
+      printf '  %s=%s settings.json and themes/claude-theme both say %s\n' "$_c_ok" "$_c_off" "$a"
+    else
+      warn "settings.json says '$a', themes/claude-theme says '$p'"
+      printf '       cc-theme %s to make them agree\n' "$p"
+      exit 1
+    fi
+    ;;
+
+  --all)
+    was="$(active)"
+    n_all="$(values | wc -l | tr -d ' ')"
+    printf '\n  walking all %s. starting from %s, and putting it back after.\n' "$n_all" "$was"
+    while read -r v; do
+      printf '\n%s\n' "$(printf '─%.0s' {1..64})"
+      set_theme "$v" >/dev/null
+      printf '  %s%s%s  %s\n  %s\n' "$_c_chg" "$v" "$_c_off" "$(label_for "$v")" "$(char_for "$v")"
+      swatches
+      printf '\n    [enter] next, [q] stop here  '
+      read -r -n 1 key </dev/tty || key=q
+      printf '\n'
+      [ "$key" = q ] && { printf '\n  stopping on %s.\n\n' "$v"; exit 0; }
+    done < <(values)
+    printf '\n%s\n' "$(printf '─%.0s' {1..64})"
+    set_theme "$was" >/dev/null
+    printf '\n  back on %s. cc-theme <value> to settle on one.\n\n' "$was"
+    where_to_look
+    ;;
+
+  next) step 1 ;;
+  prev) step -1 ;;
+
+  -h|--help)
+    sed -n '2,9p' "$0" | sed 's/^# \?//'
+    ;;
+
+  -*)
+    echo "cc-theme: unknown option $1" >&2; exit 2
+    ;;
+
+  *)
+    set_theme "$1"
+    ;;
+esac

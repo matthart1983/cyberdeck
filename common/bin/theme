@@ -2,15 +2,15 @@
 # Switch the rice's palette, everywhere, in one command.
 #
 #   theme                 what's active, and what else there is
-#   theme blade           switch: render all 14 surfaces, re-link, reload what
+#   theme blade           switch: render all 16 surfaces, re-link, reload what
 #                         is running, and name what you still have to restart
 #   theme blade --render-only   rewrite the files and stop
 #   theme --render        re-render the active theme (install.sh calls this)
 #   theme --check         render to a temp tree and report drift, writing nothing
 #
-# Fourteen surfaces mirror the palette, in nine different colour notations.
+# Sixteen surfaces mirror the palette, in nine different colour notations.
 # They were mirrored by hand until now, which meant eight themes would have
-# been 112 files that could drift with nothing to catch it. Each one is a
+# been 128 files that could drift with nothing to catch it. Each one is a
 # .tmpl beside its output; this renders them.
 #
 # Which theme you run is a property of your machine, so themes/active.sh is a
@@ -42,6 +42,8 @@ SURFACES=(
   "macos/sketchybar/colors.sh.tmpl              macos/sketchybar/colors.sh"
   "macos/bin/borders.sh.tmpl                    macos/bin/borders.sh"
   "capture/theme.tape.tmpl                      capture/theme.tape"
+  "common/claude/theme.json.tmpl                common/claude/cyberdeck.json"
+  "common/fastfetch/config.jsonc.tmpl           common/fastfetch/config.jsonc"
 )
 
 active_slug() {
@@ -115,7 +117,7 @@ case "${1:-}" in
       fi
     done
     if [ "$drift" -eq 0 ]; then
-      printf '  %s=%s 14 surfaces match themes/%s.sh\n' "$_c_ok" "$_c_off" "$slug"
+      printf '  %s=%s 16 surfaces match themes/%s.sh\n' "$_c_ok" "$_c_off" "$slug"
     fi
     exit "$drift"
     ;;

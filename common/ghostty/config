@@ -1,6 +1,6 @@
 # Cyberpunk rice — Ghostty
 # Managed in ~/.dotfiles/common/ghostty/config, symlinked to ~/.config/ghostty/config
-# Rendered from themes/cyberpunk-neon.sh by `theme` — edit the .tmpl, not this.
+# Rendered from themes/deep-sea.sh by `theme` — edit the .tmpl, not this.
 
 theme = cyberdeck
 
@@ -22,6 +22,16 @@ window-decoration = true
 window-width = 200
 window-height = 52
 
+# The window's own close button lives in the titlebar, which is the one place
+# a control is always where the window is rather than up on the bar. `ghostty`
+# is what makes that chrome take the palette instead of the system's grey. The
+# two colour keys below are GTK-only and inert on macOS, but the palette owns
+# them either way — BG_ALT is the bar's fill, so bar and titlebar read as the
+# same surface.
+window-theme = ghostty
+window-titlebar-background = #0e1729
+window-titlebar-foreground = #7fd1d6
+
 # --- Cursor ----------------------------------------------------------------
 cursor-style = block
 cursor-style-blink = true
@@ -29,7 +39,7 @@ mouse-hide-while-typing = true
 
 # --- Splits: dim what isn't focused ---------------------------------------
 unfocused-split-opacity = 0.72
-unfocused-split-fill = #000b1e
+unfocused-split-fill = #060b16
 
 # --- Behaviour -------------------------------------------------------------
 shell-integration = zsh

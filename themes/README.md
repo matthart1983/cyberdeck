@@ -1,13 +1,13 @@
 # Themes
 
-Eight palettes, one contract, thirteen surfaces rendered from it.
+Eight palettes, one contract, sixteen surfaces rendered from it.
 
 ```sh
 theme                 # what's active, and what else there is
 theme blade           # switch — that's the whole command
 ```
 
-`theme <slug>` renders all thirteen surfaces, runs `install.sh` to re-link them,
+`theme <slug>` renders all sixteen surfaces, runs `install.sh` to re-link them,
 reloads everything that can be reloaded from outside (the bar, tmux, the
 wallpaper), and then names the two or three things that genuinely cannot be —
 Ghostty has no reload-from-CLI, and a shell's exported colours are fixed when it
@@ -15,6 +15,11 @@ starts. niri watches its own config file and Zed watches its themes directory,
 so both have already caught up by the time it prints.
 
 Add `--render-only` to rewrite the files and stop.
+
+Claude Code is the fifteenth surface, and the only one whose file this repo
+does not own: `common/claude/cyberdeck.json` is rendered here and linked into
+`~/.claude/themes/`, and `cc-theme` is what points Claude Code at it. See
+`common/claude/README.md`.
 
 | Theme | Slug | Character |
 |---|---|---|
@@ -29,13 +34,13 @@ Add `--render-only` to rewrite the files and stop.
 
 ## How it works
 
-A palette is **data**: 41 slots, each a literal `#rrggbb`, plus three metadata
+A palette is **data**: 47 slots, each a literal `#rrggbb`, plus four metadata
 lines. Nothing in it is computed and nothing is executed — `theme` reads these
 files, it does not source them, so pointing it at a palette someone sent you
 cannot run anything.
 
 Each themed surface is a `.tmpl` beside its output, holding `__CP_SLOT__`
-placeholders. `theme <slug>` renders all thirteen. Four forms per slot, because
+placeholders. `theme <slug>` renders all sixteen. Four forms per slot, because
 the surfaces do not agree on how to write a colour and none of them is going to
 start:
 
@@ -80,6 +85,22 @@ authored, per theme, like everything else.
 Syntax highlighting only. Chrome is glanced at; code is read for hours, and
 full-saturation magenta on black is exhausting at that duration.
 
+### Diff (6)
+`CP_DIFF_ADD_BG` `CP_DIFF_DEL_BG` `CP_DIFF_ADD_BG_DIM` `CP_DIFF_DEL_BG_DIM`
+`CP_DIFF_ADD_WORD` `CP_DIFF_DEL_WORD`
+
+Claude Code paints diffs as filled lines, which no other surface does and no
+other slot answers: an added-line background is `CP_GREEN` sunk most of the way
+into `CP_BG`, and nothing in the accent half is that. Derived once from
+`CP_GREEN`, `CP_RED` and `CP_BG`, then authored per theme like the bright half.
+
+### Metadata (4)
+`CP_THEME_NAME` `CP_THEME_SLUG` `CP_THEME_LIGHT` `CP_THEME_BASE`
+
+`CP_THEME_BASE` names the built-in Claude Code theme the overrides sit on top
+of — `dark` for seven of these, `light` for Paper. It is the one metadata slot
+a surface reads as a value rather than a label.
+
 ## Two rules
 
 **`CP_PURPLE` and `CP_BLUE` are surface colours. Never put text in them.**
@@ -106,7 +127,7 @@ test/theme.sh
 
 It checks that the palette actually *sets* its variables — `CP_BG ="#000b1e"`
 with a space before the `=` is a command, not an assignment, so `bash -n`
-passes it and the variable is never set — that all 41 slots are present in
+passes it and the variable is never set — that all 47 slots are present in
 order, that every surface renders, that nothing has drifted from its template,
 that switching through every theme and back restores the tree byte for byte,
 and that the slots carrying text clear their contrast floor:

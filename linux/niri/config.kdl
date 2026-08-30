@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // Cyberpunk rice — niri (Wayland tiling compositor)
 // ~/.dotfiles/linux/niri/config.kdl  ->  ~/.config/niri/config.kdl
-// Palette: see ~/.dotfiles/themes/. Rendered from themes/cyberpunk-neon.sh by `theme` — edit the .tmpl, not this.
+// Palette: see ~/.dotfiles/themes/. Rendered from themes/deep-sea.sh by `theme` — edit the .tmpl, not this.
 //
 // This is the Linux stand-in for aerospace/aerospace.toml. Two deliberate
 // divergences from the macOS side, both forced by the platform:
@@ -64,8 +64,8 @@ layout {
     // colours JankyBorders draws on the macOS side.
     focus-ring {
         width 2
-        active-color "#ea00d9"
-        inactive-color "#711c91"
+        active-color "#5d86ff"
+        inactive-color "#3b3f9e"
     }
     border { off; }
 
@@ -75,11 +75,11 @@ layout {
         softness 24
         spread 2
         offset x=0 y=4
-        color "#ea00d955"
+        color "#5d86ff55"
     }
 
     insert-hint {
-        color "#0abdc655"
+        color "#7fd1d655"
     }
 }
 

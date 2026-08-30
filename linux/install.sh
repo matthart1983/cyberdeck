@@ -17,6 +17,7 @@ link "$D/common/ghostty/platform-linux.conf" "$HOME/.config/ghostty/platform.con
 link "$D/linux/niri/config.kdl"              "$HOME/.config/niri/config.kdl"
 link "$D/linux/waybar/config.jsonc"          "$HOME/.config/waybar/config.jsonc"
 link "$D/linux/waybar/style.css"             "$HOME/.config/waybar/style.css"
+link "$D/linux/waybar/power.xml"             "$HOME/.config/waybar/power.xml"
 link "$D/linux/waybar/scripts"               "$HOME/.config/waybar/scripts"
 link "$D/linux/nwg-drawer/drawer.css"        "$HOME/.config/nwg-drawer/drawer.css"
 

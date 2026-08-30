@@ -1,13 +1,13 @@
-# Rendered from themes/cyberpunk-neon.sh by `theme` — edit the .tmpl, not this.
+# Rendered from themes/deep-sea.sh by `theme` — edit the .tmpl, not this.
 [theme]
 name = "cyberdeck"
 
 [colors]
-AlertInfo   = "#00ff9f"
-AlertWarn   = "#f57800"
-AlertError  = "#ff0055"
-Annotation  = "#0f7d84"
-Base        = "#0abdc6"
-Guidance    = "#711c91"
-Important   = "#ea00d9"
-Title       = "#ea00d9"
+AlertInfo   = "#4fc9a0"
+AlertWarn   = "#d98c4a"
+AlertError  = "#e05a6b"
+Annotation  = "#4a7d86"
+Base        = "#7fd1d6"
+Guidance    = "#3b3f9e"
+Important   = "#5d86ff"
+Title       = "#5d86ff"

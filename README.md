@@ -182,14 +182,14 @@ either, or just the Ghostty theme.
 
 ## Themes
 
-Eight of them. One command moves all fourteen themed surfaces at once:
+Eight of them. One command moves all sixteen themed surfaces at once:
 
 ```sh
 theme                 # what's active, and what else there is
 theme blade           # tiling, bar, terminal, shell, tmux, editor, HUD, wallpaper
 ```
 
-One command. It renders the fourteen surfaces, re-links them, reloads what can
+One command. It renders the sixteen surfaces, re-links them, reloads what can
 be reloaded from outside, and tells you the two or three things that can't be —
 Ghostty has no reload-from-CLI, and a shell's colours are fixed at start.
 
@@ -207,7 +207,7 @@ Ghostty has no reload-from-CLI, and a shell's colours are fixed at start.
 A palette is 41 colour slots of literal hex in `themes/<slug>.sh` — data, read
 rather than sourced. Each themed surface is a `.tmpl` beside its output;
 `theme` renders them. Nothing is mirrored by hand any more, which is the point:
-eight themes across fourteen surfaces is 112 files that would drift with
+eight themes across sixteen surfaces is 128 files that would drift with
 nothing to catch it.
 
 The rendered surfaces are tracked, so `theme blade && git diff` shows you
@@ -242,12 +242,12 @@ mirror each other, and each holds its own `install.sh` and `bin/rice-doctor`.
 |---|---|
 | `palette.sh` | points at the active theme — what scripts source |
 | **`themes/`** | |
-| `themes/<slug>.sh` | one palette per theme: 41 slots of literal hex, no logic |
+| `themes/<slug>.sh` | one palette per theme: 47 slots of literal hex, no logic |
 | `themes/README.md` | the slot contract, the contrast floors, and how to add one |
 | `themes/active.sh` | gitignored symlink to whichever is in use |
 | `install.sh` | dispatcher — runs `common/` then the platform half |
 | `test/idempotent.sh` | runs the installer twice against a throwaway `$HOME` and fails if the second run writes anything |
-| `test/theme.sh` | renders all 8 themes across all 14 surfaces and checks the contract, the drift and the contrast floors |
+| `test/theme.sh` | renders all 8 themes across all 16 surfaces and checks the contract, the drift and the contrast floors |
 | **`common/`** | |
 | `common/install.sh` | the symlinks and settings both platforms share |
 | `common/lib.sh` | `link` / `copy` / `render` — the helpers that make a re-run a no-op |
@@ -315,7 +315,7 @@ The themes have their own:
 test/theme.sh
 ```
 
-Eight palettes across fourteen surfaces is 112 renders nobody is going to check
+Eight palettes across sixteen surfaces is 128 renders nobody is going to check
 by eye. It proves each palette actually *sets* its variables (a space before the
 `=` makes it a command, which `bash -n` passes and which sets nothing), that
 every palette fills the same contract in the same order, that every surface
@@ -338,6 +338,7 @@ to `attic/<timestamp>/`, mirroring its path under `$HOME`.
 | `rice-doctor` | verify aerospace, borders, bar, netwatch feed, configs, secrets |
 | `rice-capture` | render demo GIFs (`rice-capture hud` for just one) |
 | `theme [slug]` | show or switch the palette — renders, re-links and reloads in one |
+| `cc-theme [value]` | show or switch Claude Code's theme — `custom:cyberdeck` is the palette's own; `cc-theme --all` walks them |
 | `open`/`xdg-open docs/cyberdeck-manual.html` | the [field manual](https://matthart1983.github.io/cyberdeck/) — every key and command for both platforms, searchable |
 
 ## Window management

@@ -7,6 +7,7 @@
 CP_THEME_NAME="Blade"
 CP_THEME_SLUG="blade"
 CP_THEME_LIGHT=0
+CP_THEME_BASE="dark"
 
 # --- surfaces ----------------------------------------------------------------
 CP_BG="#0a0d0d"            # primary background
@@ -58,3 +59,16 @@ CP_SOFT_YELLOW="#b9ad8d"   # constants
 CP_SOFT_CYAN="#9baba9"     # functions
 CP_SOFT_RED="#bf8e87"      # errors, deletions
 CP_SOFT_BLUE="#98a9ae"     # tags, attributes
+
+# --- diff ---------------------------------------------------------------------
+# Claude Code paints diffs as filled lines, which no other surface does and no
+# other slot answers: a diff background is CP_GREEN sunk most of the way into
+# CP_BG, and nothing in the accent half is that. Derived once from CP_GREEN,
+# CP_RED and CP_BG, then authored here like the bright half — edit any line and
+# re-run `theme <slug>`.
+CP_DIFF_ADD_BG="#212d26"      # added line — whole-line fill
+CP_DIFF_DEL_BG="#331a17"      # removed line
+CP_DIFF_ADD_BG_DIM="#161d1a"  # added line, outside the focused hunk
+CP_DIFF_DEL_BG_DIM="#1f1412"  # removed line, outside it
+CP_DIFF_ADD_WORD="#4a6652"    # the changed words inside an added line
+CP_DIFF_DEL_WORD="#7c3127"    # and inside a removed one

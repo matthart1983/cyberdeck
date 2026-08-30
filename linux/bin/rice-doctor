@@ -191,10 +191,19 @@ command -v claude >/dev/null \
 
 cc_theme=$(jq -r '.theme // empty' "$HOME/.claude/settings.json" 2>/dev/null)
 cc_sl=$(jq -r '.statusLine.command // empty' "$HOME/.claude/settings.json" 2>/dev/null)
-if [ "$cc_theme" = "dark-ansi" ] && [ -x "$cc_sl" ]; then
-  pass "claude code" "dark-ansi + neon statusline"
-else
+# The theme is yours to pick now, so this no longer asserts one. What it
+# catches instead is the two records disagreeing — `cc-theme` writes both
+# settings.json and themes/claude-theme, and a hand-edit to either leaves a
+# theme that reverts on the next `theme <slug>`.
+if [ -z "$cc_theme" ] || [ ! -x "$cc_sl" ]; then
   fail "claude code" "theme=${cc_theme:-unset} statusline=${cc_sl:-unset}"
+elif ! cc_out=$("$HOME/.dotfiles/common/bin/cc-theme" --check 2>&1); then
+  fail "claude code" "$(printf '%s' "$cc_out" | sed -n 's/^ *! *//p' | head -1)"
+elif [ "${cc_theme#custom:}" != "$cc_theme" ] \
+     && [ ! -r "$HOME/.claude/themes/${cc_theme#custom:}.json" ]; then
+  fail "claude code" "$cc_theme selected but ~/.claude/themes/${cc_theme#custom:}.json is missing"
+else
+  pass "claude code" "$cc_theme + neon statusline"
 fi
 
 if grep -q 'name = "cyberdeck"' "$HOME/.config/atuin/config.toml" 2>/dev/null; then
@@ -204,11 +213,11 @@ else
 fi
 
 # --- theme -----------------------------------------------------------------
-# Fourteen surfaces are rendered from themes/<active>.sh. Hand-editing one is
+# Sixteen surfaces are rendered from themes/<active>.sh. Hand-editing one is
 # the failure this catches: the edit survives until the next `theme` run and
 # then vanishes, which is a miserable thing to debug from the colours alone.
 if theme_out=$("$HOME/.dotfiles/common/bin/theme" --check 2>&1); then
-  pass "theme" "${CP_THEME_NAME:-?} · 14 surfaces match their templates"
+  pass "theme" "${CP_THEME_NAME:-?} · 16 surfaces match their templates"
 else
   fail "theme" "rendered surfaces have drifted from their templates —
                          $(printf '%s' "$theme_out" | sed -n 's/.*drifted: //p' | tr '\n' ' ')

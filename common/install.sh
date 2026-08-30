@@ -21,7 +21,7 @@ if [ "$_theme_chg" -gt 0 ]; then
   printf '%s\n' "$_theme_out" | grep '^  +'
   _changed=$((_changed + _theme_chg))
 else
-  same "13 surfaces match $(basename "$(readlink "$D/themes/active.sh" 2>/dev/null || echo cyberpunk-neon.sh)" .sh)"
+  same "16 surfaces match $(basename "$(readlink "$D/themes/active.sh" 2>/dev/null || echo cyberpunk-neon.sh)" .sh)"
 fi
 
 echo "==> shared configs"
@@ -103,16 +103,33 @@ else
 fi
 
 echo "==> claude code"
+# Claude Code reads custom themes as loose .json files in ~/.claude/themes/, so
+# the fifteenth surface installs the way ghostty's and zed's do — a link into
+# the repo, not a copy. `cc-theme custom:cyberdeck` is what selects it.
+link "$D/common/claude/cyberdeck.json" "$HOME/.claude/themes/cyberdeck.json"
+
 # The rice owns Claude Code's theme and statusline; the rest of that file is
 # the user's own, so this patches two keys rather than linking over it.
+#
+# Which Claude Code theme you run is a property of your machine, exactly as
+# themes/active.sh is, so it lives in an untracked file that `cc-theme` writes.
+# Reading it here is what stops `theme blade` — which runs this script — from
+# reverting a theme you switched to. A fresh clone has no such file and gets
+# the default, so nothing has to exist for this to work.
 CC_SETTINGS="$HOME/.claude/settings.json"
+CC_THEME="dark-ansi"
+if [ -r "$D/themes/claude-theme" ]; then
+  CC_THEME="$(tr -d '[:space:]' <"$D/themes/claude-theme")"
+  [ -n "$CC_THEME" ] || CC_THEME="dark-ansi"
+fi
 if ! command -v python3 >/dev/null; then
   warn "python3 not available — skipped"
 else
-  case "$(python3 "$D/common/claude-settings.py" "$CC_SETTINGS" "$D/common/bin/cc-statusline")" in
-    changed) chg "$CC_SETTINGS" ;;
-    same)    same "$CC_SETTINGS" ;;
-    invalid) warn "$CC_SETTINGS is not valid JSON — left alone" ;;
+  case "$(python3 "$D/common/claude-settings.py" "$CC_SETTINGS" "$D/common/bin/cc-statusline" "$CC_THEME")" in
+    changed)       chg "$CC_SETTINGS ($CC_THEME)" ;;
+    same)          same "$CC_SETTINGS ($CC_THEME)" ;;
+    invalid)       warn "$CC_SETTINGS is not valid JSON — left alone" ;;
+    invalid-theme) warn "themes/claude-theme names '$CC_THEME', which is not a theme — left alone" ;;
   esac
 fi
 

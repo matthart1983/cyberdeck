@@ -24,3 +24,7 @@ __pycache__/
 
 # Which theme is active is a property of this machine, not of the repo.
 themes/active.sh
+
+# Which Claude Code theme you run is a property of this machine too.
+# `cc-theme` writes it; install.sh reads it.
+themes/claude-theme

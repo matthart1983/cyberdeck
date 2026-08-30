@@ -7,6 +7,7 @@
 CP_THEME_NAME="Deep Sea"
 CP_THEME_SLUG="deep-sea"
 CP_THEME_LIGHT=0
+CP_THEME_BASE="dark"
 
 # --- surfaces ----------------------------------------------------------------
 CP_BG="#060b16"            # primary background
@@ -58,3 +59,16 @@ CP_SOFT_YELLOW="#bcb28b"   # constants
 CP_SOFT_CYAN="#8eb6b8"     # functions
 CP_SOFT_RED="#bf878e"      # errors, deletions
 CP_SOFT_BLUE="#8ba4bc"     # tags, attributes
+
+# --- diff ---------------------------------------------------------------------
+# Claude Code paints diffs as filled lines, which no other surface does and no
+# other slot answers: a diff background is CP_GREEN sunk most of the way into
+# CP_BG, and nothing in the accent half is that. Derived once from CP_GREEN,
+# CP_RED and CP_BG, then authored here like the bright half — edit any line and
+# re-run `theme <slug>`.
+CP_DIFF_ADD_BG="#153132"      # added line — whole-line fill
+CP_DIFF_DEL_BG="#321b27"      # removed line
+CP_DIFF_ADD_BG_DIM="#0d1e24"  # added line, outside the focused hunk
+CP_DIFF_DEL_BG_DIM="#1c131e"  # removed line, outside it
+CP_DIFF_ADD_WORD="#2e7462"    # the changed words inside an added line
+CP_DIFF_DEL_WORD="#7e3645"    # and inside a removed one

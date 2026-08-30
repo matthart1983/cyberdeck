@@ -1,0 +1,15 @@
+# Claude Code's built-in themes. value|label|character
+#
+# The seven values its settings.json accepts, in the order `cc-theme next`
+# walks them. Read by common/bin/cc-theme and common/claude-settings.py so the
+# list exists once; the labels are Claude Code's own, lifted from the binary's
+# label map rather than paraphrased.
+#
+# A theme Claude Code adds later is one line here and nothing else.
+auto|Auto (match terminal)|Follows the terminal's reported background — dark or light, decided at startup.
+dark|Dark mode|Fixed RGB. Ignores the rice palette entirely.
+light|Light mode|Fixed RGB on a light ground.
+dark-daltonized|Dark mode (colorblind-friendly)|Diffs move off red/green onto blue/orange.
+light-daltonized|Light mode (colorblind-friendly)|The same reassignment, light ground.
+dark-ansi|Dark mode (ANSI colors only)|Defers to the terminal's 16 colours — the rice palette. The default here.
+light-ansi|Light mode (ANSI colors only)|The same deference, light ground.

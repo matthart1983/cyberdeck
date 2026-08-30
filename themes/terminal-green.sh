@@ -7,6 +7,7 @@
 CP_THEME_NAME="Terminal Green"
 CP_THEME_SLUG="terminal-green"
 CP_THEME_LIGHT=0
+CP_THEME_BASE="dark"
 
 # --- surfaces ----------------------------------------------------------------
 CP_BG="#020a05"            # primary background
@@ -58,3 +59,16 @@ CP_SOFT_YELLOW="#c3c183"   # constants
 CP_SOFT_CYAN="#86c099"     # functions
 CP_SOFT_RED="#ca7d7d"      # errors, deletions
 CP_SOFT_BLUE="#8dbab1"     # tags, attributes
+
+# --- diff ---------------------------------------------------------------------
+# Claude Code paints diffs as filled lines, which no other surface does and no
+# other slot answers: a diff background is CP_GREEN sunk most of the way into
+# CP_BG, and nothing in the accent half is that. Derived once from CP_GREEN,
+# CP_RED and CP_BG, then authored here like the bright half — edit any line and
+# re-run `theme <slug>`.
+CP_DIFF_ADD_BG="#0c3b1c"      # added line — whole-line fill
+CP_DIFF_DEL_BG="#351713"      # removed line
+CP_DIFF_ADD_BG_DIM="#072210"  # added line, outside the focused hunk
+CP_DIFF_DEL_BG_DIM="#1b100c"  # removed line, outside it
+CP_DIFF_ADD_WORD="#1d9144"    # the changed words inside an added line
+CP_DIFF_DEL_WORD="#8d2d2b"    # and inside a removed one

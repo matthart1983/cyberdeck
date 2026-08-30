@@ -22,22 +22,34 @@
   "margin-right": 8,
   "spacing": 2,
 
-  "modules-left":   ["custom/launcher", "niri/workspaces", "custom/sep", "niri/window"],
+  "modules-left":   ["custom/launcher", "custom/run", "niri/workspaces", "custom/sep", "niri/window"],
   "modules-center": [],
-  "modules-right":  ["custom/link", "custom/net", "cpu", "memory", "disk", "battery", "clock"],
+  "modules-right":  ["custom/link", "custom/net", "cpu", "memory", "disk", "battery", "clock", "custom/power"],
 
   // --- Left: the launcher button ------------------------------------------
   // Opens nwg-drawer, not fuzzel: a button is for the times you are looking
   // rather than typing, and the drawer is the one that answers that. It drops
   // down from here as a panel, so the button and its menu read as one thing.
   // linux/bin/drawer is what sizes that panel to the current output and
-  // toggles the resident copy. Right-click still gets you fuzzel.
+  // toggles the resident copy. Typing has its own button beside this one —
+  // it used to be this button's right-click, which is no more findable than
+  // the keybind it was standing in for.
   "custom/launcher": {
     "format": "󰀻",
     "tooltip": true,
-    "tooltip-format": "Browse applications  (Mod+A)\nRight-click to type  (Mod+Space)",
-    "on-click": "~/.dotfiles/linux/bin/drawer",
-    "on-click-right": "pkill fuzzel || fuzzel"
+    "tooltip-format": "Browse applications  (Mod+A)",
+    "on-click": "~/.dotfiles/linux/bin/drawer"
+  },
+
+  // --- Left: the run button ------------------------------------------------
+  // The other half of the pair: fuzzel, for when you can name the thing.
+  // Toggles, so a second click dismisses a prompt that is already up rather
+  // than failing silently — fuzzel refuses to run twice.
+  "custom/run": {
+    "format": "󰍉",
+    "tooltip": true,
+    "tooltip-format": "Run a program  (Mod+Space)",
+    "on-click": "pkill fuzzel || fuzzel"
   },
 
   // --- Left: niri workspaces, named exactly as the compositor names them ---
@@ -125,5 +137,29 @@
     "format": "󰥔 {:%H:%M}",
     "format-alt": "󰃭 {:%a %d %b}",
     "tooltip-format": "<tt><small>{calendar}</small></tt>"
+  },
+
+  // --- Right: the session menu ---------------------------------------------
+  // A GTK menu rather than a script driving fuzzel or a wlogout overlay:
+  // waybar builds the popup from power.xml itself and styles it with THIS
+  // bar's stylesheet, so the menu takes the palette without a seventeenth
+  // themed surface and without a package that is not already installed.
+  //
+  // The ids here are power.xml's ids. Log out goes through niri rather than
+  // loginctl so it uses the compositor's own confirmation dialog — the same
+  // one Mod+Shift+E raises — instead of ending the session on one click.
+  "custom/power": {
+    "format": "󰐥",
+    "tooltip": true,
+    "tooltip-format": "Session",
+    "menu": "on-click",
+    "menu-file": "$HOME/.config/waybar/power.xml",
+    "menu-actions": {
+      "lock": "swaylock -f",
+      "logout": "niri msg action quit",
+      "suspend": "systemctl suspend",
+      "reboot": "systemctl reboot",
+      "poweroff": "systemctl poweroff"
+    }
   }
 }

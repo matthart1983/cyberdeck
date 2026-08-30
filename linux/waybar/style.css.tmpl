@@ -63,6 +63,26 @@ window#waybar.hidden { opacity: 0.2; }
   border-color: @magenta;
 }
 
+/* The run button, beside the drawer. Same shape as the launcher so the two
+   read as a pair, but @fg rather than @magenta: the drawer is the primary of
+   the two, and two accents side by side would leave neither one leading. */
+#custom-run {
+  color: @fg;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0 10px;
+  margin: 3px 1px;
+  font-size: 15px;
+  transition: color 120ms ease, background 120ms ease;
+}
+
+#custom-run:hover {
+  color: @bg;
+  background: @fg;
+  border-color: @fg;
+}
+
 #workspaces { padding: 0 4px; }
 
 /* The labels are glyphs rather than digits now. A glyph reads optically
@@ -163,6 +183,26 @@ window#waybar.empty #window { background: transparent; }
 #disk        { color: @white; }
 #clock       { color: @magenta; font-weight: bold; }
 
+/* The session button, hard against the right edge. Neutral until you are on
+   it, then red — it is the one control on this bar that can end your session,
+   and it should say so under the pointer rather than sit there shouting. */
+#custom-power {
+  color: @fg_dim;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0 9px;
+  margin: 3px 3px 3px 1px;
+  font-size: 15px;
+  transition: color 120ms ease, background 120ms ease;
+}
+
+#custom-power:hover {
+  color: @bg;
+  background: @red;
+  border-color: @red;
+}
+
 /* State colours — Waybar sets these classes from the "states" map. */
 #cpu.warning,
 #memory.warning,
@@ -200,3 +240,36 @@ tooltip {
   border-radius: 6px;
 }
 tooltip label { color: @fg; padding: 4px; }
+
+/* The session menu. Waybar renders it as a plain GTK menu, which means it is
+   this sheet's to colour — same @bg_alt on @purple as the tooltip above, so
+   the bar's two popups read as one family. */
+menu {
+  background: @bg_alt;
+  border: 1px solid @purple;
+  border-radius: 8px;
+  padding: 4px;
+}
+
+menu menuitem {
+  color: @fg;
+  padding: 6px 14px;
+  border-radius: 6px;
+  min-width: 128px;
+}
+
+menu menuitem:hover { color: @bg; background: @magenta; }
+
+menu separator {
+  background: @border;
+  margin: 4px 8px;
+  min-height: 1px;
+}
+
+/* The three below the rule end a session, so they answer in red rather than
+   the magenta the safe two get. GtkBuilder gives each item its id as a widget
+   name, which is what these match; if a GTK build ever stops doing that they
+   simply fall back to the magenta above. */
+menu menuitem#suspend:hover,
+menu menuitem#reboot:hover,
+menu menuitem#poweroff:hover { color: @bg; background: @red; }

@@ -7,6 +7,7 @@
 CP_THEME_NAME="Amber CRT"
 CP_THEME_SLUG="amber-crt"
 CP_THEME_LIGHT=0
+CP_THEME_BASE="dark"
 
 # --- surfaces ----------------------------------------------------------------
 CP_BG="#0f0a01"            # primary background
@@ -58,3 +59,16 @@ CP_SOFT_YELLOW="#cabd7d"   # constants
 CP_SOFT_CYAN="#cab27d"     # functions
 CP_SOFT_RED="#ca867d"      # errors, deletions
 CP_SOFT_BLUE="#baa68d"     # tags, attributes
+
+# --- diff ---------------------------------------------------------------------
+# Claude Code paints diffs as filled lines, which no other surface does and no
+# other slot answers: a diff background is CP_GREEN sunk most of the way into
+# CP_BG, and nothing in the accent half is that. Derived once from CP_GREEN,
+# CP_RED and CP_BG, then authored here like the bright half — edit any line and
+# re-run `theme <slug>`.
+CP_DIFF_ADD_BG="#333201"      # added line — whole-line fill
+CP_DIFF_DEL_BG="#3f1407"      # removed line
+CP_DIFF_ADD_BG_DIM="#211e01"  # added line, outside the focused hunk
+CP_DIFF_DEL_BG_DIM="#270f04"  # removed line, outside it
+CP_DIFF_ADD_WORD="#717700"    # the changed words inside an added line
+CP_DIFF_DEL_WORD="#932512"    # and inside a removed one
