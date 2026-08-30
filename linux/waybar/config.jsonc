@@ -22,6 +22,12 @@
 [
   {
     "name": "top",
+    // SIGUSR1 is the dock's, not this bar's. Both bars come out of one waybar,
+    // so the signal reaches both — and on-sigusr1 is a PER-BAR parameter,
+    // which is what lets `pkill -USR1 waybar` mean "hide the dock" and leave
+    // the status bar alone. That is the whole reason the dock did not need to
+    // become a second process.
+    "on-sigusr1": "noop",
     "layer": "top",
     "position": "top",
     "height": 32,
@@ -245,9 +251,10 @@
   // =========================================================================
   {
     "name": "dock",
+    "on-sigusr1": "toggle",
     "layer": "top",
     "position": "bottom",
-    "height": 54,
+    "height": 60,
     "margin-bottom": 8,
     "spacing": 0,
 
@@ -255,15 +262,47 @@
     // drawn on .modules-center, so it is as wide as its contents instead of
     // stretching the full output the way the top bar does.
     "modules-left":   [],
-    "modules-center": [
-      "custom/dock-term", "custom/dock-editor", "custom/dock-browser",
-      "custom/dock-claude", "custom/dock-notes", "custom/dock-chat",
-      "custom/dock-files",
-      "custom/dock-sep",
-      "custom/dock-hud", "custom/dock-git", "custom/dock-containers",
-      "custom/dock-k8s", "custom/dock-net"
-    ],
+    "modules-center": ["group/dock"],
     "modules-right":  [],
+
+    // Auto-hide, waybar's own way: a group drawer shows its FIRST child and
+    // keeps the rest behind a hover. So the dock at rest is one chevron, and
+    // pointing at it slides the icons out.
+    //
+    // This is the version of auto-hide a Wayland bar can actually implement. A
+    // client cannot ask where the pointer is, so "reveal when the cursor
+    // reaches the bottom edge" would need something with a surface already
+    // sitting at that edge to notice — which is what the chevron is. Hiding
+    // the bar outright leaves nothing to hover, and `mode: hide` reveals on a
+    // modifier that only Sway sends.
+    //
+    // Mod+D hides the chevron too, when even that is too much: it sends
+    // SIGUSR1, and on-sigusr1 above routes it to this bar alone.
+    "group/dock": {
+      "orientation": "horizontal",
+      "drawer": {
+        "transition-duration": 250,
+        "children-class": "dock-hidden",
+        "transition-left-to-right": true
+      },
+      "modules": [
+        "custom/dock-handle",
+        "custom/dock-term", "custom/dock-editor", "custom/dock-browser",
+        "custom/dock-claude", "custom/dock-notes", "custom/dock-chat",
+        "custom/dock-files",
+        "custom/dock-sep",
+        "custom/dock-hud", "custom/dock-git", "custom/dock-containers",
+        "custom/dock-k8s", "custom/dock-net"
+      ]
+    },
+
+    // The handle: the one thing that stays. A chevron because it points at
+    // where the dock comes from.
+    "custom/dock-handle": {
+      "format": "󰅃",
+      "tooltip": true,
+      "tooltip-format": "Applications — hover to open  (Mod+D hides the dock)"
+    },
 
     "custom/dock-term": {
       "exec": "~/.dotfiles/linux/bin/dock probe term",

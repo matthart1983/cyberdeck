@@ -852,6 +852,12 @@
         </div>
 
         <div class="note only-linux">
+          <span class="tag">ctrl+c, without losing SIGINT</span>
+          <p>Every other Linux terminal makes you choose: <code>ctrl+c</code> copies, or it interrupts. Ghostty's <code>performable:</code> prefix means a bind is consumed <em>only if its action did something</em> — and <code>copy_to_clipboard</code> does nothing without a selection. So it copies when text is selected and sends <strong>SIGINT</strong> when it is not. The one case to know: while a selection is still on screen, <code>ctrl+c</code> copies rather than interrupts — click once to dismiss it, or use <code>ctrl+shift+c</code>, which stays bound.</p>
+          <p>Three keys deliberately did <em>not</em> get the same treatment. <kbd>ctrl</kbd>+<kbd>a</kbd> is this rice's tmux prefix and readline's beginning-of-line; <kbd>ctrl</kbd>+<kbd>w</kbd> is delete-previous-word; <kbd>ctrl</kbd>+<kbd>t</kbd> is transpose-chars and fzf's file widget. Rebinding any of them costs more than the shortcut is worth. <kbd>ctrl</kbd>+<kbd>v</kbd> <em>was</em> readline's quoted-insert and that one is taken — <kbd>ctrl</kbd>+<kbd>q</kbd> does the same job.</p>
+        </div>
+
+        <div class="note only-linux">
           <span class="tag">One volume, two drivers</span>
           <p><strong>Scrolling a bar item is a mouse-wheel gesture, and this is a laptop.</strong> Scroll-to-set is what every waybar config does, and here the module never received a scroll event at all — leaving the volume readable and mutable from the bar but not settable, which is the one thing a volume control is for. Hence a slider: clicking a position is a gesture a trackpad is actually good at. The scroll handlers stay configured for a mouse, and they run the identical <code>wpctl</code> the Framework's <kbd>F1</kbd>–<kbd>F3</kbd> run, so the bar and the keyboard cannot disagree about what one notch is worth. <strong>No macOS counterpart:</strong> SketchyBar has eighteen items and none of them is volume, because macOS keeps its own in the menu bar.</p>
         </div>
@@ -889,6 +895,8 @@
         <div class="only-linux">
         <div class="keys">
           <div class="row"><div class="kseq"><kbd class="accent">Mod</kbd><span class="plus">+</span><kbd class="accent">return</kbd></div><div class="act">New Ghostty window, from anywhere <em>The compositor's bind, not Ghostty's — see the note below</em></div></div>
+          <div class="row"><div class="kseq"><kbd class="accent">ctrl</kbd><span class="plus">+</span><kbd class="accent">c</kbd></div><div class="act">Copy the selection — <strong>and still SIGINT when nothing is selected</strong> <em>performable: the bind is only consumed if it did something</em></div></div>
+          <div class="row"><div class="kseq"><kbd>ctrl</kbd><span class="plus">+</span><kbd>v</kbd></div><div class="act">Paste <em>ctrl+shift+c / ctrl+shift+v still work too</em></div></div>
           <div class="row"><div class="kseq"><kbd>ctrl</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>`</kbd></div><div class="act">Toggle the quick terminal <em>Only from inside Ghostty</em></div></div>
           <div class="row"><div class="kseq"><kbd>ctrl</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>t</kbd></div><div class="act">New tab</div></div>
           <div class="row"><div class="kseq"><kbd>ctrl</kbd><span class="plus">+</span><kbd>shift</kbd><span class="plus">+</span><kbd>n</kbd></div><div class="act">New window <em>Ghostty&#39;s own — Mod+return asks the compositor for one instead</em></div></div>

@@ -284,6 +284,7 @@ mirror each other, and each holds its own `install.sh` and `bin/rice-doctor`.
 | `common/bat/` | `cyberdeck.tmTheme` — also drives delta and fzf previews |
 | `common/btop/themes/` | btop theme — btop is still themed, just not in the HUD |
 | `common/syswatch/` | one line, seeded once: `theme = "terminal"`, so the HUD's middle pane matches the other two |
+| `common/netwatch/` | the same one line, for a worse symptom — netwatch's own palette draws graph lows in hardcoded truecolor at 1.02:1 |
 | `common/fastfetch/` | config + ASCII logo |
 | `common/zed/themes/` | Zed theme — neon chrome, desaturated syntax |
 | `common/atuin/themes/` | atuin (ctrl-R) theme |
@@ -315,6 +316,7 @@ mirror each other, and each holds its own `install.sh` and `bin/rice-doctor`.
 | `linux/bin/rice-doctor` | the Fedora half of the health check |
 | `linux/bin/drawer` | sizes the launcher panel to the focused output and toggles it |
 | `linux/bin/dock` | the dock's slot table — resolves each one, focuses or launches it |
+| `linux/vscode.sh` | the editor slot's IDE: VSCodium from Flathub, or VS Code from Microsoft's repo (opt-in) |
 | **root** | |
 | `capture/` | VHS tapes; GIFs land in `capture/out/` (gitignored) |
 | `wallpaper/generate.py` | wallpaper generator (PIL, no numpy) |
@@ -470,6 +472,25 @@ resolved, `dock check` reports drift between that table and the bar, and
 `rice-doctor` reports both. Clicking focuses a window that is already open —
 cycling, if there is more than one — before it starts a second copy.
 
+The dock **auto-hides**: at rest it is a single chevron, and hovering it slides
+the icons out. That is waybar's own group drawer, and it is the version of
+auto-hide a Wayland bar can implement — a client cannot ask where the pointer
+is, so "reveal at the bottom edge" needs something already holding a surface at
+that edge to notice, which is what the chevron is. `Mod+D` hides even the
+chevron; that works because `on-sigusr1` is a **per-bar** parameter, so one
+`pkill -USR1 waybar` reaches the dock (`toggle`) and not the status bar
+(`noop`) — which is also why the dock still does not need to be a second
+waybar process.
+
+The icons are set in **JetBrainsMono Nerd Font Propo**, not the family the rest
+of the bar uses, and that is a centring fix rather than a taste one. Nerd Fonts
+ship three families: the default gives an icon a single-cell advance with
+double-width ink, so GTK lays out on 16.2px while the glyph paints 21–25px and
+every icon overflows right — by a different amount each, which is why it reads
+as "some of them are crooked" rather than one clean offset. Propo widens the
+cell to the ink instead, and lands every glyph within 0.31px horizontally and
+0.5px vertically.
+
 Everything right of the divider runs in a terminal, and each of those gets its
 own GTK app-id — `ghostty --class=com.mitchellh.ghostty-<slot>`, derived from
 the slot name so the flag and the window rule cannot drift apart. Two things
@@ -488,16 +509,27 @@ apology instead of a graph. At 10 it is 232×52, and every pane clears the floor
 
 ## Notes
 
+- **`ctrl+c` copies and still interrupts.** Ghostty's `performable:` prefix
+  consumes a bind only if its action did something, and `copy_to_clipboard`
+  does nothing without a selection — so `ctrl+c` copies when text is selected
+  and sends SIGINT when it is not. `ctrl+v` pastes. `ctrl+shift+c/v` stay
+  bound. `ctrl+a`, `ctrl+w` and `ctrl+t` are deliberately untouched: the first
+  is the tmux prefix and readline's beginning-of-line, the second is
+  delete-word, the third is transpose-chars and fzf's file widget.
 - Secrets live in `~/.config/secrets.zsh` (chmod 600), never in this repo.
 - **The HUD's palette** arrives through the terminal, not through a config each
-  tool ships. netwatch and diskwatch read the sixteen ANSI colours and so
-  inherit whatever Ghostty is set to. syswatch is the exception: it defaults to
-  its own `dark`, a good palette that is not this one, and in a HUD pane it
-  reads as the tile with the wrong greens. `install.sh` seeds
-  `theme = "terminal"` — **seeded, not linked**, because syswatch writes that
-  file back when you change a setting in its own UI (`T` cycles the theme), and
-  a symlink would put those writes in this repo. `rice-doctor` reports what the
-  file actually says rather than what was installed.
+  tool ships — but only diskwatch gets that for free. Both syswatch and
+  netwatch default to a palette of their own, and `install.sh` seeds
+  `theme = "terminal"` for each. syswatch's own palette is merely a different
+  one: greens where the rest of the grid is cyan. netwatch's is worse — it
+  draws the low end of every graph in **hardcoded truecolor**, `rgb(0,66,0)`
+  and `rgb(0,0,69)`, which measure 1.67:1 and 1.02:1 against these
+  backgrounds. The second is not dim, it is invisible, so the traffic graphs
+  read as half-missing. `terminal` drops the hardcoded RGB entirely.
+  **Seeded, not linked**, because both tools write that file back when you
+  change a setting in their own UI, and a symlink would put those writes in
+  this repo. `rice-doctor` reports what each file actually says rather than
+  what was installed.
 - **macOS:** the menu bar is hidden now that SketchyBar replaces it. Undo with
   `defaults delete NSGlobalDomain _HIHideMenuBar`, or `macos/restore.sh`.
 - **Fedora:** nothing equivalent to hide. Waybar declares its own exclusive

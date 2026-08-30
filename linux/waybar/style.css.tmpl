@@ -279,20 +279,32 @@ window#waybar.dock .modules-center {
 
 /* Every slot carries class "app" from `dock probe`. Bigger than anything on
    the top bar: these are targets for the pointer, not readouts for the eye. */
+/* Propo, not the Nerd Font this sheet sets globally, and this is the whole
+   fix for icons that would not sit straight in their own highlight.
+   
+   Nerd Fonts ship three families. The default one gives an icon a SINGLE-cell
+   advance and double-width ink, so a 27px glyph is 21-25px of ink in a 16.2px
+   cell. GTK lays out on the advance, so every icon overflowed to the right —
+   by 2.4px for the grid, 4.4px for the robot, a different amount each, which
+   is why it read as "some of them are off" rather than as one clean offset.
+   Mono squeezes the ink into the cell; Propo widens the cell to the ink. Propo
+   keeps the icons full size, and lands every one of them within 0.31px
+   horizontally and 0.5px vertically. Measured, not eyeballed — and it is why
+   there is no padding hack here any more. */
+window#waybar.dock .app,
+window#waybar.dock #custom-dock-handle,
+window#waybar.dock #custom-dock-sep {
+  font-family: "JetBrainsMono Nerd Font Propo", "JetBrainsMono Nerd Font", monospace;
+}
+
 window#waybar.dock .app {
   color: @fg_dim;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 10px;
-  /* padding-top without a matching padding-bottom, and it is not a typo. A
-     font's line box is ascent plus descent, and an icon glyph uses none of the
-     descent — so centring the LINE box, which is all GTK can do, leaves the
-     ink about 1.5px high inside its own background. Invisible until something
-     is filled in behind it, which is exactly when it is. The margin stays
-     symmetric so the row itself still centres in the pill; only the ink moves. */
-  padding: 2px 12px 0 12px;
+  padding: 0 12px;
   margin: 4px 2px;
-  font-size: 27px;
+  font-size: 32px;
   transition: color 120ms ease, background 120ms ease;
 }
 
@@ -334,8 +346,28 @@ window#waybar.dock .app.absent {
 #custom-dock-sep {
   color: @purple;
   padding: 0 8px;
-  font-size: 20px;
+  font-size: 22px;
 }
+
+/* The handle — the only thing the dock shows at rest. @fg_dim so it reads as
+   an affordance rather than a control, and the same magenta on hover that the
+   icons it reveals will wear. */
+#custom-dock-handle {
+  color: @fg_dim;
+  background: transparent;
+  border-radius: 10px;
+  padding: 0 14px;
+  margin: 4px 2px;
+  font-size: 26px;
+  transition: color 150ms ease, background 150ms ease;
+}
+
+window#waybar.dock:hover #custom-dock-handle { color: @magenta; }
+
+/* Waybar puts this class on the drawer's hidden children while they are
+   sliding. Nothing to do but let them animate — it is named here so the next
+   person can find the hook. */
+window#waybar.dock .dock-hidden { }
 
 /* State colours — Waybar sets these classes from the "states" map. */
 #cpu.warning,

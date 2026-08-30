@@ -130,7 +130,12 @@ window-rule {
 window-rule {
     match app-id=r#"^dev\.zed\.Zed$"#
     match app-id=r#"^jetbrains-rustrover$"#
-    match app-id=r#"^code$"#
+    // VS Code reports "code" from the repo build and "Code" from some
+    // releases; VSCodium reports "VSCodium" packaged and the reverse-DNS id
+    // when it comes from flatpak. All four land on the same workspace.
+    match app-id=r#"^[Cc]ode$"#
+    match app-id=r#"^VSCodium$"#
+    match app-id=r#"^com\.vscodium\.codium$"#
     open-on-workspace "code"
 }
 window-rule {
@@ -206,6 +211,10 @@ binds {
     // The wrapper toggles the resident copy, and starts one if the daemon
     // died or the output changed under it.
     Mod+A            { spawn "sh" "-c" "~/.dotfiles/linux/bin/drawer"; }
+    // Hide the dock outright, chevron and all. SIGUSR1 reaches both bars —
+    // config.jsonc's per-bar on-sigusr1 is what makes it land only on the
+    // dock, with the status bar set to noop.
+    Mod+D            { spawn "pkill" "-USR1" "waybar"; }
     Mod+Shift+Q      { close-window; }
     Mod+Shift+E      { quit; }
 

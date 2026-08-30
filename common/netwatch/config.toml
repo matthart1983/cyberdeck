@@ -1,0 +1,17 @@
+# netwatch — one setting, and only the first time.
+#   ~/.dotfiles/common/netwatch/config.toml  ->  ~/.config/netwatch/config.toml
+#
+# The same fix syswatch needed, for a worse symptom. netwatch defaults to its
+# own `dark` palette, and that palette draws the low end of every graph in
+# hardcoded truecolor rather than in a palette slot: rgb(0,66,0) and
+# rgb(0,0,69). Measured against this rice's backgrounds those are 1.67:1 and
+# 1.02:1 — the second is invisible, not dim. So the traffic graphs read as
+# half-missing rather than as low.
+#
+# `terminal` drops the hardcoded RGB entirely — capture-pane confirms no
+# truecolor sequences survive — and every graph cell resolves to an ANSI entry
+# that Ghostty fills from the active theme. Worst case becomes ANSI 4.
+#
+# Seeded, not linked: netwatch writes this file back when you change a setting
+# from inside it. See common/syswatch/config.toml for the same reasoning.
+theme = "terminal"

@@ -240,18 +240,22 @@ fi
 # tile with the wrong greens. install.sh seeds `terminal`; syswatch can also be
 # switched from inside its own UI, so report what it actually says rather than
 # what was installed.
-SW="$HOME/.config/syswatch/config.toml"
-if ! command -v syswatch >/dev/null; then
-  :
-elif [ ! -f "$SW" ]; then
-  fail "syswatch theme" "no config — run install.sh to seed theme = \"terminal\""
-elif grep -qE '^[[:space:]]*theme[[:space:]]*=[[:space:]]*"terminal"' "$SW"; then
-  pass "syswatch theme" "terminal — inherits the palette through Ghostty"
-else
-  fail "syswatch theme" "$(sed -n 's/^[[:space:]]*theme[[:space:]]*=[[:space:]]*/theme = /p' "$SW" | head -1) —
-                         the HUD pane will not match. Press T in syswatch, or
-                         set theme = \"terminal\" in $SW"
-fi
+# Both default to a palette of their own, and netwatch's is the worse of the
+# two: it draws the low end of every graph in hardcoded truecolor, which lands
+# at 1.02:1 on these backgrounds — invisible rather than dim.
+for t in syswatch netwatch; do
+  cfg="$HOME/.config/$t/config.toml"
+  command -v "$t" >/dev/null || continue
+  if [ ! -f "$cfg" ]; then
+    fail "$t theme" "no config — run install.sh to seed theme = \"terminal\""
+  elif grep -qE '^[[:space:]]*theme[[:space:]]*=[[:space:]]*"terminal"' "$cfg"; then
+    pass "$t theme" "terminal — inherits the palette through Ghostty"
+  else
+    fail "$t theme" "$(sed -n 's/^[[:space:]]*theme[[:space:]]*=[[:space:]]*/theme = /p' "$cfg" | head -1) —
+                         its pane will not match. Set theme = \"terminal\" in
+                         $cfg"
+  fi
+done
 
 for t in eza bat fd fzf zoxide atuin delta rg fastfetch btop wl-copy; do
   command -v "$t" >/dev/null || missing="${missing:-}$t "

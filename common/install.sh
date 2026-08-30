@@ -36,6 +36,7 @@ link "$D/common/atuin/themes/cyberdeck.toml"      "$HOME/.config/atuin/themes/cy
 # The HUD's middle pane. Seeded rather than linked: syswatch writes this file
 # itself when you change a setting in its UI. See common/syswatch/config.toml.
 seed "$D/common/syswatch/config.toml" "$HOME/.config/syswatch/config.toml"
+seed "$D/common/netwatch/config.toml" "$HOME/.config/netwatch/config.toml"
 
 # btop reads its themes directory directly and will not follow a symlink into
 # the repo, so this one is a copy.

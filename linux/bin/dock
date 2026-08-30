@@ -51,7 +51,10 @@ set -euo pipefail
 SLOTS=(
   # --- the applications ---
   'term|󰆍|Terminal||ghostty;alacritty;foot;kitty'
-  'editor|󰅩|Editor|^dev\.zed\.Zed$ ^jetbrains- ^codium?$|zed;code;rustrover;ghostty -e nvim'
+  # The flatpak id is a candidate in its own right, not a special case: a
+  # flatpak install exports a wrapper of that name onto PATH, so `command -v`
+  # finds it exactly like any other binary.
+  'editor|󰅩|Editor|^[Cc]ode$ ^codium$ ^VSCodium$ ^com\.vscodium\.codium$ ^dev\.zed\.Zed$ ^jetbrains-|code;codium;com.vscodium.codium;zed;rustrover;ghostty -e nvim'
   'browser|󰖟|Browser|^google-chrome$ ^brave-browser$ ^firefox$|google-chrome;brave-browser;firefox'
   'claude|󰚩|Claude|^claude$|claude-desktop;ghostty -e claude'
   'notes|󰎚|Notes|^obsidian$|obsidian'
@@ -205,9 +208,11 @@ check() {
   done
   want=" $(printf '%s ' "${SLOTS[@]%%|*}")"
   while read -r slot; do
-    # dock-sep is the bar's own divider between the applications and the
-    # toolbelt, not a slot — it has nothing to resolve and no table row.
-    [ -n "$slot" ] && [ "$slot" != sep ] || continue
+    # Two of the bar's dock items are furniture rather than slots: `sep`
+    # divides the applications from the toolbelt, and `handle` is the chevron
+    # the drawer leaves showing when everything else is hidden. Neither has
+    # anything to resolve or a row in the table.
+    case "$slot" in ""|sep|handle) continue ;; esac
     case "$want" in *" $slot "*) ;; *) orphan+=("$slot") ;; esac
   done < <(grep -o '"custom/dock-[a-z0-9]*"' "$bar" 2>/dev/null \
            | sed 's/"custom\/dock-//; s/"//' | sort -u)
