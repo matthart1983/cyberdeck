@@ -128,6 +128,20 @@ else
   fi
 fi
 
+# --- the display item ------------------------------------------------------
+# Reports what each output is actually being driven at, and fails on the one
+# state that is a fault rather than a preference: a panel running below its own
+# resolution, which looks like broken font rendering and never announces itself.
+DISPLAY_BIN="$HOME/.dotfiles/linux/bin/display"
+if [ ! -x "$DISPLAY_BIN" ]; then
+  fail "display" "linux/bin/display missing or not executable"
+elif out=$("$DISPLAY_BIN" check 2>&1); then
+  pass "display" "$out"
+else
+  fail "display" "$(printf '%s' "$out" | paste -sd' — ' -)
+                         'display reset' puts config.kdl's numbers back"
+fi
+
 # --- the netwatch feed -----------------------------------------------------
 if systemctl --user is-active --quiet netwatch-metrics.service; then
   if body=$(curl -sf --max-time 2 http://127.0.0.1:9464/metrics 2>/dev/null); then

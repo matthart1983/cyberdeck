@@ -38,7 +38,7 @@
 
     "modules-left":   ["custom/launcher", "custom/run", "niri/workspaces", "custom/sep", "niri/window"],
     "modules-center": [],
-    "modules-right":  ["custom/link", "custom/net", "cpu", "memory", "disk", "pulseaudio/slider", "wireplumber", "battery", "clock", "custom/power"],
+    "modules-right":  ["custom/link", "custom/net", "cpu", "memory", "disk", "pulseaudio/slider", "wireplumber", "custom/display", "battery", "clock", "custom/power"],
 
     // --- Left: the launcher button ------------------------------------------
     // Opens nwg-drawer, not fuzzel: a button is for the times you are looking
@@ -186,6 +186,31 @@
       "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-",
       "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
       "on-click-right": "ghostty -e soundwatch"
+    },
+
+    // --- Right: the display --------------------------------------------------
+    // Sits beside volume because it is the same kind of thing: a hardware knob
+    // you reach for a few times a week and never want to go hunting for.
+    //
+    // Click opens the picker — scales first, then every mode the focused output
+    // actually reports. Right-click puts back what config.kdl asks for, which
+    // matters more here than elsewhere: `niri msg output` is explicitly
+    // temporary, so the bar can only ever hand you a setting for the afternoon.
+    // linux/bin/display is where the whole of that is written down.
+    //
+    // Polled rather than pushed, at an interval slow enough not to matter: the
+    // thing it is watching is a monitor being plugged in, and niri's event
+    // stream is a socket this item would have to hold open all session to learn
+    // that five seconds sooner. The signal is for the other case — after the
+    // picker applies something, it pokes the bar so the tooltip is right
+    // immediately instead of at the next tick.
+    "custom/display": {
+      "exec": "~/.dotfiles/linux/bin/display probe",
+      "return-type": "json",
+      "interval": 5,
+      "signal": 8,
+      "on-click": "~/.dotfiles/linux/bin/display menu",
+      "on-click-right": "~/.dotfiles/linux/bin/display reset"
     },
 
     "battery": {

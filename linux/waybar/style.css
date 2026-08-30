@@ -166,6 +166,7 @@ window#waybar.empty #window { background: transparent; }
 #memory,
 #disk,
 #wireplumber,
+#custom-display,
 #battery,
 #clock {
   padding: 0 8px;
@@ -182,6 +183,11 @@ window#waybar.empty #window { background: transparent; }
    the one thing it has to say at a glance is muted or not, and that is the
    rule below rather than a colour it wears all the time. */
 #wireplumber { color: @white; }
+/* White while the panel is at its own resolution, yellow when it is not.
+   Driving a 2880-wide panel at 1920 is the one setting in that menu that
+   looks like a rendering fault from the desk, so the item says which it is. */
+#custom-display.native     { color: @white; }
+#custom-display.off-native { color: @yellow; }
 #custom-net  { color: @fg; font-size: 12px; }
 #cpu         { color: @white; }
 #memory      { color: @white; }

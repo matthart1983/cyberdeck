@@ -1,0 +1,217 @@
+#!/usr/bin/env bash
+# The display item — the bar's monitor button.
+#
+#   display probe    one waybar item, as JSON               (the bar, every 5s)
+#   display menu     pick a scale or a mode                 (a click)
+#   display reset    back to what config.kdl asks for       (a right-click)
+#   display check    doctor line: outputs, and any off native
+#
+# What this mostly adjusts is SCALE, not mode, and the panel is the reason.
+# The Framework's display is 2880x1920 and niri drives it at scale 1.5, so the
+# workspace is 1920x1280 logical pixels rendered at full density. Choosing a
+# 1920x1200 MODE does not give you that: the panel still has 2880 physical
+# columns, so the scaler stretches 1920 across them and every edge softens.
+# Scale changes how much fits and stays sharp. Mode changes what the panel is
+# actually driven at — worth doing for refresh rate (120 -> 60 saves power),
+# and the useful one on an external monitor with several real resolutions.
+#
+# Both are in the list, because which one you want depends on what is plugged
+# in, and the list is built from the focused output rather than written down.
+#
+# The picker is fuzzel rather than a GTK menu-file like custom/power's, and the
+# reason is that a menu-file is a static XML document. The mode list differs per
+# output and changes the moment a monitor is plugged in, so there is nothing to
+# write into it. fuzzel is already this rice's "name the thing" surface — the
+# run button and Mod+Space — so this borrows a window that exists instead of
+# adding a seventeenth themed one.
+#
+# One thing to know about all of it: `niri msg output` is TEMPORARY. niri says
+# so itself — the change is not written to the config, and it is forgotten the
+# next time the config changes. config.kdl is where a permanent choice goes;
+# this button is for the afternoon, not for the setup. `reset` reads that file
+# and puts back exactly what it asks for, which is why it does not simply say
+# `auto`: config.kdl pins eDP-1 to scale 1.5, and niri's own automatic pick is
+# a different number.
+#
+# Every python block below takes niri's JSON as an ARGUMENT, not on stdin. The
+# program itself arrives on stdin from the heredoc — `python3 -` cannot have
+# both, and the failure is quiet: json.load() reads the script it is running.
+set -euo pipefail
+
+# waybar is spawned by the compositor, not a login shell, so it inherits
+# PATH=/usr/local/bin:/usr/bin and nothing else — the same reason dock sources
+# this. niri and fuzzel are in /usr/bin, but a slot that resolves nothing here
+# would read as "the bar is broken" rather than "PATH is short".
+# shellcheck source=common/lib-path.sh
+. "$HOME/.dotfiles/common/lib-path.sh"
+
+NIRI_CONFIG="$HOME/.config/niri/config.kdl"
+SIGNAL=8            # waybar's custom/display "signal": redraw after a change
+
+die() { printf '%s\n' "$1" >&2; exit 1; }
+
+# The arithmetic (logical size at a given scale, mHz -> Hz) is the whole point
+# of reaching for python over jq here; drawer already set that precedent.
+focused() { niri msg --json focused-output 2>/dev/null; }
+outputs() { niri msg --json outputs 2>/dev/null || echo '{}'; }
+name_of() { python3 -c 'import json,sys; print(json.loads(sys.argv[1])["name"])' "$1"; }
+
+# --- what config.kdl asks for -----------------------------------------------
+# Read back the `output "NAME" { ... }` block for one output: the scale and the
+# mode it pins, or "auto" for whichever it leaves to niri.
+config_for() {
+  python3 - "$NIRI_CONFIG" "$1" <<'PY'
+import re, sys
+try:
+    src = open(sys.argv[1]).read()
+except OSError:
+    print("auto auto"); raise SystemExit
+m = re.search(r'output\s+"%s"\s*\{(.*?)\n\}' % re.escape(sys.argv[2]), src, re.S)
+body = m.group(1) if m else ""
+scale = re.search(r'^\s*scale\s+([0-9.]+)', body, re.M)
+mode  = re.search(r'^\s*mode\s+"([^"]+)"', body, re.M)
+print(scale.group(1) if scale else "auto", mode.group(1) if mode else "auto")
+PY
+}
+
+# --- the waybar item ---------------------------------------------------------
+probe() {
+  python3 - "$(focused)" "$(outputs)" <<'PY'
+import json, sys
+
+try:
+    cur = json.loads(sys.argv[1])
+except Exception:                      # niri not up, or nothing focused
+    print(json.dumps({"text": "", "tooltip": "no output"})); raise SystemExit
+allout = json.loads(sys.argv[2] or "{}")
+
+def line(o):
+    i = o.get("current_mode")
+    m = o["modes"][i] if i is not None else None
+    lg = o.get("logical") or {}
+    res = f"{m['width']}×{m['height']} @{m['refresh_rate']/1000:.0f}" if m else "off"
+    return (f"{o['name']}  ·  {res}  ·  scale {lg.get('scale', 1)}"
+            f"  ·  {lg.get('width')}×{lg.get('height')} workspace")
+
+rows = [line(cur)] + [line(o) for o in allout.values()
+                      if o["name"] != cur["name"] and o.get("logical")]
+
+# Yellow when the panel is being driven below its own resolution — the one
+# state here that reads as a broken render rather than as a setting, so the
+# bar says which it is.
+i = cur.get("current_mode")
+m = cur["modes"][i] if i is not None else None
+native = max((x["width"] * x["height"] for x in cur["modes"] if x["is_preferred"]), default=0)
+cls = "off-native" if m and native and m["width"] * m["height"] < native else "native"
+
+print(json.dumps({
+    "text": "\U000f0379",
+    "class": cls,
+    "tooltip": "\n".join(rows) + "\nclick to change · right-click restores config.kdl",
+}, ensure_ascii=False))
+PY
+}
+
+# --- the picker --------------------------------------------------------------
+menu() {
+  local out entries=() labels=() idx action
+  out="$(focused)" || die "niri is not answering"
+  [ -n "$out" ] || die "no focused output"
+
+  # Each row is "<label>TAB<niri msg output args>", so a label can be as chatty
+  # as it likes without the dispatch below having to parse it back apart.
+  mapfile -t entries < <(python3 - "$out" "$(config_for "$(name_of "$out")")" <<'PY'
+import json, sys
+
+o = json.loads(sys.argv[1])
+name, modes, lg = o["name"], o["modes"], o["logical"]
+cur = o.get("current_mode")
+cw, ch = (modes[cur]["width"], modes[cur]["height"]) if cur is not None else (lg["width"], lg["height"])
+want_scale = sys.argv[2].split()[0]
+
+rows = []
+# Scale first: on a HiDPI panel it is the knob that does what "change the
+# resolution" is usually reaching for, and it gives up no pixels to do it.
+for s in (1.0, 1.25, 1.5, 1.75, 2.0):
+    tag = []
+    if abs(s - lg["scale"]) < 1e-6: tag.append("current")
+    if want_scale != "auto" and abs(s - float(want_scale)) < 1e-6: tag.append("config")
+    note = "  ·  " + ", ".join(tag) if tag else ""
+    rows.append((f"scale {s:<5} {round(cw/s)}×{round(ch/s)} workspace{note}",
+                 f"{name} scale {s}"))
+
+native = max((m["width"] * m["height"] for m in modes if m["is_preferred"]), default=0)
+for i, m in enumerate(modes):
+    hz = m["refresh_rate"] / 1000
+    tag = ["native"] if m["width"] * m["height"] == native else ["soft — below panel"]
+    if i == cur: tag.append("current")
+    rows.append((f"mode  {m['width']}×{m['height']} @{hz:<4.0f} ·  {', '.join(tag)}",
+                 f"{name} mode {m['width']}x{m['height']}@{hz:.3f}"))
+
+rows.append(("reset       ·  back to config.kdl", "reset"))
+for label, action in rows:
+    print(f"{label}\t{action}")
+PY
+)
+
+  for e in "${entries[@]}"; do labels+=("${e%%$'\t'*}"); done
+  # --index, so a label can be reworded without the dispatch below noticing.
+  idx="$(printf '%s\n' "${labels[@]}" \
+         | fuzzel --dmenu --index --prompt 'display  ' --lines 12 --width 46 2>/dev/null)" || return 0
+  [ -n "${idx:-}" ] || return 0
+
+  action="${entries[$idx]#*$'\t'}"
+  if [ "$action" = reset ]; then
+    reset
+  else
+    # shellcheck disable=SC2086 # word splitting is the point: three arguments
+    niri msg output $action >/dev/null
+  fi
+  refresh
+}
+
+# --- back to the config ------------------------------------------------------
+reset() {
+  local name conf
+  name="$(name_of "$(focused)")"
+  conf="$(config_for "$name")"
+  niri msg output "$name" mode  "${conf#* }" >/dev/null
+  niri msg output "$name" scale "${conf% *}" >/dev/null
+  refresh
+}
+
+refresh() { pkill -RTMIN+$SIGNAL waybar 2>/dev/null || true; }
+
+# --- doctor ------------------------------------------------------------------
+# One line, and a non-zero exit when an output is driven below its own
+# resolution — the one state here that is a fault rather than a preference.
+check() {
+  python3 - "$(outputs)" <<'PY'
+import json, sys
+
+outs = [o for o in json.loads(sys.argv[1] or "{}").values() if o.get("logical")]
+if not outs:
+    print("no enabled output"); raise SystemExit(1)
+
+bad, said = [], []
+for o in outs:
+    m = o["modes"][o["current_mode"]]
+    native = max((x["width"] * x["height"] for x in o["modes"] if x["is_preferred"]), default=0)
+    said.append(f"{o['name']} {m['width']}x{m['height']}@{m['refresh_rate']/1000:.0f}"
+                f" scale {o['logical']['scale']}")
+    if native and m["width"] * m["height"] < native:
+        bad.append(o["name"])
+
+print(" · ".join(said))
+if bad:
+    print("below native: " + ", ".join(bad)); raise SystemExit(1)
+PY
+}
+
+case "${1:-probe}" in
+  probe) probe ;;
+  menu)  menu ;;
+  reset) reset ;;
+  check) check ;;
+  *)     die "usage: display [probe|menu|reset|check]" ;;
+esac
