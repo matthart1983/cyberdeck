@@ -188,6 +188,51 @@ window#waybar.empty #window { background: transparent; }
 #disk        { color: @white; }
 #clock       { color: @magenta; font-weight: bold; }
 
+/* The volume slider. GTK exposes a GtkScale as four nodes and all four want
+   telling, or the parts you skip arrive wearing Adwaita: the box, the handle,
+   the unfilled trough and the filled highlight.
+
+   The filled part is @magenta, which on most of these themes is not magenta.
+   The slot is accent 1 — it is called magenta because it was, in the palette
+   this rice started from, and every theme since has repainted it. In Deep Sea
+   it is #5d86ff, a cornflower blue that looks exactly like an unstyled GTK
+   widget. Worth knowing before you go hunting for a stylesheet that is not
+   being applied. */
+#pulseaudio-slider {
+  min-width: 84px;
+  margin: 3px 6px 3px 4px;
+  padding: 0;
+}
+
+#pulseaudio-slider trough {
+  min-height: 6px;
+  min-width: 84px;
+  border-radius: 3px;
+  background-color: @bg_alt;
+  border: 1px solid @border;
+}
+
+#pulseaudio-slider highlight {
+  min-height: 6px;
+  border-radius: 3px;
+  background-color: @magenta;
+}
+
+/* A visible handle, because the thing this item has to say before you touch it
+   is "you can drag me". */
+#pulseaudio-slider slider {
+  min-width: 11px;
+  min-height: 11px;
+  border-radius: 6px;
+  background-color: @white;
+  border: 1px solid @border;
+  box-shadow: none;
+}
+
+#pulseaudio-slider slider:hover {
+  background-color: @magenta;
+}
+
 /* The session button, hard against the right edge. Neutral until you are on
    it, then red — it is the one control on this bar that can end your session,
    and it should say so under the pointer rather than sit there shouting. */
@@ -238,10 +283,16 @@ window#waybar.dock .app {
   color: @fg_dim;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 8px;
-  padding: 0 10px;
+  border-radius: 10px;
+  /* padding-top without a matching padding-bottom, and it is not a typo. A
+     font's line box is ascent plus descent, and an icon glyph uses none of the
+     descent — so centring the LINE box, which is all GTK can do, leaves the
+     ink about 1.5px high inside its own background. Invisible until something
+     is filled in behind it, which is exactly when it is. The margin stays
+     symmetric so the row itself still centres in the pill; only the ink moves. */
+  padding: 2px 12px 0 12px;
   margin: 4px 2px;
-  font-size: 20px;
+  font-size: 27px;
   transition: color 120ms ease, background 120ms ease;
 }
 
@@ -282,7 +333,8 @@ window#waybar.dock .app.absent {
 
 #custom-dock-sep {
   color: @purple;
-  padding: 0 6px;
+  padding: 0 8px;
+  font-size: 20px;
 }
 
 /* State colours — Waybar sets these classes from the "states" map. */

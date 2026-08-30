@@ -33,6 +33,15 @@ which is why `hud` starts each tool in `--lite`; zoomed it is the full 232×53,
 so `L` (or `V` in syswatch and diskwatch) gives you the full view instead of a
 "terminal too small" line.
 
+**Dense wants 130×44, and does not say so when it cannot have it.** Below 44
+rows netwatch quietly draws two of its four boxes rather than refusing, which
+reads as a broken render instead of a size problem. That is why anything in
+this rice meant to reach dense is launched with a font size rather than the
+configured 14: a maximised terminal on a 1920×1280 output is 168×38 at 14 —
+wide enough and six rows short, so `V` could never get there however far you
+zoomed. `hud` runs at 10 (232×53) and the bar's netwatch items open at 11
+(211×48).
+
 ![hud](capture/out/hud.gif)
 
 ## The shell
@@ -418,13 +427,22 @@ each needed a shell plugin on macOS only because `top`, `memory_pressure` and
 itself, so `linux/waybar/scripts/` holds just the two netwatch ones — which
 was always the part worth having.
 
-The Fedora bar has one item macOS's does not: **volume**, from waybar's
-`wireplumber` module. Scroll sets it, click mutes, right-click opens
-soundwatch — the same idiom as cpu and mem opening btop. It and the Framework's
-hardware keys drive the same daemon and cannot disagree about a notch: the
-keybinds in `config.kdl` are `wpctl` at `5%` with `--limit 1.0`, and the
-module's `scroll-step` and `max-volume` are those same two numbers. There is no
-macOS counterpart because macOS keeps volume in its own menu bar.
+The Fedora bar has one thing macOS's does not: **volume**, as two items that
+read as one — a `pulseaudio/slider` you drag or click a position on, and a
+`wireplumber` readout beside it carrying the level and the mute state. Click
+the readout to mute, right-click it for soundwatch, the same idiom as cpu and
+mem opening btop.
+
+The slider is there because **scrolling a bar item is a mouse-wheel gesture and
+this is a laptop.** The obvious build is scroll-to-set — that is what every
+waybar config does — and on this machine the module never saw a scroll event at
+all, which left the volume readable and mutable from the bar and not settable,
+which is the one thing a volume control is for. Clicking a position is a
+gesture a trackpad is good at. The scroll handlers stay configured for a mouse,
+and they run the identical `wpctl` the Framework's F1–F3 run, so the bar and
+the keyboard cannot disagree about what a notch is worth.
+
+There is no macOS counterpart because macOS keeps volume in its own menu bar.
 
 ## The dock
 

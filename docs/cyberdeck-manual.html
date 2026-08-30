@@ -810,7 +810,8 @@
           <div class="row"><div class="kseq"><kbd>cpu · memory · disk</kbd></div><div class="act">System vitals, straight from the kernel <em>click any of them to open btop</em></div></div>
           <div class="row"><div class="kseq"><kbd class="accent">net</kbd></div><div class="act">Throughput up and down <em>from netwatch, not /proc/net/dev</em></div></div>
           <div class="row"><div class="kseq"><kbd class="accent">link</kbd></div><div class="act">Gateway RTT, DNS RTT, loss ratio, live connection count <em>click to open netwatch</em></div></div>
-          <div class="row"><div class="kseq"><kbd>wireplumber</kbd></div><div class="act">Volume — scroll to set it, click to mute <em>right-click opens soundwatch · 5% a step, the same as the hardware keys</em></div></div>
+          <div class="row"><div class="kseq"><kbd>pulseaudio/slider</kbd></div><div class="act">Volume, as a bar you drag <em>or click a position on it to jump there</em></div></div>
+          <div class="row"><div class="kseq"><kbd>wireplumber</kbd></div><div class="act">The level and the mute state beside it <em>click to mute · right-click opens soundwatch</em></div></div>
           <div class="row"><div class="kseq"><kbd>battery · clock</kbd></div><div class="act">BAT1 with time-to-empty and draw in watts, then the clock</div></div>
         </div>
 
@@ -852,7 +853,7 @@
 
         <div class="note only-linux">
           <span class="tag">One volume, two drivers</span>
-          <p>The bar item and the Framework's <kbd>F1</kbd>–<kbd>F3</kbd> keys drive the same daemon and agree on the numbers by construction: <code>config.kdl</code> binds the hardware keys to <code>wpctl</code> at <code>5%</code> a step with <code>--limit 1.0</code>, and the module's <code>scroll-step</code> and <code>max-volume</code> are the same two numbers on the bar's side. It is waybar's <code>wireplumber</code> module rather than <code>pulseaudio</code> — both are linked in, and wireplumber is what this rice actually runs. <strong>No macOS counterpart:</strong> SketchyBar has eighteen items and none of them is volume, because macOS keeps its own in the menu bar.</p>
+          <p><strong>Scrolling a bar item is a mouse-wheel gesture, and this is a laptop.</strong> Scroll-to-set is what every waybar config does, and here the module never received a scroll event at all — leaving the volume readable and mutable from the bar but not settable, which is the one thing a volume control is for. Hence a slider: clicking a position is a gesture a trackpad is actually good at. The scroll handlers stay configured for a mouse, and they run the identical <code>wpctl</code> the Framework's <kbd>F1</kbd>–<kbd>F3</kbd> run, so the bar and the keyboard cannot disagree about what one notch is worth. <strong>No macOS counterpart:</strong> SketchyBar has eighteen items and none of them is volume, because macOS keeps its own in the menu bar.</p>
         </div>
 
         <div class="note good">
@@ -1089,6 +1090,7 @@
         <div class="note">
           <span class="tag">Sizing</span>
           <p>All of them refuse to draw below 80×24, and each gets a quarter of the window — so the terminal has to clear roughly 160×50 cells or the panes show a "terminal too small" message instead.</p>
+          <p><strong>Dense is the one that does not warn you.</strong> It wants 130×44, and below 44 rows netwatch draws two of its four boxes rather than saying it cannot — which looks like a broken render, not a size problem. A maximised terminal on a 1920×1280 output is 168×38 at the configured font size of 14: wide enough, six rows short, and no amount of zooming fixes a window that is too short to begin with. So anything here meant to reach dense carries a font size: <code>hud</code> at 10 (232×53), the bar's netwatch items at 11 (211×48).</p>
         </div>
       </section>
 

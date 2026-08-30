@@ -32,7 +32,7 @@
 
     "modules-left":   ["custom/launcher", "custom/run", "niri/workspaces", "custom/sep", "niri/window"],
     "modules-center": [],
-    "modules-right":  ["custom/link", "custom/net", "cpu", "memory", "disk", "wireplumber", "battery", "clock", "custom/power"],
+    "modules-right":  ["custom/link", "custom/net", "cpu", "memory", "disk", "pulseaudio/slider", "wireplumber", "battery", "clock", "custom/power"],
 
     // --- Left: the launcher button ------------------------------------------
     // Opens nwg-drawer, not fuzzel: a button is for the times you are looking
@@ -90,18 +90,24 @@
     },
 
     // --- The two netwatch-fed items -----------------------------------------
+    // --font-size, for the same reason the HUD carries one. netwatch's dense
+    // view wants 130x44 and does not say so when it cannot have it — below 44
+    // rows it quietly draws two of its four boxes, which reads as a broken
+    // render rather than a refusal. A maximised ghostty on this display at the
+    // configured 14 is 168x38: wide enough and six rows short, so `V` could
+    // never reach dense however far you zoomed. At 11 it is 211x48.
     "custom/link": {
       "exec": "~/.config/waybar/scripts/link.sh",
       "return-type": "json",
       "interval": 5,
-      "on-click": "ghostty -e netwatch"
+      "on-click": "ghostty --font-size=11 -e netwatch"
     },
 
     "custom/net": {
       "exec": "~/.config/waybar/scripts/net.sh",
       "return-type": "json",
       "interval": 2,
-      "on-click": "ghostty -e netwatch"
+      "on-click": "ghostty --font-size=11 -e netwatch"
     },
 
     // --- Kernel-fed items ----------------------------------------------------
@@ -128,6 +134,22 @@
       "states": { "warning": 85, "critical": 93 }
     },
 
+    // --- Right: volume, as a thing you can actually drag ---------------------
+    // Scrolling a bar item is a mouse-wheel gesture. This is a laptop, and on
+    // this machine the module never received a scroll event at all — so the
+    // volume was readable and mutable from the bar, and not settable, which is
+    // the one thing a volume control is for.
+    //
+    // So the control is a slider: click anywhere on it to jump there, or drag
+    // it. Both are gestures a trackpad is good at. The readout beside it keeps
+    // the number and the mute state, and the scroll handlers stay configured
+    // because they cost nothing and a mouse may yet get plugged in.
+    "pulseaudio/slider": {
+      "min": 0,
+      "max": 100,
+      "orientation": "horizontal"
+    },
+
     // --- Right: volume ------------------------------------------------------
     // The wireplumber module, not pulseaudio: waybar links both, and this rice
     // runs PipeWire with wireplumber as its session manager — the same daemon
@@ -149,7 +171,11 @@
       "format": "{icon} {volume}%",
       "format-muted": "󰝟 muted",
       "format-icons": ["󰕿", "󰖀", "󰕾"],
-      "tooltip-format": "{node_name}  ·  {volume}%\nscroll to set · click to mute · right-click for soundwatch",
+      "tooltip-format": "{node_name}  ·  {volume}%\ndrag the slider to set · click to mute · right-click for soundwatch",
+      // Kept for a mouse, and a threshold so that if one ever is plugged in it
+      // steps once per notch. Not the control this item relies on: see the
+      // slider above for why.
+      "smooth-scrolling-threshold": 1,
       "on-scroll-up": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+ --limit 1.0",
       "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-",
       "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
@@ -221,7 +247,7 @@
     "name": "dock",
     "layer": "top",
     "position": "bottom",
-    "height": 44,
+    "height": 54,
     "margin-bottom": 8,
     "spacing": 0,
 
