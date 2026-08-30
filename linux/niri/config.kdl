@@ -103,6 +103,10 @@ spawn-at-startup "waybar"
 // bar — see linux/bin/drawer for why those margins have to be computed.
 spawn-at-startup "sh" "-c" "~/.dotfiles/linux/bin/drawer --daemon"
 spawn-at-startup "sh" "-c" "swaybg -i ~/.local/share/wallpapers/cyberpunk-fw13.png -m fill"
+// niri ships no polkit authentication agent, so without this every action that
+// needs one — fprintd enrollment, fwupd, dnf5daemon — fails outright with
+// "Not Authorized" rather than prompting for a password.
+spawn-at-startup "/usr/libexec/polkit-mate-authentication-agent-1"
 
 prefer-no-csd
 screenshot-path "~/Pictures/Screenshots/cyberdeck-%Y-%m-%d-%H%M%S.png"
