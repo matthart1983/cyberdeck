@@ -144,6 +144,32 @@ else
   fail "netwatch feed" "netwatch not installed — cargo install netwatch-tui"
 fi
 
+# --- fingerprint -----------------------------------------------------------
+# Framework ships a Goodix sensor and Fedora ships everything to drive it, so
+# this check is about the one step that cannot be automated: enrolling a finger
+# means putting a finger on the reader. Everything else is already true out of
+# the box — pam_fprintd is `sufficient` in system-auth, /etc/pam.d/swaylock is
+# `auth include login`, and login substacks system-auth, so the lock screen and
+# sudo both take a print the moment one exists. Worth stating, because "it does
+# not work" here nearly always means zero fingers, not broken PAM.
+if ! command -v fprintd-list >/dev/null; then
+  fail "fingerprint" "fprintd not installed — dnf install fprintd fprintd-pam"
+elif ! fp=$(timeout 5 fprintd-list "$USER" 2>/dev/null); then
+  fail "fingerprint" "fprintd-list failed or timed out —
+                         systemctl status fprintd"
+elif printf '%s' "$fp" | grep -q "found 0 devices"; then
+  pass "fingerprint" "no reader on this machine"
+elif ! authselect current 2>/dev/null | grep -q "with-fingerprint"; then
+  fail "fingerprint" "reader present, PAM feature off —
+                         sudo authselect enable-feature with-fingerprint"
+elif printf '%s' "$fp" | grep -q "has no fingers enrolled"; then
+  fail "fingerprint" "reader and PAM ready, nothing enrolled — run:
+                         fprintd-enroll        (then again with -f for more)"
+else
+  fp_n=$(printf '%s' "$fp" | grep -c -- "- #")
+  pass "fingerprint" "$fp_n enrolled · swaylock and sudo both take it"
+fi
+
 # --- terminal + shell ------------------------------------------------------
 if [ -L "$HOME/.config/ghostty/config" ] && [ -L "$HOME/.config/ghostty/platform.conf" ]; then
   if command -v ghostty >/dev/null; then
@@ -176,14 +202,37 @@ else
 fi
 
 # --- the HUD's panes -------------------------------------------------------
-# soundwatch is deliberately not checked: it is macOS-only (CoreAudio tap),
-# and bin/hud drops to a three-pane grid without it.
+# Four now, not three. soundwatch used to be macOS-only and is not any more:
+# /proc/asound carries the devices, streams, latency and xruns, and libpulse
+# carries the meters. It is the one that is not on crates.io, so it gets its
+# own remedy line.
 for t in netwatch syswatch diskwatch; do
   command -v "$t" >/dev/null || hud_missing="${hud_missing:-}$t "
 done
-[ -z "${hud_missing:-}" ] \
-  && pass "hud panes" "netwatch, syswatch, diskwatch present" \
-  || fail "hud panes" "missing: $hud_missing— cargo install netwatch-tui syswatch diskwatch"
+command -v soundwatch >/dev/null || sw_missing=1
+if [ -z "${hud_missing:-}" ] && [ -z "${sw_missing:-}" ]; then
+  pass "hud panes" "soundwatch, netwatch, syswatch, diskwatch present"
+elif [ -z "${hud_missing:-}" ]; then
+  fail "hud panes" "soundwatch missing — hud drops to three panes.
+                         cargo install --git https://github.com/matthart1983/soundwatch"
+else
+  fail "hud panes" "missing: $hud_missing${sw_missing:+soundwatch }—
+                         cargo install netwatch-tui syswatch diskwatch${sw_missing:+
+                         cargo install --git https://github.com/matthart1983/soundwatch}"
+fi
+
+# soundwatch's meters are the one part of it that needs a library, and it
+# dlopens libpulse rather than linking it — precisely so a box with no sound
+# server still runs the tool and says which part is missing. Report the same
+# distinction here instead of calling the whole pane broken.
+if ! command -v soundwatch >/dev/null; then
+  :
+elif ldconfig -p 2>/dev/null | grep -q "libpulse\.so\.0"; then
+  pass "soundwatch meters" "libpulse present — levels and spectrum will read"
+else
+  fail "soundwatch meters" "no libpulse — devices, latency and xruns still work,
+                         the meters read silence. dnf install pulseaudio-libs"
+fi
 
 # netwatch and diskwatch read the terminal's sixteen ANSI colours and so take
 # the palette through Ghostty for free. syswatch ships its own `dark` as the

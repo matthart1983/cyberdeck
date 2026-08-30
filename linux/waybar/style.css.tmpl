@@ -165,6 +165,7 @@ window#waybar.empty #window { background: transparent; }
 #cpu,
 #memory,
 #disk,
+#wireplumber,
 #battery,
 #clock {
   padding: 0 8px;
@@ -177,6 +178,10 @@ window#waybar.empty #window { background: transparent; }
    colour the icon separately from the label inside one module, so the accent
    moves to the whole item and the neutral ones stay white. */
 #custom-link { color: @green; }
+/* Volume sits with the hardware items, so it stays white like cpu and disk —
+   the one thing it has to say at a glance is muted or not, and that is the
+   rule below rather than a colour it wears all the time. */
+#wireplumber { color: @white; }
 #custom-net  { color: @fg; font-size: 12px; }
 #cpu         { color: @white; }
 #memory      { color: @white; }
@@ -306,6 +311,11 @@ window#waybar.dock .app.absent {
 #custom-link.loss  { color: @red; }
 #custom-link.down  { color: @fg_dim; }
 #custom-net.down   { color: @fg_dim; }
+
+/* Waybar sets .muted on the wireplumber module. Dimmed rather than red: muted
+   audio is a state you chose, not a fault — the same grey the link item goes
+   when netwatch is off. */
+#wireplumber.muted { color: @fg_dim; }
 
 @keyframes blink {
   to { color: @red; background: @bg_alt; }

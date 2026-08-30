@@ -795,7 +795,7 @@
         <div class="only-linux">
         <p class="eyebrow">Layer 02 · Waybar</p>
         <h1>The bar reads your own network</h1>
-        <p class="lede">Same claim, seven items instead of eighteen, and <strong>only two of them need a script</strong>. cpu, memory, disk and battery each wanted a shell plugin on macOS purely because <code>top</code>, <code>memory_pressure</code> and <code>pmset</code> have to be parsed; Waybar reads all four out of <code>/proc</code> and <code>/sys</code> itself. What's left in <code>scripts/</code> is <strong>link</strong> and <strong>net</strong> — the netwatch-fed pair, which was always the part worth having.</p>
+        <p class="lede">Same claim, eight items instead of eighteen, and <strong>only two of them need a script</strong>. cpu, memory, disk and battery each wanted a shell plugin on macOS purely because <code>top</code>, <code>memory_pressure</code> and <code>pmset</code> have to be parsed; Waybar reads all four out of <code>/proc</code> and <code>/sys</code> itself. What's left in <code>scripts/</code> is <strong>link</strong> and <strong>net</strong> — the netwatch-fed pair, which was always the part worth having.</p>
 
         <div class="meta">
           <span class="chip"><b>Config</b> linux/waybar/config.jsonc</span>
@@ -810,6 +810,7 @@
           <div class="row"><div class="kseq"><kbd>cpu · memory · disk</kbd></div><div class="act">System vitals, straight from the kernel <em>click any of them to open btop</em></div></div>
           <div class="row"><div class="kseq"><kbd class="accent">net</kbd></div><div class="act">Throughput up and down <em>from netwatch, not /proc/net/dev</em></div></div>
           <div class="row"><div class="kseq"><kbd class="accent">link</kbd></div><div class="act">Gateway RTT, DNS RTT, loss ratio, live connection count <em>click to open netwatch</em></div></div>
+          <div class="row"><div class="kseq"><kbd>wireplumber</kbd></div><div class="act">Volume — scroll to set it, click to mute <em>right-click opens soundwatch · 5% a step, the same as the hardware keys</em></div></div>
           <div class="row"><div class="kseq"><kbd>battery · clock</kbd></div><div class="act">BAT1 with time-to-empty and draw in watts, then the clock</div></div>
         </div>
 
@@ -847,6 +848,11 @@
         <div class="note blocked">
           <span class="tag">Session PATH</span>
           <p>niri runs under <code>systemd --user</code>, whose PATH is <code>/usr/local/bin:/usr/bin</code> — and because Ghostty is single-instance, that one process runs every <code>ghostty -e &lt;tool&gt;</code> on the machine. So <code>ghostty -e btop</code> works and <code>ghostty -e hud</code> opens a window that dies, with nothing to say why. <code>linux/systemd/environment.d/cyberdeck.conf</code> puts <code>~/.cargo/bin</code>, <code>~/.local/bin</code> and the rice's own <code>common/bin</code> on the session PATH; it is read at login, so <code>rice-doctor</code> checks the running compositor rather than trusting that the link was enough.</p>
+        </div>
+
+        <div class="note only-linux">
+          <span class="tag">One volume, two drivers</span>
+          <p>The bar item and the Framework's <kbd>F1</kbd>–<kbd>F3</kbd> keys drive the same daemon and agree on the numbers by construction: <code>config.kdl</code> binds the hardware keys to <code>wpctl</code> at <code>5%</code> a step with <code>--limit 1.0</code>, and the module's <code>scroll-step</code> and <code>max-volume</code> are the same two numbers on the bar's side. It is waybar's <code>wireplumber</code> module rather than <code>pulseaudio</code> — both are linked in, and wireplumber is what this rice actually runs. <strong>No macOS counterpart:</strong> SketchyBar has eighteen items and none of them is volume, because macOS keeps its own in the menu bar.</p>
         </div>
 
         <div class="note good">
@@ -1035,9 +1041,10 @@
           <div class="hudpane"><div class="t">diskwatch</div><div class="d">Read/write throughput, capacity, busiest files</div></div>
         </div>
         <div class="hudgrid only-linux">
-          <div class="hudpane"><div class="t">netwatch</div><div class="d">Throughput, gateway and DNS RTT, live connections</div></div>
+          <div class="hudpane"><div class="t">soundwatch</div><div class="d">output and input levels, streams, latency, xruns</div></div>
           <div class="hudpane"><div class="t">syswatch</div><div class="d">Load, thermals, power draw, process table</div></div>
-          <div class="hudpane" style="grid-column: span 2"><div class="t">diskwatch</div><div class="d">Read/write throughput, capacity, busiest files</div></div>
+          <div class="hudpane"><div class="t">netwatch</div><div class="d">Throughput, gateway and DNS RTT, live connections</div></div>
+          <div class="hudpane"><div class="t">diskwatch</div><div class="d">Read/write throughput, capacity, busiest files</div></div>
         </div>
 
         <div class="keys">
@@ -1050,9 +1057,9 @@
           <p>Worth pairing the two: a pane in the grid is around 115×26, which is why <code>hud</code> starts every tool with <code>--lite</code>. Zoomed it is the full 232×53, so <kbd>L</kbd> (or <kbd>V</kbd> in syswatch and diskwatch) will now give you the full or dense view rather than a "terminal too small" line. Un-zoom and they go back to lite on their own.</p>
         </div>
 
-        <div class="note only-linux">
-          <span class="tag">Three, not four</span>
-          <p><strong>soundwatch is macOS-only</strong> — it binds a CoreAudio tap, and there is no Linux build. <code>hud</code> checks for it and builds a three-pane grid when it's absent, rather than opening a fourth pane that dies immediately. That's the same degradation any missing tool gets.</p>
+        <div class="note good only-linux">
+          <span class="tag">Four here too</span>
+          <p><strong>soundwatch is no longer macOS-only.</strong> It grew an ALSA backend and libpulse meters, so the CoreAudio tap is one implementation behind its backend trait rather than the whole tool. Nothing to sign, no consent to grant: devices, streams, latency and xruns come out of <code>/proc/asound</code>, and only the meters want a library — <code>libpulse</code>, dlopened at first use, so a box with no sound server still runs the tool and names the missing part. It is the one pane not on crates.io: <code>cargo install --git https://github.com/matthart1983/soundwatch</code>. <code>hud</code> still checks before it opens the pane, and still drops to a three-pane grid without it — that check was never about the platform.</p>
         </div>
 
         <div class="note">
@@ -1225,6 +1232,11 @@
         <div class="note good">
           <span class="tag">One palette</span>
           <p>Sixteen surfaces mirror the colours, in nine different notations — Ghostty's <code>#rrggbb</code>, SketchyBar's <code>0xAARRGGBB</code>, Zed's <code>#rrggbbaa</code>, CSS, ANSI truecolor triplets. They were mirrored <em>by hand</em> until the themes landed, which made eight palettes 128 files that could drift with nothing to catch it. Each one is a <code>.tmpl</code> beside its output now; <code>theme</code> renders them and <code>test/theme.sh</code> fails if a rendered file stops matching its template.</p>
+        </div>
+
+        <div class="note good only-linux">
+          <span class="tag">Fingerprint</span>
+          <p>The Framework's Goodix reader needs nothing built. <code>authselect enable-feature with-fingerprint</code> puts <code>pam_fprintd</code> in <code>system-auth</code> as <em>sufficient</em>; <code>/etc/pam.d/swaylock</code> is <code>auth include login</code> and <code>login</code> substacks <code>system-auth</code> — so the lock screen and <code>sudo</code> both accept a print without a line of their own config. The step nothing can automate is enrolling, because it wants a finger on the reader: <code>fprintd-enroll</code>, then <code>fprintd-enroll -f right-middle-finger</code> for a second. <code>rice-doctor</code> tests the reader, the PAM feature and the enrolment separately — "the fingerprint doesn't work" is nearly always the third one.</p>
         </div>
 
         <h2>What the doctor looks at</h2>

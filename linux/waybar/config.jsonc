@@ -32,7 +32,7 @@
 
     "modules-left":   ["custom/launcher", "custom/run", "niri/workspaces", "custom/sep", "niri/window"],
     "modules-center": [],
-    "modules-right":  ["custom/link", "custom/net", "cpu", "memory", "disk", "battery", "clock", "custom/power"],
+    "modules-right":  ["custom/link", "custom/net", "cpu", "memory", "disk", "wireplumber", "battery", "clock", "custom/power"],
 
     // --- Left: the launcher button ------------------------------------------
     // Opens nwg-drawer, not fuzzel: a button is for the times you are looking
@@ -126,6 +126,34 @@
       "format": "󰋊 {percentage_used}% · {free} free",
       "interval": 300,
       "states": { "warning": 85, "critical": 93 }
+    },
+
+    // --- Right: volume ------------------------------------------------------
+    // The wireplumber module, not pulseaudio: waybar links both, and this rice
+    // runs PipeWire with wireplumber as its session manager — the same daemon
+    // the Framework's hardware keys already drive through wpctl.
+    //
+    // Scroll sets it, click mutes, right-click opens soundwatch — the same
+    // idiom as cpu and memory opening btop, and the two netwatch items opening
+    // netwatch. Muting is what a volume item is mostly for, so it keeps the
+    // left button and the tool gets the right.
+    //
+    // The scroll handlers are spelled out rather than left to the module's
+    // built-in one, and the reason is the ceiling. waybar's own handler steps
+    // by `scroll-step` up to `max-volume`; config.kdl's XF86Audio binds step by
+    // 5% up to `--limit 1.0`. Two implementations of the same rule is one more
+    // than is needed, and they drift the first time either number is edited.
+    // The man page is explicit that on-scroll-up/down REPLACE the default, so
+    // this is one rule: the bar runs the identical wpctl the keyboard runs.
+    "wireplumber": {
+      "format": "{icon} {volume}%",
+      "format-muted": "󰝟 muted",
+      "format-icons": ["󰕿", "󰖀", "󰕾"],
+      "tooltip-format": "{node_name}  ·  {volume}%\nscroll to set · click to mute · right-click for soundwatch",
+      "on-scroll-up": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+ --limit 1.0",
+      "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-",
+      "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+      "on-click-right": "ghostty -e soundwatch"
     },
 
     "battery": {

@@ -40,6 +40,19 @@ else
   sudo systemctl enable --now tuned tuned-ppd
 fi
 
+echo "==> fingerprint (Framework's Goodix sensor)"
+# Both are usually already in a Fedora Workstation install; this is for the
+# minimal ones. Enrolling is the user's own step — `fprintd-enroll` needs a
+# finger on the reader — and `with-fingerprint` is what puts pam_fprintd in
+# system-auth, which is what swaylock and sudo inherit.
+sudo dnf install -y fprintd fprintd-pam
+if authselect current 2>/dev/null | grep -q "with-fingerprint"; then
+  echo "  with-fingerprint already enabled"
+else
+  sudo authselect enable-feature with-fingerprint \
+    && echo "  with-fingerprint enabled — now run: fprintd-enroll"
+fi
+
 echo "==> firmware"
 # Framework ships BIOS over LVFS, so fwupd is the whole update path.
 # fwupd is in Fedora's default install; only add it if it somehow is not.
@@ -71,6 +84,13 @@ cat <<'NOTE'
 
   The HUD's panes netwatch / syswatch / diskwatch are cargo installs:
                     cargo install netwatch-tui syswatch diskwatch
-                  soundwatch is macOS-only — it binds a CoreAudio tap. On Linux
-                  `hud` comes up as a three-pane grid instead of four.
+                  soundwatch is the fourth, and the one not on crates.io:
+                    cargo install --git https://github.com/matthart1983/soundwatch
+                  It needs no CoreAudio and no permission here — devices,
+                  streams, latency and xruns come out of /proc/asound. Only the
+                  meters want a library, and libpulse is dlopened at first use,
+                  so a box with no sound server still runs the tool and says
+                  which part is missing. On a Fedora desktop pipewire-pulseaudio
+                  already provides it; `rice-doctor` says so either way.
+
 NOTE

@@ -22,10 +22,12 @@ if ! tmux has-session -t "$SESSION" 2>/dev/null; then
   # Named pane targets ({left}, {top-right}) rather than numeric ones —
   # this config sets pane-base-index 1, so ".0" does not exist.
   #
-  # soundwatch is macOS-only: it binds a CoreAudio tap and there is no Linux
-  # build. Rather than open a pane that dies immediately, drop to a three-pane
-  # grid where it is absent — the same degradation the README promises for any
-  # missing tool.
+  # soundwatch is a fourth pane on both platforms now — it grew an ALSA backend
+  # and libpulse meters, so the CoreAudio tap is one implementation of the
+  # backend trait rather than the whole tool. The check stays because the check
+  # was never about the platform: it is the same degradation the README
+  # promises for any missing tool, and a three-pane grid beats a fourth pane
+  # that dies on startup.
   if command -v soundwatch >/dev/null; then
     tmux new-session -d -s "$SESSION" -n grid "soundwatch --theme btop"
     tmux split-window -h -t "$SESSION:grid"              "netwatch --lite"

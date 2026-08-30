@@ -23,7 +23,9 @@ key, command and surface in one searchable page, macOS and Fedora side by side.
 `hud` tiles four terminal monitors into one screen — [soundwatch](https://github.com/matthart1983/soundwatch),
 [netwatch](https://github.com/matthart1983/netwatch), [syswatch](https://github.com/matthart1983/syswatch)
 and [diskwatch](https://github.com/matthart1983/diskwatch): audio, network, system and disk,
-all themed from the same palette. Four panes, one author.
+all themed from the same palette. Four panes, one author, both platforms —
+soundwatch grew an ALSA backend and libpulse meters, so the CoreAudio tap is
+one implementation behind its backend trait rather than the whole tool.
 
 `C-a z` zooms the selected pane to the whole window and back — tmux's own
 binding, left alone. Worth knowing because a pane in the grid is about 115×26,
@@ -110,6 +112,10 @@ sudo dnf install zsh zsh-autosuggestions zsh-syntax-highlighting
 sudo dnf install eza bat fd-find fzf zoxide atuin git-delta ripgrep \
                  fastfetch btop tmux jq python3-pillow
 
+# the HUD's four panes (optional — hud degrades to whatever is installed)
+cargo install netwatch-tui syswatch diskwatch
+cargo install --git https://github.com/matthart1983/soundwatch
+
 # or just run the lot, plus the Framework/power bits
 ~/.dotfiles/linux/packages.sh
 ```
@@ -136,9 +142,14 @@ install behind your back:
 - **JetBrainsMono Nerd Font** — drop the release zip in `~/.local/share/fonts`
   and run `fc-cache -f`.
 
-`soundwatch` is macOS-only — it binds a CoreAudio tap. On Linux `hud` comes up
-as a three-pane grid instead of four; the other three are the same cargo
-installs.
+`soundwatch` is the one not on crates.io, hence the `--git`. It is a fourth
+pane on Fedora too, and unlike on macOS there is nothing to sign: no
+CoreAudio tap to bind and no consent to grant. Devices, streams, latency and
+xruns all come out of `/proc/asound`, and only the meters want a library —
+`libpulse`, dlopened at first use rather than linked, so a machine with no
+sound server still runs the tool and names the part that is missing instead of
+failing to start. On a Fedora desktop `pipewire-pulseaudio` already provides
+it; `rice-doctor` reports that as its own line.
 
 
 ## Install
@@ -407,6 +418,14 @@ each needed a shell plugin on macOS only because `top`, `memory_pressure` and
 itself, so `linux/waybar/scripts/` holds just the two netwatch ones — which
 was always the part worth having.
 
+The Fedora bar has one item macOS's does not: **volume**, from waybar's
+`wireplumber` module. Scroll sets it, click mutes, right-click opens
+soundwatch — the same idiom as cpu and mem opening btop. It and the Framework's
+hardware keys drive the same daemon and cannot disagree about a notch: the
+keybinds in `config.kdl` are `wpctl` at `5%` with `--limit 1.0`, and the
+module's `scroll-step` and `max-volume` are those same two numbers. There is no
+macOS counterpart because macOS keeps volume in its own menu bar.
+
 ## The dock
 
 Fedora only, and a second bar out of the same Waybar process — `config.jsonc`
@@ -485,6 +504,21 @@ apology instead of a graph. At 10 it is 232×52, and every pane clears the floor
   plus that `/sys/power/mem_sleep` is on `s2idle`, which is what the AMD boards
   want. The battery enumerates as `BAT1`, not `BAT0`; `bin/tmux-battery` and
   the Waybar battery module both account for that.
+- **Fingerprint** — the Framework's Goodix reader needs nothing built or
+  patched. Fedora ships `fprintd`, and `authselect enable-feature
+  with-fingerprint` puts `pam_fprintd` in `system-auth` as `sufficient`;
+  `/etc/pam.d/swaylock` is `auth include login` and `login` substacks
+  `system-auth`, so **the lock screen and `sudo` both take a print with no
+  config of their own**. The one step nothing can do for you is enrolling:
+
+  ```sh
+  fprintd-enroll              # touch the reader until it stops asking
+  fprintd-enroll -f right-middle-finger    # a second finger is worth having
+  ```
+
+  `rice-doctor` checks all three links in that chain separately, because "the
+  fingerprint doesn't work" is almost always zero fingers enrolled rather than
+  anything wrong with PAM.
 - **AeroSpace needs Accessibility permission granted by hand** on first run
   (System Settings ▸ Privacy & Security ▸ Accessibility). Until it is, the
   CLI reports "can't connect to AeroSpace server" even though the app is up,
