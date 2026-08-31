@@ -1,0 +1,245 @@
+#!/usr/bin/env bash
+# The power item — the bar's battery-mode knob.
+#
+#   power probe    one waybar item, as JSON        (the bar, every 10s)
+#   power menu     pick a profile                  (a click)
+#   power reset    back to balanced                (a right-click)
+#   power set X    set one by name                 (keybinds, scripts)
+#   power check    doctor line: profile, and why it is not the one you asked for
+#
+# Why this exists: the bar could say what the battery was doing and not a thing
+# about why. `custom/power` beside it is the SESSION menu — lock, log out, power
+# off — which is a different question wearing the same word.
+#
+# It talks D-Bus to net.hadess.PowerProfiles rather than running `tuned-adm`,
+# and the reason is portability across the daemon underneath. Fedora 41 moved
+# the desktop from power-profiles-daemon to tuned-ppd, which exists precisely to
+# serve this interface; GNOME's own switcher, the one in the quick settings
+# panel, is talking to the same bus name. So this keeps working if that swaps
+# back, and it gets the profile list from the machine instead of hard-coding
+# three names that tuned would have spelled differently anyway
+# (power-saver here is `powersave` to tuned, performance is
+# `throughput-performance`).
+#
+# Setting ActiveProfile needs no polkit authorisation — it is a per-session
+# preference, not a privileged action — so a click on the bar can just do it.
+#
+# What it moves, measured on this machine: the tuned profile, the ACPI
+# platform_profile the firmware reads, the cpufreq governor, and the
+# energy_performance_preference. All four, together, from one property.
+set -euo pipefail
+
+# waybar is spawned by the compositor, not a login shell, so it inherits
+# PATH=/usr/local/bin:/usr/bin and nothing else — same reason display and dock
+# source this.
+# shellcheck source=common/lib-path.sh
+. "$HOME/.dotfiles/common/lib-path.sh"
+
+BUS=net.hadess.PowerProfiles
+OBJ=/net/hadess/PowerProfiles
+SIGNAL=9            # waybar's custom/power-profile "signal"; display owns 8, the dock 7
+
+# The one to come back to. Not a preference so much as the only profile that is
+# a sensible resting state: performance is a thing you turn on for a compile and
+# forget, power-saver a thing you turn on for a train.
+BASE=balanced
+
+die() { printf '%s\n' "$1" >&2; exit 1; }
+
+prop()     { busctl --system get-property "$BUS" "$OBJ" "$BUS" "$1" 2>/dev/null || true; }
+# `busctl get-property` prints `s "balanced"` — the type, then the quoted value.
+unquote()  { sed -e 's/^[a-z]* //' -e 's/^"//' -e 's/"$//'; }
+active()   { prop ActiveProfile | unquote; }
+degraded() { prop PerformanceDegraded | unquote; }
+
+# The available profiles, in the daemon's own order (power-saver first,
+# performance last). Parsed from the `aa{sv}` dump rather than assumed: a
+# machine without the firmware knob offers two, not three, and a menu that
+# offers a third would be a menu with a dead row in it.
+profiles() {
+  prop Profiles | grep -o '"Profile" s "[a-z-]*"' | sed 's/.*s "\([a-z-]*\)"/\1/'
+}
+
+# Material Design glyphs, the same set the rest of the bar uses. One dial in
+# three positions rather than three unrelated pictures, so the item reads as a
+# setting with a range and not as a status that happens to change colour.
+glyph() {
+  case "$1" in
+    performance)  printf '\U000f04c5' ;;   # speedometer
+    balanced)     printf '\U000f0f85' ;;   # speedometer-medium
+    power-saver)  printf '\U000f0f86' ;;   # speedometer-slow
+    *)            printf '\U000f0f85' ;;
+  esac
+}
+
+label() {
+  case "$1" in
+    performance) echo "Performance" ;;
+    balanced)    echo "Balanced" ;;
+    power-saver) echo "Power saver" ;;
+    *)           echo "$1" ;;
+  esac
+}
+
+# --- what the battery is actually doing --------------------------------------
+# Only ever a tooltip line, which is why a missing file is silence rather than
+# an error: this is a laptop today and the same dotfiles run on a desktop.
+#
+# The Framework's BAT1 reports charge (µAh) and current (µA), not energy and
+# power — power_now simply is not there — so the watts are current × voltage,
+# computed here rather than read.
+draw() {
+  local b=/sys/class/power_supply/BAT1 ac=/sys/class/power_supply/ACAD
+  [ -d "$b" ] || return 0
+  local cap status on i v w
+  cap=$(cat "$b/capacity" 2>/dev/null || echo "?")
+  status=$(cat "$b/status" 2>/dev/null || echo "?")
+  on=$(cat "$ac/online" 2>/dev/null || echo "")
+  i=$(cat "$b/current_now" 2>/dev/null || echo 0)
+  v=$(cat "$b/voltage_now" 2>/dev/null || echo 0)
+  w=$(awk -v i="$i" -v v="$v" 'BEGIN{ printf "%.1f", (i/1e6)*(v/1e6) }')
+
+  # Every branch below is an `if` rather than a `cond && assign` one-liner.
+  # Under `set -e` that form is a statement whose exit status is the failed
+  # condition, so the first false one ends the function — which here meant a
+  # tooltip that silently lost every line after the first that did not apply.
+  local line="battery ${cap}%"
+  if [ "$on" = "1" ]; then
+    line="$line · on AC"
+  fi
+  # A zero is not a reading, it is the EC declining to give one — which it does
+  # whenever the pack is neither charging nor discharging. "0.0W" would read as
+  # a machine drawing nothing at all.
+  if awk -v w="$w" 'BEGIN{ exit !(w > 0.05) }'; then
+    line="$line · ${w}W"
+  fi
+  # "Discharging" is what the number above already says; the other states
+  # ("Not charging" on a Framework holding a charge limit, "Full") are not
+  # obvious from anything else on the item.
+  if [ "$status" != "Discharging" ]; then
+    line="$line · $status"
+  fi
+  printf '%s' "$line"
+}
+
+# --- the waybar item ---------------------------------------------------------
+probe() {
+  local cur deg text tip cls
+  cur="$(active)"
+  if [ -z "$cur" ]; then
+    # No daemon on the bus. Print nothing: waybar hides an item with no text,
+    # which is the same rule the dock's slots use, and is better than a glyph
+    # that opens a menu where every row fails.
+    printf '{"text":"","tooltip":"no power-profiles daemon on the bus"}\n'
+    return 0
+  fi
+  deg="$(degraded)"
+  text="$(glyph "$cur")"
+  cls="$cur"
+  tip="$(label "$cur")"
+
+  local d; d="$(draw)"
+  if [ -n "$d" ]; then
+    tip="$tip"$'\n'"$d"
+  fi
+  # The firmware saying "you asked for performance and you are not getting it"
+  # — thermals, or the lid being on a duvet. It is the one state here that is a
+  # fault rather than a setting, so it takes the class as well as a line.
+  if [ -n "$deg" ]; then
+    tip="$tip"$'\n'"degraded: $deg"
+    cls="degraded"
+  fi
+  tip="$tip"$'\n'"click to change · right-click for $BASE"
+
+  python3 -c 'import json,sys; print(json.dumps({"text":sys.argv[1],"class":sys.argv[2],"tooltip":sys.argv[3]}, ensure_ascii=False))' \
+    "$text" "$cls" "$tip"
+}
+
+# --- the picker --------------------------------------------------------------
+# fuzzel rather than a GTK menu-file like custom/power's, for the reason display
+# gives: a menu-file is a static XML document, and this list comes off the bus.
+# It also buys the thing the static menu cannot do — marking which one you are
+# already in, at the moment you open it.
+menu() {
+  local cur entries=() labels=() idx
+  cur="$(active)"
+  [ -n "$cur" ] || die "no power-profiles daemon on the bus"
+
+  local p mark
+  while read -r p; do
+    [ -n "$p" ] || continue
+    mark=""
+    if [ "$p" = "$cur" ]; then
+      mark="  ·  current"
+    fi
+    case "$p" in
+      performance) entries+=("$(glyph "$p")   $(label "$p")   ·  full clocks, fans up$mark"$'\t'"$p") ;;
+      balanced)    entries+=("$(glyph "$p")   $(label "$p")   ·  the resting state$mark"$'\t'"$p") ;;
+      power-saver) entries+=("$(glyph "$p")   $(label "$p")   ·  clocks capped, longest run$mark"$'\t'"$p") ;;
+      *)           entries+=("$(glyph "$p")   $(label "$p")$mark"$'\t'"$p") ;;
+    esac
+  done < <(profiles)
+
+  [ "${#entries[@]}" -gt 0 ] || die "the daemon offers no profiles"
+
+  for e in "${entries[@]}"; do labels+=("${e%%$'\t'*}"); done
+  # --index, so a row can be reworded without the dispatch below noticing —
+  # display's picker takes the same precaution for the same reason.
+  idx="$(printf '%s\n' "${labels[@]}" \
+         | fuzzel --dmenu --index --prompt 'power  ' --lines 6 --width 46 2>/dev/null)" || return 0
+  [ -n "${idx:-}" ] || return 0
+
+  set_profile "${entries[$idx]#*$'\t'}"
+}
+
+# --- setting it --------------------------------------------------------------
+set_profile() {
+  local want="$1"
+  profiles | grep -qx "$want" || die "unknown profile: $want"
+  busctl --system set-property "$BUS" "$OBJ" "$BUS" ActiveProfile s "$want" >/dev/null
+  refresh
+}
+
+reset() { set_profile "$BASE"; }
+
+refresh() { pkill -RTMIN+$SIGNAL waybar 2>/dev/null || true; }
+
+# --- doctor ------------------------------------------------------------------
+# One line, and a non-zero exit for the state that is a fault rather than a
+# preference: the firmware reporting that it cannot deliver the profile asked
+# for. Being in power-saver is a choice; being throttled out of performance
+# without being told is the thing worth a red line.
+check() {
+  local cur deg
+  cur="$(active)"
+  [ -n "$cur" ] || { echo "no power-profiles daemon on the bus"; return 1; }
+  deg="$(degraded)"
+  printf '%s' "$cur"
+  # The available list only earns a mention when it is not the usual three —
+  # a machine without the firmware knob offers two, and a doctor line that
+  # repeats "power-saver balanced performance" on every run of every healthy
+  # machine is a line nobody reads by the third time they see it.
+  local have; have="$(profiles | paste -sd' ' -)"
+  if [ "$have" != "power-saver balanced performance" ]; then
+    printf ' · offers: %s' "$have"
+  fi
+  local d; d="$(draw)"
+  if [ -n "$d" ]; then
+    printf ' · %s' "$d"
+  fi
+  printf '\n'
+  if [ -n "$deg" ]; then
+    printf 'performance degraded: %s\n' "$deg"
+    return 1
+  fi
+  return 0
+}
+
+case "${1:-probe}" in
+  probe) probe ;;
+  menu)  menu ;;
+  reset) reset ;;
+  set)   set_profile "${2:?usage: power set <profile>}" ;;
+  check) check ;;
+  *)     die "usage: power [probe|menu|reset|set <profile>|check]" ;;
+esac

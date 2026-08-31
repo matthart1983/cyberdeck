@@ -167,6 +167,7 @@ window#waybar.empty #window { background: transparent; }
 #disk,
 #wireplumber,
 #custom-display,
+#custom-power-profile,
 #battery,
 #clock {
   padding: 0 8px;
@@ -188,6 +189,15 @@ window#waybar.empty #window { background: transparent; }
    looks like a rendering fault from the desk, so the item says which it is. */
 #custom-display.native     { color: @white; }
 #custom-display.off-native { color: @yellow; }
+/* The dial, in the colour of what it is costing you: green when the machine is
+   holding back, white at rest, orange when it is spending. Yellow is not a
+   fourth position — it is the firmware saying it cannot deliver the profile
+   asked for, which is the one state here that is a fault rather than a
+   setting, and the same yellow custom-display uses for the same reason. */
+#custom-power-profile.power-saver { color: @green; }
+#custom-power-profile.balanced    { color: @white; }
+#custom-power-profile.performance { color: @orange; }
+#custom-power-profile.degraded    { color: @yellow; }
 #custom-net  { color: @fg; font-size: 12px; }
 #cpu         { color: @white; }
 #memory      { color: @white; }

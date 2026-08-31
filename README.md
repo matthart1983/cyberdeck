@@ -316,6 +316,7 @@ mirror each other, and each holds its own `install.sh` and `bin/rice-doctor`.
 | `linux/bin/rice-doctor` | the Fedora half of the health check |
 | `linux/bin/drawer` | sizes the launcher panel to the focused output and toggles it |
 | `linux/bin/dock` | the dock's slot table — resolves each one, focuses or launches it |
+| `linux/bin/power` | the bar's power-profile item — probe, picker, and the doctor's line |
 | `linux/vscode.sh` | the editor slot's IDE: VSCodium from Flathub, or VS Code from Microsoft's repo (opt-in) |
 | **root** | |
 | `capture/` | VHS tapes; GIFs land in `capture/out/` (gitignored) |
@@ -446,6 +447,37 @@ and they run the identical `wpctl` the Framework's F1–F3 run, so the bar and
 the keyboard cannot disagree about what a notch is worth.
 
 There is no macOS counterpart because macOS keeps volume in its own menu bar.
+
+It also has a **power profile** item, immediately left of the battery, because
+that is the knob for the gauge beside it — the one control on the bar that
+changes how fast the number to its right goes down. A speedometer in three
+positions: green needle-left for power saver, white for balanced, orange
+needle-right for performance. Click it for the picker, right-click to go back
+to balanced.
+
+This is not the `custom/power` button at the far right, which is the **session**
+menu — lock, log out, power off. Same word, different question, and putting
+them in one popup would mean "Power saver" and "Power off" two rows apart.
+
+`linux/bin/power` is the whole of it, and it talks D-Bus to
+`net.hadess.PowerProfiles` rather than running `tuned-adm`. Fedora 41 moved the
+desktop from power-profiles-daemon to tuned-ppd, which exists to serve exactly
+that interface — it is what GNOME's own switcher talks to — so the item keeps
+working if the daemon underneath is swapped back, and it reads the profile list
+off the bus instead of hard-coding three names tuned spells differently anyway
+(`power-saver` is tuned's `powersave`; `performance` is
+`throughput-performance`). Setting the profile needs no polkit authorisation,
+so a click can just do it.
+
+Verified on this machine that one property moves all four knobs together: the
+tuned profile, the ACPI `platform_profile` the firmware reads, the cpufreq
+governor, and the `energy_performance_preference`.
+
+It polls at 30s, not the display item's 5s. The profile changes when someone
+changes it, and the click that changes it pokes `SIGRTMIN+9` so the item is
+right immediately; the interval is only there to notice a profile set from
+somewhere else. A bar that wakes to spawn a probe every five seconds is the
+thing this item exists to help with.
 
 ## The dock
 

@@ -38,7 +38,7 @@
 
     "modules-left":   ["custom/launcher", "custom/run", "niri/workspaces", "custom/sep", "niri/window"],
     "modules-center": [],
-    "modules-right":  ["custom/link", "custom/net", "cpu", "memory", "disk", "pulseaudio/slider", "wireplumber", "custom/display", "battery", "clock", "custom/power"],
+    "modules-right":  ["custom/link", "custom/net", "cpu", "memory", "disk", "pulseaudio/slider", "wireplumber", "custom/display", "custom/power-profile", "battery", "clock", "custom/power"],
 
     // --- Left: the launcher button ------------------------------------------
     // Opens nwg-drawer, not fuzzel: a button is for the times you are looking
@@ -102,18 +102,33 @@
     // render rather than a refusal. A maximised ghostty on this display at the
     // configured 14 is 168x38: wide enough and six rows short, so `V` could
     // never reach dense however far you zoomed. At 11 it is 211x48.
+    //
+    // --class is the other half, and without it the font size alone bought
+    // nothing. "Maximised" was doing unexamined work in that paragraph: a
+    // ghostty opened from here is not maximised, it is one column at niri's
+    // default preset width, which is half the screen. So the window that
+    // actually appeared was 100x49 — the rows the font size was chosen for,
+    // and 30 columns short of dense, which draws two boxes for being narrow
+    // exactly as it does for being short. The rule that maximises these is
+    // in config.kdl and matches on app-id prefix; the dock's terminal tools
+    // get it because linux/bin/dock spells the class out, and this did not.
+    // Full width at 11 is 206x49, which clears dense on both axes.
+    //
+    // Its own suffix rather than the dock's `-net`: that slot is termshark,
+    // and sharing the class would make `dock open net` focus this window
+    // instead of launching it.
     "custom/link": {
       "exec": "~/.config/waybar/scripts/link.sh",
       "return-type": "json",
       "interval": 5,
-      "on-click": "ghostty --font-size=11 -e netwatch"
+      "on-click": "ghostty --class=com.mitchellh.ghostty-netwatch --font-size=11 -e netwatch"
     },
 
     "custom/net": {
       "exec": "~/.config/waybar/scripts/net.sh",
       "return-type": "json",
       "interval": 2,
-      "on-click": "ghostty --font-size=11 -e netwatch"
+      "on-click": "ghostty --class=com.mitchellh.ghostty-netwatch --font-size=11 -e netwatch"
     },
 
     // --- Kernel-fed items ----------------------------------------------------
@@ -211,6 +226,37 @@
       "signal": 8,
       "on-click": "~/.dotfiles/linux/bin/display menu",
       "on-click-right": "~/.dotfiles/linux/bin/display reset"
+    },
+
+    // --- Right: the power profile -------------------------------------------
+    // Sits immediately before the battery because it is the knob for the gauge
+    // beside it: the one control on this bar that changes how fast the number
+    // to its right goes down.
+    //
+    // Distinct from custom/power at the far end, which is the SESSION menu —
+    // lock, log out, power off. Those are the same word answering different
+    // questions, and conflating them would mean a single popup where "Power
+    // saver" and "Power off" are two rows apart.
+    //
+    // linux/bin/power is the whole of it: it talks D-Bus to
+    // net.hadess.PowerProfiles, which on Fedora 41+ is served by tuned-ppd and
+    // elsewhere by power-profiles-daemon — the same interface GNOME's own
+    // switcher uses, so this survives the daemon underneath being swapped.
+    //
+    // Polled at 30s rather than the display item's 5s, and deliberately: this
+    // is a setting that changes when someone changes it, and the click that
+    // changes it pokes SIGRTMIN+9 so the item is right immediately. The
+    // interval is only there to notice a profile set from somewhere else —
+    // GNOME's panel, `tuned-adm`, a low-battery auto-switch — and being 30
+    // seconds late to that costs nothing. A bar that wakes to spawn a probe
+    // every five seconds is the thing this item exists to help with.
+    "custom/power-profile": {
+      "exec": "~/.dotfiles/linux/bin/power probe",
+      "return-type": "json",
+      "interval": 30,
+      "signal": 9,
+      "on-click": "~/.dotfiles/linux/bin/power menu",
+      "on-click-right": "~/.dotfiles/linux/bin/power reset"
     },
 
     "battery": {

@@ -285,17 +285,31 @@ fc-list 2>/dev/null | grep -qi "JetBrainsMono Nerd" \
 # --- Framework 13 hardware -------------------------------------------------
 # Two implementations provide net.hadess.PowerProfiles, and they conflict:
 # Fedora 44 ships tuned-ppd, other distros ship power-profiles-daemon. Either
-# is fine — GNOME only ever talks to the D-Bus name. Note that the
-# `powerprofilesctl` CLI lives only in the latter package, so tuned-ppd systems
-# have to be read with `tuned-adm`.
+# is fine — GNOME, and the bar's power item, only ever talk to the D-Bus name.
+# Note that the `powerprofilesctl` CLI lives only in the latter package, which
+# is why linux/bin/power reaches for busctl instead of it.
+#
+# Which daemon, and then what it is actually reporting — the second half
+# delegated to that same `power check`, so the doctor and the bar cannot
+# disagree about which profile the machine is in. It is also the half that can
+# fail: sitting in power-saver is a choice, but a daemon that is up and cannot
+# deliver the profile it was asked for is worth a red line.
+POWER_BIN="$HOME/.dotfiles/linux/bin/power"
 if systemctl is-active --quiet tuned-ppd; then
-  prof=$(tuned-adm active 2>/dev/null | sed 's/^Current active profile: //')
-  pass "power profiles" "tuned-ppd up · ${prof:-?}"
+  ppd_impl="tuned-ppd"
 elif systemctl is-active --quiet power-profiles-daemon; then
-  prof=$(powerprofilesctl get 2>/dev/null)
-  pass "power profiles" "power-profiles-daemon up · ${prof:-?}"
+  ppd_impl="power-profiles-daemon"
 else
+  ppd_impl=""
+fi
+if [ -z "$ppd_impl" ]; then
   fail "power profiles" "no ppd-service running — sudo systemctl enable --now tuned-ppd"
+elif [ ! -x "$POWER_BIN" ]; then
+  fail "power profiles" "$ppd_impl up, but linux/bin/power is missing or not executable"
+elif prof=$("$POWER_BIN" check 2>&1); then
+  pass "power profiles" "$ppd_impl · $prof"
+else
+  fail "power profiles" "$ppd_impl · $(printf '%s' "$prof" | paste -sd' — ' -)"
 fi
 
 if grep -q '\[s2idle\]' /sys/power/mem_sleep 2>/dev/null; then
