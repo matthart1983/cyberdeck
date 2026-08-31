@@ -310,114 +310,155 @@
   // and this is for the handful you open every day, where a fixed target beats
   // both. linux/bin/dock holds the list; each item here is one slot of it.
   //
-  // Every module is the same five lines because the only difference between
-  // them is the slot name. `probe` runs ONCE at startup and prints the glyph,
-  // or prints nothing when nothing in that slot is installed — waybar hides an
-  // item with no text, so the dock is exactly as wide as this machine's
+  // These are `image` modules rather than `custom` ones, and that is the whole
+  // of the real-icon change: a custom module can only return text, which is
+  // what made this dock a row of Nerd Font glyphs. An image module takes a
+  // path, so each slot now draws the application's own icon, resolved through
+  // its .desktop file and the GTK icon theme — the same icon every other
+  // launcher on this machine shows for it.
+  //
+  // Every module is the same four lines because the only difference between
+  // them is the slot name. `dock icon` runs ONCE at startup and prints a path,
+  // or prints nothing when nothing in that slot is installed — waybar gives an
+  // image with no path the `empty` class, which the stylesheet collapses to
+  // zero width, so the dock stays exactly as wide as this machine's
   // software. Install something and reload the bar rather than having it poll
   // twelve commands forever — `pkill -USR2 waybar`, or just run install.sh,
-  // which sends that itself. SIGRTMIN+7 re-runs a probe more cheaply, but it
-  // only refreshes text: a slot that resolved nothing at startup is a widget
-  // the drawer is already hiding, and a reload is what brings it back.
+  // which sends that itself. SIGRTMIN+7 re-runs `dock icon` more cheaply, but
+  // it only swaps the image: a slot that resolved nothing at startup is a
+  // widget the drawer is already hiding, and a reload is what brings it back.
   //
-  // Exclusive, like the top bar: a dock that windows can slide under is a dock
-  // you have to move windows out of, which is the opposite of one click.
+  // NOT exclusive, unlike the top bar, and that is a change of mind. The old
+  // note here said a dock windows can slide under is a dock you have to move
+  // windows out of — true of a dock that is always drawn, and this one is not
+  // drawn at all until you go looking for it. Reserving 68px along the bottom
+  // of every output to display nothing is the worse trade: it is a strip of
+  // screen you paid for and never see.
+  //
+  // The cost is real and worth stating. A layer-shell surface takes pointer
+  // input across its whole area whether or not it painted anything there, and
+  // waybar has no way to shape that region — so while the dock is invisible it
+  // still swallows clicks in the band it occupies. That is why `height` came
+  // down from 60 to 46: the band is the surface, so the surface is now only as
+  // tall as the icons need. `Mod+D` takes it away entirely when even that is
+  // in the way.
   // =========================================================================
   {
     "name": "dock",
     "on-sigusr1": "toggle",
     "layer": "top",
     "position": "bottom",
-    "height": 60,
-    "margin-bottom": 8,
+    "height": 52,
+    // No bottom margin, and this is the fix for "it disappears when I hit the
+    // bottom". A margin shortens the SURFACE, so the last 6px of the screen
+    // were not the dock — running the pointer to the physical edge took it off
+    // the dock and shut it again, which is exactly the movement anyone makes
+    // reaching for a dock. The 6px gap is still there, but it is padding
+    // inside the surface now (see #dockrow in the stylesheet) rather than a
+    // strip of nothing outside it.
+    "margin-bottom": 0,
     "spacing": 0,
+    "exclusive": false,
 
-    // Centred, and the window itself is transparent: the pill you can see is
-    // drawn on .modules-center, so it is as wide as its contents instead of
-    // stretching the full output the way the top bar does.
+    // Centred, and the window itself is transparent and full-width: the pill
+    // you can see is drawn on .modules-center, so it is as wide as its
+    // contents, while the window it sits in spans the output.
+    //
+    // Two nested groups, and the split is the whole trick: dockzone is what
+    // the pointer has to reach, dockrow is what you can see.
+    //
+    // Which node can be hovered at all is the constraint. CSS :hover is GTK's
+    // PRELIGHT flag, set from pointer crossing events, which need a
+    // GdkWindow. Every waybar module — a group included — is wrapped in a
+    // GtkEventBox and has one. The bar's layer-shell window and the plain
+    // GtkBoxes it packs (.modules-left, .modules-center, .modules-right) do
+    // not, so `window#waybar.dock:hover` and `.modules-center:hover` match
+    // nothing; both were tried and the dock never appeared. Expanding pads
+    // either side failed differently: waybar packs .modules-center at its
+    // natural size, so `expand` has no leftover space to take.
+    //
+    // So dockzone is a module, and the stylesheet gives it 500px of padding
+    // on each side. Padding is inside the widget, so its event box covers all
+    // of it: a 1000px-plus strip of bottom edge that reveals the dock, with
+    // the icons still centred in the middle of it.
+    //
+    // There is no drawer any more, and that is also a fix rather than a
+    // simplification. The drawer's first child is its trigger, so making the
+    // trigger wide and then collapsing it on hover was the only way to keep
+    // the icons centred — and collapsing the thing the pointer is standing on
+    // is unstable. Hover near its edge and it shrinks out from under you, the
+    // pointer is no longer over it, it reopens, and the dock flickers. Nothing
+    // changes size here now; only opacity does.
     "modules-left":   [],
-    "modules-center": ["group/dock"],
+    "modules-center": ["group/dockzone"],
     "modules-right":  [],
 
-    // Auto-hide, waybar's own way: a group drawer shows its FIRST child and
-    // keeps the rest behind a hover. So the dock at rest is one chevron, and
-    // pointing at it slides the icons out.
-    //
-    // This is the version of auto-hide a Wayland bar can actually implement. A
-    // client cannot ask where the pointer is, so "reveal when the cursor
-    // reaches the bottom edge" would need something with a surface already
-    // sitting at that edge to notice — which is what the chevron is. Hiding
-    // the bar outright leaves nothing to hover, and `mode: hide` reveals on a
-    // modifier that only Sway sends.
-    //
-    // Mod+D hides the chevron too, when even that is too much: it sends
-    // SIGUSR1, and on-sigusr1 above routes it to this bar alone.
-    "group/dock": {
+    "group/dockzone": {
       "orientation": "horizontal",
-      "drawer": {
-        "transition-duration": 250,
-        "children-class": "dock-hidden",
-        "transition-left-to-right": true
-      },
+      "modules": ["group/dockrow"]
+    },
+
+    "group/dockrow": {
+      "orientation": "horizontal",
       "modules": [
-        "custom/dock-handle",
-        "custom/dock-term", "custom/dock-editor", "custom/dock-browser",
-        "custom/dock-claude", "custom/dock-notes", "custom/dock-chat",
-        "custom/dock-files",
+        "image#dock-term", "image#dock-editor", "image#dock-browser",
+        "image#dock-claude", "image#dock-notes", "image#dock-chat",
+        "image#dock-files",
         "custom/dock-sep",
-        "custom/dock-hud", "custom/dock-git", "custom/dock-containers",
-        "custom/dock-k8s", "custom/dock-net"
+        "image#dock-hud", "image#dock-git", "image#dock-containers",
+        "image#dock-k8s", "image#dock-net"
       ]
     },
 
-    // The handle: the one thing that stays. A chevron because it points at
-    // where the dock comes from.
-    "custom/dock-handle": {
-      "format": "󰅃",
-      "tooltip": true,
-      "tooltip-format": "Applications — hover to open  (Mod+D hides the dock)"
-    },
+    // There is no group drawer here any more, and no chevron. A waybar drawer
+    // reveals on ITS OWN hover, so the target was however wide its first child
+    // was — one glyph in the middle of the output. Every slot is laid out all
+    // the time now and the stylesheet fades the row in, which moves the target
+    // from that glyph to the whole bottom edge.
+    //
+    // Mod+D still takes the surface away entirely: it sends SIGUSR1, and
+    // on-sigusr1 above routes it to this bar and not the status bar.
 
-    "custom/dock-term": {
-      "exec": "~/.dotfiles/linux/bin/dock probe term",
+    "image#dock-term": {
+      "exec": "~/.dotfiles/linux/bin/dock icon term",
       "on-click": "~/.dotfiles/linux/bin/dock open term",
-      "return-type": "json", "interval": "once", "signal": 7
+      "size": 34, "signal": 7
     },
 
-    "custom/dock-editor": {
-      "exec": "~/.dotfiles/linux/bin/dock probe editor",
+    "image#dock-editor": {
+      "exec": "~/.dotfiles/linux/bin/dock icon editor",
       "on-click": "~/.dotfiles/linux/bin/dock open editor",
-      "return-type": "json", "interval": "once", "signal": 7
+      "size": 34, "signal": 7
     },
 
-    "custom/dock-browser": {
-      "exec": "~/.dotfiles/linux/bin/dock probe browser",
+    "image#dock-browser": {
+      "exec": "~/.dotfiles/linux/bin/dock icon browser",
       "on-click": "~/.dotfiles/linux/bin/dock open browser",
-      "return-type": "json", "interval": "once", "signal": 7
+      "size": 34, "signal": 7
     },
 
-    "custom/dock-claude": {
-      "exec": "~/.dotfiles/linux/bin/dock probe claude",
+    "image#dock-claude": {
+      "exec": "~/.dotfiles/linux/bin/dock icon claude",
       "on-click": "~/.dotfiles/linux/bin/dock open claude",
-      "return-type": "json", "interval": "once", "signal": 7
+      "size": 34, "signal": 7
     },
 
-    "custom/dock-notes": {
-      "exec": "~/.dotfiles/linux/bin/dock probe notes",
+    "image#dock-notes": {
+      "exec": "~/.dotfiles/linux/bin/dock icon notes",
       "on-click": "~/.dotfiles/linux/bin/dock open notes",
-      "return-type": "json", "interval": "once", "signal": 7
+      "size": 34, "signal": 7
     },
 
-    "custom/dock-chat": {
-      "exec": "~/.dotfiles/linux/bin/dock probe chat",
+    "image#dock-chat": {
+      "exec": "~/.dotfiles/linux/bin/dock icon chat",
       "on-click": "~/.dotfiles/linux/bin/dock open chat",
-      "return-type": "json", "interval": "once", "signal": 7
+      "size": 34, "signal": 7
     },
 
-    "custom/dock-files": {
-      "exec": "~/.dotfiles/linux/bin/dock probe files",
+    "image#dock-files": {
+      "exec": "~/.dotfiles/linux/bin/dock icon files",
       "on-click": "~/.dotfiles/linux/bin/dock open files",
-      "return-type": "json", "interval": "once", "signal": 7
+      "size": 34, "signal": 7
     },
 
     // Applications to the left of this, the terminal toolbelt to the right.
@@ -426,37 +467,37 @@
       "tooltip": false
     },
 
-    "custom/dock-hud": {
-      "exec": "~/.dotfiles/linux/bin/dock probe hud",
+    "image#dock-hud": {
+      "exec": "~/.dotfiles/linux/bin/dock icon hud",
       "on-click": "~/.dotfiles/linux/bin/dock open hud",
-      "return-type": "json", "interval": "once", "signal": 7
+      "size": 34, "signal": 7
     },
 
-    "custom/dock-git": {
-      "exec": "~/.dotfiles/linux/bin/dock probe git",
+    "image#dock-git": {
+      "exec": "~/.dotfiles/linux/bin/dock icon git",
       "on-click": "~/.dotfiles/linux/bin/dock open git",
-      "return-type": "json", "interval": "once", "signal": 7
+      "size": 34, "signal": 7
     },
 
-    "custom/dock-containers": {
-      "exec": "~/.dotfiles/linux/bin/dock probe containers",
+    "image#dock-containers": {
+      "exec": "~/.dotfiles/linux/bin/dock icon containers",
       "on-click": "~/.dotfiles/linux/bin/dock open containers",
-      "return-type": "json", "interval": "once", "signal": 7
+      "size": 34, "signal": 7
     },
 
     // Nothing on this machine answers to k9s yet. That is the point of the
     // hide-when-absent rule: the slot is written down now, and the dock grows
     // an item the day the ops layer lands rather than needing a config edit.
-    "custom/dock-k8s": {
-      "exec": "~/.dotfiles/linux/bin/dock probe k8s",
+    "image#dock-k8s": {
+      "exec": "~/.dotfiles/linux/bin/dock icon k8s",
       "on-click": "~/.dotfiles/linux/bin/dock open k8s",
-      "return-type": "json", "interval": "once", "signal": 7
+      "size": 34, "signal": 7
     },
 
-    "custom/dock-net": {
-      "exec": "~/.dotfiles/linux/bin/dock probe net",
+    "image#dock-net": {
+      "exec": "~/.dotfiles/linux/bin/dock icon net",
       "on-click": "~/.dotfiles/linux/bin/dock open net",
-      "return-type": "json", "interval": "once", "signal": 7
+      "size": 34, "signal": 7
     }
   }
 ]

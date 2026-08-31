@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# Fetch the real icon for slots that have one upstream but none on this machine.
+#
+#   dock-icons/fetch          every slot that needs it
+#   dock-icons/fetch claude   just one
+#
+# Claude Code is the case this exists for. It installs a binary and a URL
+# handler and no icon at all — its .desktop file has no `Icon=` key to read —
+# so the dock had nothing to resolve and fell back to a drawn tile. The real
+# mark is published at claude.ai and is what everything else on the machine
+# shows for Claude, so the dock should show it too.
+#
+# These land in $ICON_DIR/real/, which `dock icon` prefers over a drawn tile
+# and which generate.py never writes to. Drop your own PNG in there to override
+# any slot, including one that already resolves.
+#
+# Deliberately NOT called by install.sh, and deliberately not committed to the
+# repo. install.sh is offline and idempotent, and this is neither; and a public
+# dotfiles repo is the wrong place to redistribute somebody's trademark. The
+# fetch is a thing you run once on a machine you own.
+set -euo pipefail
+
+ICON_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/cyberdeck/dock-icons"
+REAL="$ICON_DIR/real"
+
+# slot -> URL. One line each; the fallback tile stays in place for anything not
+# listed, which is every terminal tool that genuinely has no icon anywhere.
+sources() {
+  cat <<'EOF'
+claude https://claude.ai/images/claude_app_icon.png
+EOF
+}
+
+die() { printf 'dock-icons/fetch: %s\n' "$*" >&2; exit 1; }
+
+command -v curl >/dev/null || die "curl is not installed"
+python3 -c 'import PIL' 2>/dev/null || die "python3-pillow is not installed"
+
+mkdir -p "$REAL"
+want="${1:-}"
+got=0
+
+while read -r slot url; do
+  [ -n "$slot" ] || continue
+  [ -z "$want" ] || [ "$want" = "$slot" ] || continue
+  tmp="$(mktemp)"
+  if ! curl -sSfL --max-time 20 -o "$tmp" "$url"; then
+    printf '  %-10s could not fetch %s\n' "$slot" "$url"
+    rm -f "$tmp"; continue
+  fi
+  # Square it off and round the corners. These are published as app icons,
+  # which every platform masks before drawing — an unrounded cream square
+  # beside Ghostty's and Firefox's shaped icons reads as a placeholder.
+  if python3 - "$tmp" "$REAL/$slot.png" <<'PY'
+import sys
+from PIL import Image, ImageDraw
+
+src, dst = sys.argv[1], sys.argv[2]
+im = Image.open(src).convert("RGBA")
+n = max(im.size)
+if im.size != (n, n):                       # letterbox rather than stretch
+    sq = Image.new("RGBA", (n, n), (0, 0, 0, 0))
+    sq.alpha_composite(im, ((n - im.width) // 2, (n - im.height) // 2))
+    im = sq
+
+SS, OUT = 4, 256
+im = im.resize((OUT * SS, OUT * SS), Image.LANCZOS)
+mask = Image.new("L", im.size, 0)
+ImageDraw.Draw(mask).rounded_rectangle([0, 0, im.size[0] - 1, im.size[1] - 1],
+                                       radius=int(OUT * SS * 0.22), fill=255)
+im.putalpha(mask)
+im.resize((OUT, OUT), Image.LANCZOS).save(dst)
+PY
+  then
+    printf '  %-10s %s\n' "$slot" "$REAL/$slot.png"
+    got=$((got + 1))
+  else
+    printf '  %-10s downloaded but could not be read as an image\n' "$slot"
+  fi
+  rm -f "$tmp"
+done < <(sources)
+
+[ "$got" -gt 0 ] || die "nothing fetched"
+pkill -RTMIN+7 waybar 2>/dev/null || true

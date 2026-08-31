@@ -390,6 +390,7 @@ mirror each other, and each holds its own `install.sh` and `bin/rice-doctor`.
 | `linux/bin/drawer` | sizes the launcher panel to the focused output and toggles it |
 | `linux/bin/dock` | the dock's slot table — resolves each one, focuses or launches it |
 | `linux/bin/power` | the bar's power-profile item — probe, picker, and the doctor's line |
+| `linux/dock-icons/` | `generate.py` draws a palette tile for each slot with no real icon; `fetch` pulls the ones published upstream |
 | `linux/vscode.sh` | the editor slot's IDE: VSCodium from Flathub, or VS Code from Microsoft's repo (opt-in) |
 | **root** | |
 | `capture/` | VHS tapes; GIFs land in `capture/out/` (gitignored) |
@@ -578,24 +579,84 @@ resolved, `dock check` reports drift between that table and the bar, and
 `rice-doctor` reports both. Clicking focuses a window that is already open —
 cycling, if there is more than one — before it starts a second copy.
 
-The dock **auto-hides**: at rest it is a single chevron, and hovering it slides
-the icons out. That is waybar's own group drawer, and it is the version of
-auto-hide a Wayland bar can implement — a client cannot ask where the pointer
-is, so "reveal at the bottom edge" needs something already holding a surface at
-that edge to notice, which is what the chevron is. `Mod+D` hides even the
-chevron; that works because `on-sigusr1` is a **per-bar** parameter, so one
-`pkill -USR1 waybar` reaches the dock (`toggle`) and not the status bar
-(`noop`) — which is also why the dock still does not need to be a second
-waybar process.
+The icons are **real application icons**, not a font. Each slot resolves its
+app's own `.desktop` file, reads the `Icon=` key and puts it through the GTK
+icon theme, so the dock shows exactly what every other launcher on the machine
+shows for that app — and installing something new gets its real icon with no
+edit anywhere. That is why these are waybar `image` modules rather than
+`custom` ones: a custom module can only return text.
 
-The icons are set in **JetBrainsMono Nerd Font Propo**, not the family the rest
-of the bar uses, and that is a centring fix rather than a taste one. Nerd Fonts
-ship three families: the default gives an icon a single-cell advance with
-double-width ink, so GTK lays out on 16.2px while the glyph paints 21–25px and
-every icon overflows right — by a different amount each, which is why it reads
-as "some of them are crooked" rather than one clean offset. Propo widens the
-cell to the ink instead, and lands every glyph within 0.31px horizontally and
-0.5px vertically.
+The terminal toolbelt cannot work that way. There is no icon on the machine for
+lazygit, k9s or the HUD, because none of those projects ship one, and Adwaita's
+generic stand-ins are its old 48px legacy set — sitting those beside Ghostty's
+and VS Code's current icons reads as four icons and five mistakes. Those slots
+get a drawn tile instead: `linux/dock-icons/generate.py` renders a rounded
+outline and a short monogram from the active palette, so they move with `theme`
+like every other surface. A terminal-hosted slot never falls back to `argv[0]`'s
+icon, which matters more than it sounds: `argv[0]` is `ghostty` for every one of
+them, so that fallback would quietly give the HUD, git, k8s and containers the
+same terminal icon.
+
+Two slots sit outside both paths. Claude Code installs a binary and a URL
+handler and **no icon at all** — its `.desktop` file has no `Icon=` key to read.
+So there is a third layer: anything in
+`~/.local/share/cyberdeck/dock-icons/real/` wins over a drawn tile, the
+generator never writes there, and `linux/dock-icons/fetch` pulls the published
+mark into it. That is opt-in and not called by `install.sh`, which is offline
+and idempotent and should stay both; a public dotfiles repo is also the wrong
+place to redistribute someone's trademark. Drop your own PNG in that directory
+to override any slot.
+
+The dock **fully disappears**, and comes back when the pointer reaches anywhere
+along the bottom edge. At rest nothing is drawn: no icons, no plate, no
+chevron.
+
+Two nested groups do it. `dockzone` is what the pointer has to reach and paints
+nothing; the stylesheet gives it 500px of padding either side, and padding is
+inside the widget, so its event box covers all of it — roughly 1300px of bottom
+edge that reveals the dock. `dockrow` sits inside and is the visible plate,
+only as wide as the icons. Nothing changes size when the pointer arrives; only
+opacity does.
+
+Which node can listen at all is the fiddly part, and it cost three attempts.
+CSS `:hover` is GTK's PRELIGHT flag, set from pointer crossing events, which
+need a `GdkWindow`. Every waybar module has one, a group included, because
+waybar wraps each in a `GtkEventBox`. The bar's layer-shell window and the
+plain `GtkBox`es it packs — `.modules-left`, `.modules-center`,
+`.modules-right` — do not, so `window#waybar.dock:hover` and
+`.modules-center:hover` match nothing and the dock never appears. Expanding
+pads either side failed differently: waybar packs `.modules-center` at its
+natural size, so `expand` has no leftover space to take.
+
+Two more things had to go, and both were bugs you could feel. A drawer reveals
+on its own hover, so its first child is the trigger — which meant making that
+child wide and then collapsing it on hover to keep the icons centred. Collapsing
+the thing the pointer is standing on is unstable: hover near its edge and it
+shrinks out from under you, the pointer is no longer over it, and the dock
+flickers. And the bar carried `margin-bottom`, which shortens the *surface*, so
+the last few pixels of the screen were not the dock at all — running the pointer
+to the physical edge, which is exactly how anyone reaches for a dock, took it
+off and shut it again. The gap is padding inside the surface now.
+
+**The dock is not exclusive**, so windows use the space it sits in. That is a
+change of mind — reserving 68px along the bottom of every output to display
+nothing is a strip of screen you paid for and never see. The cost is real and
+worth knowing: a layer-shell surface takes pointer input across its whole area
+whether or not it painted anything there, and waybar cannot shape that region,
+so while the dock is invisible it still swallows clicks in the band it
+occupies. The band *is* the surface, which is why the bar's height came down to
+46 — it is now only as tall as the icons need. `Mod+D` takes it away entirely
+when even that is in the way, and that works because `on-sigusr1` is a
+**per-bar** parameter, so one `pkill -USR1 waybar` reaches the dock (`toggle`)
+and not the status bar (`noop`) — which is also why the dock still does not
+need to be a second waybar process.
+
+The separator is the last glyph down there, and it is set in **JetBrainsMono
+Nerd Font Propo** rather than the family the rest of the bar uses. Nerd Fonts ship three families: the default gives a glyph a
+single-cell advance with double-width ink, so GTK lays out on 16.2px while the
+glyph paints 21–25px and it overflows its own box to the right. Propo widens
+the cell to the ink instead. The slots used to need this too, and no longer do,
+because they are images.
 
 Everything right of the divider runs in a terminal, and each of those gets its
 own GTK app-id — `ghostty --class=com.mitchellh.ghostty-<slot>`, derived from

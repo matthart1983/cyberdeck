@@ -82,6 +82,34 @@ else
   fi
 fi
 
+echo "==> dock icons"
+# The dock draws real application icons, resolved at click-time from each app's
+# .desktop file. The slots that run inside a terminal have no icon anywhere on
+# the machine, so those are drawn here instead — same arrangement as the
+# wallpaper above, and stale for the same reason, so it carries the same stamp.
+DI_DIR="$HOME/.local/share/cyberdeck/dock-icons"
+DI_STAMP="$DI_DIR/.cyberdeck-theme"
+DI_STALE=0
+for f in claude hud git containers k8s net; do
+  if [ ! -f "$DI_DIR/$f.png" ]; then DI_STALE=1; break; fi
+done
+if [ "$(cat "$DI_STAMP" 2>/dev/null || true)" != "$CP_THEME_SLUG" ]; then
+  DI_STALE=1
+fi
+if [ "$DI_STALE" -eq 0 ]; then
+  same "$DI_DIR"
+elif ! python3 -c 'import PIL' 2>/dev/null; then
+  warn "python3-pillow not installed — the terminal slots will have no icon"
+else
+  mkdir -p "$DI_DIR"
+  if D="$D" python3 "$D/linux/dock-icons/generate.py" "$DI_DIR" >/dev/null 2>&1; then
+    printf '%s\n' "$CP_THEME_SLUG" > "$DI_STAMP"
+    chg "$DI_DIR ($CP_THEME_SLUG)"
+  else
+    warn "generator failed — see linux/dock-icons/generate.py"
+  fi
+fi
+
 echo "==> waybar"
 # Only poke the bar if this run actually rewrote something under it.
 if [ "$_changed" -gt 0 ] && pgrep -x waybar >/dev/null; then

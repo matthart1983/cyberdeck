@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # The application dock — the bar's second row, pinned to the bottom edge.
 #
-#   dock probe <slot>   one waybar item, as JSON      (the bar, once at startup)
+#   dock icon  <slot>   the image the bar draws, and its tooltip  (the bar)
+#   dock probe <slot>   one waybar item, as JSON      (unused by the bar now)
 #   dock open  <slot>   focus it if it is up, else launch it   (a click)
 #   dock list           every slot and what it resolved to
 #   dock check          doctor lines: resolution, and drift against the bar
@@ -73,7 +74,127 @@ SLOTS=(
   'net|󰌘|Packet capture|^wireshark$ ^org\.wireshark\.Wireshark$|wireshark;ghostty -e termshark'
 )
 
+# Where generate.py leaves the drawn tiles for the slots no icon exists for,
+# and beside it real/, which wins over a tile and which the generator never
+# writes to. dock-icons/fetch fills that in for Claude Code, whose .desktop
+# file carries no Icon= key at all; drop a PNG in there to override any slot.
+ICON_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/cyberdeck/dock-icons"
+
 die() { printf 'dock: %s\n' "$*" >&2; exit 2; }
+
+# --- icon: the real one, or the drawn one -----------------------------------
+# The dock used to be Nerd Font glyphs. It is images now, which is a better fit
+# for what a dock is: Firefox's icon is the thing people recognise, and no glyph
+# set is going to beat it at being Firefox.
+#
+# Resolution is the .desktop file's own `Icon=` key put through GTK's icon
+# theme, so what the dock shows is exactly what every other launcher on the
+# machine shows for that application. Nothing is hardcoded per app, which means
+# installing Obsidian tomorrow gets its real icon with no edit here.
+#
+# The toolbelt cannot work that way. lazygit, k9s and the HUD are terminals with
+# a program in them; there is no icon on the machine for any of them, and
+# Adwaita's generic stand-ins are its old legacy set and look it. Those slots
+# get a drawn tile from linux/dock-icons/generate.py instead.
+#
+# A terminal-hosted slot never falls back to argv[0]'s icon, and that rule is
+# load-bearing: argv[0] is `ghostty` for every one of them, so the fallback
+# would quietly give the HUD, git, k8s and containers all the same terminal
+# icon and make four slots indistinguishable.
+icon_for_binary() {
+  python3 - "$1" <<'PY' 2>/dev/null
+import configparser, glob, os, sys
+import gi
+gi.require_version("Gtk", "3.0")
+from gi.repository import Gtk
+
+want = sys.argv[1]
+DIRS = [os.path.expanduser("~/.local/share/applications"),
+        os.path.expanduser("~/.local/share/flatpak/exports/share/applications"),
+        "/var/lib/flatpak/exports/share/applications",
+        "/usr/local/share/applications", "/usr/share/applications"]
+
+best = None
+for d in DIRS:
+    for path in sorted(glob.glob(os.path.join(d, "*.desktop"))):
+        cp = configparser.RawConfigParser(interpolation=None, strict=False)
+        try:
+            cp.read(path, encoding="utf-8")
+        except Exception:
+            continue
+        if not cp.has_section("Desktop Entry"):
+            continue
+        e = cp["Desktop Entry"]
+        if e.get("Type", "Application") != "Application":
+            continue
+        if e.getboolean("NoDisplay", fallback=False):
+            continue
+        ex = (e.get("TryExec") or e.get("Exec") or "").strip()
+        icon = e.get("Icon")
+        if not ex or not icon:
+            continue
+        if os.path.basename(ex.split()[0].strip('"')) != want:
+            continue
+        # An application often ships several entries and only one of them is
+        # the application: VS Code also installs code-url-handler.desktop,
+        # Nautilus installs nautilus-autorun-software.desktop. Both name a
+        # real icon, so picking the first match is a coin toss. Rank the
+        # companion entries last instead.
+        base = os.path.basename(path)
+        score = sum(10 for bad in ("url-handler", "autorun", "-open", "settings")
+                    if bad in base)
+        if best is None or score < best[0]:
+            best = (score, icon)
+
+if best is None:
+    raise SystemExit(1)
+icon = best[1]
+if os.path.isabs(icon):
+    print(icon if os.path.exists(icon) else "", end="")
+    raise SystemExit(0 if os.path.exists(icon) else 1)
+info = Gtk.IconTheme.get_default().lookup_icon(icon, 64, 0)
+if not info or not info.get_filename():
+    raise SystemExit(1)
+print(info.get_filename(), end="")
+PY
+}
+
+icon() {
+  local line slot label cmds cmd tool path
+  slot="$1"
+  line="$(row "$slot")" || die "no such slot: $slot"
+  IFS='|' read -r _ _ label _ cmds <<<"$line"
+  # Nothing installed for this slot: print nothing. waybar gives an image with
+  # no path the `empty` class, which the stylesheet collapses to zero width —
+  # the same "as wide as the software you actually have" rule the glyph dock
+  # got from an empty label.
+  cmd="$(resolve "$cmds")" || { printf '\n'; return 0; }
+
+  tool=""
+  case " $cmd " in
+    *" -e "*) tool="${cmd##* -e }"; tool="${tool%% *}" ;;
+  esac
+
+  # A file dropped in real/ is the last word, ahead of anything the icon theme
+  # would resolve: it is there because someone put it there on purpose.
+  if [ -f "$ICON_DIR/real/$slot.png" ]; then
+    path="$ICON_DIR/real/$slot.png"
+  elif [ -n "$tool" ]; then
+    # Terminal-hosted. Some of these do ship an icon (wireshark, btop), so it
+    # is worth asking before falling back to the drawn tile.
+    path="$(icon_for_binary "$tool")" || path=""
+    [ -n "$path" ] || path="$ICON_DIR/$slot.png"
+  else
+    path="$(icon_for_binary "${cmd%% *}")" || path=""
+  fi
+
+  [ -n "$path" ] && [ -f "$path" ] || path="$ICON_DIR/$slot.png"
+  if [ ! -f "$path" ]; then
+    printf '\n'
+    return 0
+  fi
+  printf '%s\n%s  ·  %s\n' "$path" "$label" "$cmd"
+}
 
 row() {  # slot -> the table line, or nothing
   local s
@@ -204,18 +325,20 @@ check() {
   local have want missing=() orphan=()
   for line in "${SLOTS[@]}"; do
     slot="${line%%|*}"
-    grep -q "\"custom/dock-$slot\"" "$bar" 2>/dev/null || missing+=("$slot")
+    grep -q "\"image#dock-$slot\"" "$bar" 2>/dev/null || missing+=("$slot")
   done
   want=" $(printf '%s ' "${SLOTS[@]%%|*}")"
   while read -r slot; do
     # Two of the bar's dock items are furniture rather than slots: `sep`
-    # divides the applications from the toolbelt, and `handle` is the chevron
-    # the drawer leaves showing when everything else is hidden. Neither has
-    # anything to resolve or a row in the table.
-    case "$slot" in ""|sep|handle) continue ;; esac
+    # divides the applications from the toolbelt, and `trigger` is the wide
+    # invisible module the drawer leaves showing at rest, which is what makes
+    # the bottom edge hoverable. Neither has anything to resolve or a row in
+    # the table. `handle` was the chevron this replaced; it is kept here so a
+    # bar config from before the change does not report drift on its way out.
+    case "$slot" in ""|sep|trigger|handle) continue ;; esac
     case "$want" in *" $slot "*) ;; *) orphan+=("$slot") ;; esac
-  done < <(grep -o '"custom/dock-[a-z0-9]*"' "$bar" 2>/dev/null \
-           | sed 's/"custom\/dock-//; s/"//' | sort -u)
+  done < <(grep -oE '"(image#|custom/)dock-[a-z0-9]*"' "$bar" 2>/dev/null \
+           | sed -E 's/"(image#|custom\/)dock-//; s/"//' | sort -u)
 
   have=$(list | grep -c ' ok ' || true)
   printf 'resolved %s of %s\n' "$have" "${#SLOTS[@]}"
@@ -225,10 +348,11 @@ check() {
 }
 
 case "${1:-list}" in
+  icon)  [ $# -eq 2 ] || die "usage: dock icon <slot>";  icon "$2" ;;
   probe) [ $# -eq 2 ] || die "usage: dock probe <slot>"; probe "$2" ;;
   open)  [ $# -eq 2 ] || die "usage: dock open <slot>";  open_slot "$2" ;;
   list)  list ;;
   check) check "${2:-}" ;;
   slots) printf '%s\n' "${SLOTS[@]%%|*}" ;;
-  *)     die "usage: dock [probe <slot>|open <slot>|list|check|slots]" ;;
+  *)     die "usage: dock [icon <slot>|probe <slot>|open <slot>|list|check|slots]" ;;
 esac

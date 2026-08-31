@@ -286,49 +286,109 @@ window#waybar.dock {
   border-radius: 0;
 }
 
+/* At rest the dock is not there at all: nothing is painted anywhere along the
+   bottom of the output. What stays behind is an invisible full-width strip,
+   and it has to — a Wayland client cannot ask where the pointer is, so
+   something of the dock's must already be under it to notice the hover. That
+   surface is transparent rather than absent, which is the difference between
+   "you cannot see it" and "you cannot reach it". Mod+D takes away even that. */
 window#waybar.dock .modules-center {
-  background: alpha(@bg, 0.9);
-  border: 1px solid @border;
-  border-radius: 10px;
-  padding: 0 4px;
+  background: transparent;
+  border: none;
+  padding: 0;
 }
 
-/* Every slot carries class "app" from `dock probe`. Bigger than anything on
-   the top bar: these are targets for the pointer, not readouts for the eye. */
-/* Propo, not the Nerd Font this sheet sets globally, and this is the whole
-   fix for icons that would not sit straight in their own highlight.
-   
-   Nerd Fonts ship three families. The default one gives an icon a SINGLE-cell
-   advance and double-width ink, so a 27px glyph is 21-25px of ink in a 16.2px
-   cell. GTK lays out on the advance, so every icon overflowed to the right —
-   by 2.4px for the grid, 4.4px for the robot, a different amount each, which
-   is why it read as "some of them are off" rather than as one clean offset.
-   Mono squeezes the ink into the cell; Propo widens the cell to the ink. Propo
-   keeps the icons full size, and lands every one of them within 0.31px
-   horizontally and 0.5px vertically. Measured, not eyeballed — and it is why
-   there is no padding hack here any more. */
-window#waybar.dock .app,
-window#waybar.dock #custom-dock-handle,
+/* #dockzone is the hover target and paints nothing. The padding is the whole
+   point: it is inside the widget, so the event box covers it, which turns
+   500px either side of the icons into bottom edge that reveals the dock. The
+   icons stay centred because the padding is symmetric — no widget changes
+   size when the pointer arrives, so there is nothing to flicker. */
+window#waybar.dock #dockzone {
+  padding: 0 500px;
+  background: transparent;
+  border: none;
+}
+
+/* #dockrow is the plate: only as wide as the icons, and the 6px it floats
+   above the screen edge lives here rather than in the bar's margin-bottom.
+   A bar margin would shorten the surface and take the last 6px of the screen
+   away from the dock, which is what made it vanish at the moment you reached
+   the bottom. */
+window#waybar.dock #dockrow {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 0 4px;
+  margin-bottom: 6px;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+/* `window#waybar.dock:hover`, not `.modules-center:hover`. The window is the
+   full-width transparent surface and the pill is only as wide as the icons, so
+   hanging the reveal on the window is what makes the whole bottom edge the
+   target instead of the centre of the output. */
+window#waybar.dock #dockzone:hover #dockrow {
+  background: alpha(@bg, 0.9);
+  border-color: @border;
+}
+
+/* Opacity is the only thing that changes. The slots keep their boxes while
+   invisible, so the plate is already the right size when it paints and the row
+   never shifts under the pointer. */
+window#waybar.dock #image,
+window#waybar.dock #custom-dock-sep {
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+window#waybar.dock #dockzone:hover #image,
+window#waybar.dock #dockzone:hover #custom-dock-sep {
+  opacity: 1;
+}
+
+/* The chevron and the separator are the last two glyphs in the dock — the
+   slots themselves are images now. Propo rather than the Nerd Font this sheet
+   sets globally, because these two still hit the problem the slots used to:
+   the default family gives a glyph a single-cell advance and double-width ink,
+   GTK lays out on the advance, and the glyph overflows its own box to the
+   right. Mono squeezes the ink into the cell; Propo widens the cell to the ink
+   and centres what is drawn. */
 window#waybar.dock #custom-dock-sep {
   font-family: "JetBrainsMono Nerd Font Propo", "JetBrainsMono Nerd Font", monospace;
 }
 
-window#waybar.dock .app {
-  color: @fg_dim;
+/* The slots are `image` modules now, and waybar names every one of them
+   `image` with the config id as a style class — so `#image.dock-term`, not
+   `#custom-dock-term`. The shared rule is the bare `#image`. */
+window#waybar.dock #image {
   background: transparent;
   border: 1px solid transparent;
   border-radius: 10px;
-  padding: 0 12px;
+  padding: 0 10px;
   margin: 4px 2px;
-  font-size: 32px;
-  transition: color 120ms ease, background 120ms ease;
+  transition: background 120ms ease, border-color 120ms ease;
 }
 
-/* Applications answer in magenta, the same accent the launcher button uses:
-   both of them start something you then look at. */
-window#waybar.dock .app:hover {
-  color: @bg;
-  background: @magenta;
+/* A slot with nothing installed resolves to no path, and waybar puts `empty`
+   on it. It still occupies its padding and margin unless told otherwise, and
+   six of twelve slots are empty on this machine — left alone that is a dock
+   with a hand-sized hole in the middle of it. */
+window#waybar.dock #image.empty {
+  padding: 0;
+  margin: 0;
+  border-width: 0;
+  min-width: 0;
+}
+
+/* Hover fills the plate behind the icon rather than recolouring it, because an
+   image cannot be recoloured the way a glyph could: the old rule flipped
+   `color` to @bg over a magenta fill, and there is no `color` on a PNG. So the
+   accent moved to the plate and the border, and the icon sits on top of it
+   unchanged. The tint is the palette accent at low alpha rather than the solid
+   fill the glyphs had — Firefox's icon on a solid magenta block reads as an
+   error state, not as a hover. */
+window#waybar.dock #image:hover {
+  background: alpha(@magenta, 0.22);
   border-color: @magenta;
 }
 
@@ -336,13 +396,12 @@ window#waybar.dock .app:hover {
    instead. The separator is then doing something visible rather than just
    spacing the row out. Two ids in each selector, which is what puts these
    above the .app:hover rule — GTK resolves specificity the way CSS does. */
-window#waybar.dock #custom-dock-hud:hover,
-window#waybar.dock #custom-dock-git:hover,
-window#waybar.dock #custom-dock-containers:hover,
-window#waybar.dock #custom-dock-k8s:hover,
-window#waybar.dock #custom-dock-net:hover {
-  color: @bg;
-  background: @blue;
+window#waybar.dock #image.dock-hud:hover,
+window#waybar.dock #image.dock-git:hover,
+window#waybar.dock #image.dock-containers:hover,
+window#waybar.dock #image.dock-k8s:hover,
+window#waybar.dock #image.dock-net:hover {
+  background: alpha(@blue, 0.35);
   border-color: @blue;
 }
 
@@ -364,26 +423,6 @@ window#waybar.dock .app.absent {
   padding: 0 8px;
   font-size: 22px;
 }
-
-/* The handle — the only thing the dock shows at rest. @fg_dim so it reads as
-   an affordance rather than a control, and the same magenta on hover that the
-   icons it reveals will wear. */
-#custom-dock-handle {
-  color: @fg_dim;
-  background: transparent;
-  border-radius: 10px;
-  padding: 0 14px;
-  margin: 4px 2px;
-  font-size: 26px;
-  transition: color 150ms ease, background 150ms ease;
-}
-
-window#waybar.dock:hover #custom-dock-handle { color: @magenta; }
-
-/* Waybar puts this class on the drawer's hidden children while they are
-   sliding. Nothing to do but let them animate — it is named here so the next
-   person can find the hook. */
-window#waybar.dock .dock-hidden { }
 
 /* State colours — Waybar sets these classes from the "states" map. */
 #cpu.warning,
