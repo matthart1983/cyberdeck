@@ -14,9 +14,88 @@ btop, bat, delta, fastfetch and Zed — from one palette, in one repo.
 **[📖 Read the Field Manual](https://matthart1983.github.io/cyberdeck/)** — every
 key, command and surface in one searchable page, macOS and Fedora side by side.
 
+[Where this is](#where-this-is) · [Where it's heading](#where-its-heading) · [ROADMAP.md](ROADMAP.md)
+
 </div>
 
 ---
+
+## Where this is
+
+46 commits since 23 August, and it has been the daily driver throughout. Both
+halves run: macOS 13+ on AeroSpace and SketchyBar, Fedora on niri and Waybar,
+from one palette and one installer.
+
+The parts I would call finished are the ones with tests behind them. The
+palette engine renders 8 themes across 16 surfaces from 47 colour slots, and
+`test/theme.sh` checks the contract, the drift and the contrast floors on every
+one. The installer writes only on difference, and `test/idempotent.sh` runs the
+real thing twice against a throwaway `$HOME` rather than asserting idempotence
+in a comment. `rice-doctor` is 28 checks on Fedora, each failure carrying its
+own remediation. The field manual is 1,497 lines and covers both platforms from
+one page.
+
+The honest gaps. **There is no CI** — both suites run by hand, and that is the
+first item on the roadmap below. The Fedora half is ahead of the macOS half and
+pulling further ahead, because Fedora is the machine I actually use. And the
+four HUD tools live in their own repos, so this one is configuration rather
+than the monitors themselves.
+
+| | macOS | Fedora |
+|---|---|---|
+| tiling | AeroSpace | niri |
+| bar | SketchyBar | Waybar |
+| focus ring | JankyBorders | niri draws its own |
+| dock | — | second bar, same Waybar process |
+| volume in the bar | — | slider plus readout |
+| power profile | — | speedometer beside the battery |
+| launcher panel | — | fuzzel and nwg-drawer |
+| Ghostty | prebuilt cask | built from upstream's signed tarball |
+| system layer | `snapshot` / `defaults` / `restore` | `packages.sh`, opt-in |
+| HUD · themes · zsh · tmux · manual · doctor | same | same |
+
+Nothing in the macOS column is planned to close. niri's own focus ring and
+Waybar's exclusive zone are better than what they replace, and macOS keeps
+volume in its own menu bar, so those rows stay blank on purpose.
+
+This is one person's setup, published because the parts are worth stealing, and
+the pieces are independent. Take the bar without the tiling, the HUD without
+either, or just the Ghostty theme.
+
+## Where it's heading
+
+An operations layer. A workstation for running infrastructure rather than one
+that looks like it could. [`ROADMAP.md`](ROADMAP.md) is the whole plan, written
+down before any of it is built, because the ordering is the part that matters.
+
+The thesis is one sentence. What separates an operations workstation from a
+terminal with `kubectl` installed is that it always knows, and always shows,
+which cluster and which environment the next command lands on. So one resolver
+writes one file, every surface subscribes, and the environment class drives an
+accent overlay: point at production and the bar, the prompt, the tmux status
+line and the focus ring all change colour together. An unmatched context
+classifies as `unknown`, and `unknown` is styled like production, because the
+classification is the safety property and its failure mode has to be caution.
+
+Seven phases. **None of them are built yet** — no `ops/`, no CI, no extracted
+libraries. This is a plan, not a changelog.
+
+| Phase | Size | What it unlocks |
+|---|---|---|
+| 0 · Foundations | a weekend | CI, plus shared libraries for Prometheus scraping and doctor output. Turns phases 2 and 4 from scripting into configuration. |
+| 1 · Context | 1–2 weeks | The spine. Phases 2, 3 and 5 are all consumers of it. |
+| 2 · Kubernetes | 1–2 weeks | A cluster you read from the bar and drive from a HUD layout, with an advisory guardrail on destructive verbs. |
+| 3 · Fleet SSH | 1–2 weeks | One inventory file driving the resolver, the SSH config, parallel exec and a per-host HUD. Parallelises with phase 2. |
+| 4 · Observability | 1 week | Alerts and dashboards become a config file instead of new scripts. |
+| 5 · Incident mode | 3–4 days | One command puts the machine into incident posture and hands you a timeline at the end. |
+| 6 · Hardening | 1 week | `ops-doctor`, gitleaks in CI, and whatever ports to macOS cheaply. |
+
+Kubernetes, fleet SSH and observability are in scope. Cloud CLIs, Terraform and
+Ansible are out, not forever, just not first. It arrives as a fourth top-level
+directory under the same rule as the other three: opt-in, idempotent, and
+`install.sh` never calls it.
+
+Sizes assume evenings and weekends.
 
 ## The HUD
 
@@ -200,12 +279,6 @@ and the bar's workspace indicators stay hidden. `rice-doctor` calls this out.
 On Fedora there is no equivalent grant: log out, pick **niri** at the session
 chooser, and it comes up with Waybar already running.
 
-## Making it yours
-
-This is one person's setup, published because the parts are worth stealing.
-The pieces are independent: take the bar without the tiling, the HUD without
-either, or just the Ghostty theme.
-
 ## Themes
 
 Eight of them. One command moves all sixteen themed surfaces at once:
@@ -230,7 +303,7 @@ Ghostty has no reload-from-CLI, and a shell's colours are fixed at start.
 | `blade` | Desaturated teal, rust accent. Built for eight-hour days. |
 | `paper` | Warm off-white, ink foreground. The only light one. |
 
-A palette is 41 colour slots of literal hex in `themes/<slug>.sh` — data, read
+A palette is 47 colour slots of literal hex in `themes/<slug>.sh` — data, read
 rather than sourced. Each themed surface is a `.tmpl` beside its output;
 `theme` renders them. Nothing is mirrored by hand any more, which is the point:
 eight themes across sixteen surfaces is 128 files that would drift with
