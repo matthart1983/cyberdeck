@@ -142,6 +142,22 @@ else
                          'display reset' puts config.kdl's numbers back"
 fi
 
+# --- the wifi item ---------------------------------------------------------
+# The link the bar's network items are measuring. Fails only on the state that
+# is a fault rather than a choice: hardware present, radio on, and nothing
+# joined. Wi-Fi switched off on purpose is a choice, and a machine with no
+# radio at all is not a fault — these dotfiles run on a desktop too.
+WIFI_BIN="$HOME/.dotfiles/linux/bin/wifi"
+if [ ! -x "$WIFI_BIN" ]; then
+  fail "wifi" "linux/bin/wifi missing or not executable"
+elif ! command -v nmcli >/dev/null 2>&1; then
+  fail "wifi" "nmcli not installed — sudo dnf install NetworkManager"
+elif wout=$("$WIFI_BIN" check 2>&1); then
+  pass "wifi" "$wout"
+else
+  fail "wifi" "$wout — click the bar item, or 'wifi menu'"
+fi
+
 # --- the netwatch feed -----------------------------------------------------
 if systemctl --user is-active --quiet netwatch-metrics.service; then
   if body=$(curl -sf --max-time 2 http://127.0.0.1:9464/metrics 2>/dev/null); then

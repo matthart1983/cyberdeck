@@ -390,6 +390,7 @@ mirror each other, and each holds its own `install.sh` and `bin/rice-doctor`.
 | `linux/bin/drawer` | sizes the launcher panel to the focused output and toggles it |
 | `linux/bin/dock` | the dock's slot table — resolves each one, focuses or launches it |
 | `linux/bin/power` | the bar's power-profile item — probe, picker, and the doctor's line |
+| `linux/bin/wifi` | the bar's Wi-Fi item — probe, network picker, radio toggle, doctor line |
 | `linux/dock-icons/` | `generate.py` draws a palette tile for each slot with no real icon; `fetch` pulls the ones published upstream |
 | `linux/vscode.sh` | the editor slot's IDE: VSCodium from Flathub, or VS Code from Microsoft's repo (opt-in) |
 | **root** | |
@@ -488,6 +489,7 @@ with a 1.5s ceiling so a sick daemon can never stall the bar.
 
 | Item | Source |
 |---|---|
+| `wifi` | `nmcli` — SSID and signal, click to pick a network (Fedora only) |
 | `link` | `netwatch_gateway_rtt_seconds`, `dns_rtt`, `loss_ratio`, `connections` — colours on the worst signal, goes red on any loss |
 | `net` | `netwatch_interface_{receive,transmit}_bytes_per_second` on the default route |
 | `cpu` / `mem` | `top` one-shot · `memory_pressure` (free RAM is meaningless on macOS) |
@@ -521,6 +523,32 @@ and they run the identical `wpctl` the Framework's F1–F3 run, so the bar and
 the keyboard cannot disagree about what a notch is worth.
 
 There is no macOS counterpart because macOS keeps volume in its own menu bar.
+
+It also has a **Wi-Fi** item, leftmost of the network cluster, because it is
+the question the two items beside it assume an answer to. They could already
+say a great deal about the link and nothing at all about *which* network: "why
+is this slow" was one click away, and "join the other access point" meant a
+terminal. Click it for a picker of everything in range — signal, a padlock on
+the secured ones, markers for the current and the saved — plus rows to
+disconnect or switch the radio off. Right-click toggles the radio.
+
+`linux/bin/wifi` drives `nmcli` rather than NetworkManager's D-Bus API, which
+is a deliberate difference from the power item next door. Setting a power
+profile is one property and a `busctl set-property`. Joining a network is scan,
+match, secrets agent, activate, then wait for the state to settle — and nmcli
+is NetworkManager's own client for exactly that sequence. Reimplementing it
+over raw D-Bus in bash would be a worse copy of it. Nothing needs polkit:
+`nmcli general permissions` already grants `wifi.scan`, `network-control`,
+`settings.modify.own` and `enable-disable-wifi`.
+
+A saved network activates its existing profile rather than being asked for a
+password NetworkManager already holds — otherwise you end up with two profiles
+for one network. An open one connects with no prompt. A secured one gets a
+`fuzzel --password` box. **802.1X is refused rather than attempted**: enterprise
+networks need certificates, an identity and sometimes an inner method, none of
+which fit in a one-line password box, and pretending otherwise leaves you with
+a profile that silently never connects. It says so and points at
+`nm-connection-editor`.
 
 It also has a **power profile** item, immediately left of the battery, because
 that is the knob for the gauge beside it — the one control on the bar that

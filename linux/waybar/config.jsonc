@@ -38,7 +38,7 @@
 
     "modules-left":   ["custom/launcher", "custom/run", "niri/workspaces", "custom/sep", "niri/window"],
     "modules-center": [],
-    "modules-right":  ["custom/link", "custom/net", "cpu", "memory", "disk", "pulseaudio/slider", "wireplumber", "custom/display", "custom/power-profile", "battery", "clock", "custom/power"],
+    "modules-right":  ["custom/wifi", "custom/link", "custom/net", "cpu", "memory", "disk", "pulseaudio/slider", "wireplumber", "custom/display", "custom/power-profile", "battery", "clock", "custom/power"],
 
     // --- Left: the launcher button ------------------------------------------
     // Opens nwg-drawer, not fuzzel: a button is for the times you are looking
@@ -93,6 +93,35 @@
       "format": "  {}",
       "max-length": 48,
       "separate-outputs": true
+    },
+
+    // --- Right: the network you are on --------------------------------------
+    // Leftmost of the network cluster, because it is the question the two
+    // items beside it assume an answer to. They could already say a great deal
+    // about the link — gateway RTT, DNS RTT, loss, connections, throughput —
+    // and nothing at all about WHICH network. "Why is this slow" was one
+    // click away; "join the other access point" meant a terminal.
+    //
+    // linux/bin/wifi is the whole of it, and it drives nmcli rather than
+    // NetworkManager's D-Bus API — a deliberate difference from the power item,
+    // which is one property and a `busctl set-property`. Joining a network is
+    // scan, match, secrets agent, activate, settle; nmcli is NetworkManager's
+    // own client for exactly that, and doing it over raw D-Bus in bash would be
+    // a worse copy of it.
+    //
+    // No polkit dialog: `nmcli general permissions` already grants this user
+    // wifi.scan, network-control, settings.modify.own and enable-disable-wifi.
+    //
+    // Polled at 10s because signal strength genuinely moves, unlike the power
+    // profile next door. The click that changes networks pokes SIGRTMIN+10 so
+    // the item is right immediately rather than up to ten seconds late.
+    "custom/wifi": {
+      "exec": "~/.dotfiles/linux/bin/wifi probe",
+      "return-type": "json",
+      "interval": 10,
+      "signal": 10,
+      "on-click": "~/.dotfiles/linux/bin/wifi menu",
+      "on-click-right": "~/.dotfiles/linux/bin/wifi toggle"
     },
 
     // --- The two netwatch-fed items -----------------------------------------

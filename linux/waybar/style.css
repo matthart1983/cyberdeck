@@ -160,6 +160,7 @@ window#waybar.hidden { opacity: 0.2; }
 window#waybar.empty #window { background: transparent; }
 
 /* --- Right --------------------------------------------------------------- */
+#custom-wifi,
 #custom-link,
 #custom-net,
 #cpu,
@@ -198,6 +199,14 @@ window#waybar.empty #window { background: transparent; }
 #custom-power-profile.balanced    { color: @white; }
 #custom-power-profile.performance { color: @orange; }
 #custom-power-profile.degraded    { color: @yellow; }
+/* Wi-Fi wears white like the other hardware readouts, and only changes colour
+   for the two states that explain something: a weak signal, which is the usual
+   answer to "why is this slow", and a radio that is off or unjoined, which is
+   why nothing is answering at all. */
+#custom-wifi.ok   { color: @white; }
+#custom-wifi.weak { color: @yellow; }
+#custom-wifi.down,
+#custom-wifi.off  { color: @fg_dim; }
 #custom-net  { color: @fg; font-size: 12px; }
 #cpu         { color: @white; }
 #memory      { color: @white; }

@@ -1,0 +1,271 @@
+#!/usr/bin/env bash
+# The Wi-Fi item — the bar's network picker.
+#
+#   wifi probe    one waybar item, as JSON        (the bar, every 10s)
+#   wifi menu     pick a network                  (a click)
+#   wifi toggle   radio on/off                    (a right-click)
+#   wifi check    doctor line: radio, link, signal
+#
+# The bar could already tell you a great deal about the network — gateway RTT,
+# DNS RTT, loss, connection count, throughput, all of it out of netwatch — and
+# nothing whatsoever about WHICH network. Answering "why is this slow" was one
+# click away; answering "join the other access point" meant a terminal.
+#
+# nmcli rather than the D-Bus API, unlike the power item next door. That is a
+# deliberate difference: ActiveProfile is one property and a `busctl
+# set-property` away, whereas joining a network is scan, match, secrets agent,
+# activate, and wait for the state to settle. nmcli is NetworkManager's own
+# client for exactly that sequence, and reimplementing it over raw D-Bus in
+# bash would be a worse copy of it.
+#
+# Nothing here needs polkit. `nmcli general permissions` grants this user
+# wifi.scan, network-control, settings.modify.own and enable-disable-wifi
+# outright, so a click on the bar can scan, join and toggle the radio without
+# an authentication dialog appearing over whatever you were doing.
+set -euo pipefail
+
+# waybar is spawned by the compositor, not a login shell — same reason display,
+# dock and power source this.
+# shellcheck source=common/lib-path.sh
+. "$HOME/.dotfiles/common/lib-path.sh"
+
+SIGNAL=10           # waybar's custom/wifi "signal"; display 8, power 9, dock 7
+
+# Field separator between this script's own functions and their callers, and
+# deliberately NOT a tab. Tab is IFS whitespace, so `read` folds a run of them
+# into one delimiter and an empty field simply disappears — an open network has
+# no SECURITY, so every column after it shifted left, `sec` came back holding
+# the IN-USE space, and the picker offered to ask for a password on a network
+# that does not have one. US (0x1f) is not whitespace, so an empty field stays
+# an empty field.
+US=$'\x1f'
+SSID_MAX=12         # the bar is crowded; the tooltip carries the full name
+
+die() { printf 'wifi: %s\n' "$1" >&2; exit 1; }
+command -v nmcli >/dev/null || die "nmcli is not installed"
+
+radio()  { nmcli radio wifi 2>/dev/null || echo "unknown"; }
+device() { nmcli -t -f DEVICE,TYPE device 2>/dev/null | awk -F: '$2=="wifi"{print $1; exit}'; }
+
+# The connected network, as "ssid<TAB>signal<TAB>security", or nothing.
+current() {
+  nmcli -t -e yes -f ACTIVE,SSID,SIGNAL,SECURITY device wifi list 2>/dev/null \
+    | awk -F: -v US="$US" '$1=="yes"{ printf "%s%s%s%s%s\n", $2, US, $3, US, $4; exit }'
+}
+
+# Material Design's five-step ramp, the same family as everything else on the
+# bar. Signal is 0-100 out of nmcli.
+bars() {
+  local s="${1:-0}"
+  if   [ "$s" -ge 80 ]; then printf '\U000f0928'
+  elif [ "$s" -ge 55 ]; then printf '\U000f0925'
+  elif [ "$s" -ge 30 ]; then printf '\U000f0922'
+  elif [ "$s" -ge 5  ]; then printf '\U000f091f'
+  else                       printf '\U000f092f'
+  fi
+}
+
+trim() {  # trim <text> <max> — ellipsis rather than a silent shear
+  local t="$1" n="$2"
+  if [ "${#t}" -gt "$n" ]; then printf '%s…' "${t:0:n-1}"; else printf '%s' "$t"; fi
+}
+
+# --- the waybar item ---------------------------------------------------------
+probe() {
+  local dev r cur ssid sig sec text tip cls
+  dev="$(device)"
+  if [ -z "$dev" ]; then
+    # No wifi hardware at all. Print nothing and let waybar hide the item —
+    # the same rule the dock's slots use. These dotfiles also run on a desktop.
+    printf '{"text":"","tooltip":""}\n'
+    return 0
+  fi
+
+  r="$(radio)"
+  if [ "$r" != "enabled" ]; then
+    printf '{"text":"\U000f092e","class":"off","tooltip":"Wi-Fi off  ·  right-click to turn it on"}\n'
+    return 0
+  fi
+
+  cur="$(current)"
+  if [ -z "$cur" ]; then
+    printf '{"text":"\U000f092b","class":"down","tooltip":"Wi-Fi on, not connected  ·  click to choose a network"}\n'
+    return 0
+  fi
+
+  IFS="$US" read -r ssid sig sec <<<"$cur"
+  text="$(bars "$sig") $(trim "$ssid" "$SSID_MAX")"
+  tip="$ssid  ·  ${sig}%  ·  ${sec:-open}"$'\n'"$dev"$'\n'"click to change · right-click for the radio"
+  # Weak enough to be the reason something feels slow, which is the one state
+  # here worth a colour rather than a number.
+  cls="ok"
+  if [ "$sig" -lt 30 ]; then cls="weak"; fi
+
+  python3 -c 'import json,sys; print(json.dumps({"text":sys.argv[1],"class":sys.argv[2],"tooltip":sys.argv[3]}, ensure_ascii=False))' \
+    "$text" "$cls" "$tip"
+}
+
+# --- the picker --------------------------------------------------------------
+# fuzzel, like display's and power's, and for the same reason: the list is built
+# fresh from a scan every time and there is nothing to write into a menu-file.
+menu() {
+  local dev cur_ssid
+  dev="$(device)" || true
+  [ -n "$dev" ] || die "no wifi device"
+
+  if [ "$(radio)" != "enabled" ]; then
+    # Offer the one thing that can be done rather than an empty list.
+    if pick_one "Wi-Fi is off" "Turn Wi-Fi on"; then
+      nmcli radio wifi on >/dev/null && refresh
+    fi
+    return 0
+  fi
+
+  # A rescan is a request, not a command: NetworkManager rate-limits it and
+  # errors if one ran moments ago. Either way the cached list below is fresh
+  # enough to show, so the failure is ignored rather than reported.
+  nmcli device wifi rescan >/dev/null 2>&1 || true
+
+  cur_ssid="$(current | cut -d"$US" -f1)"
+
+  local entries=() labels=() idx action ssid sig sec
+  while IFS="$US" read -r ssid sig sec; do
+    [ -n "$ssid" ] || continue
+
+    # Every branch is an `if`. `cond && assign` is a statement whose exit
+    # status is the failed condition, and under `set -e` that ends the
+    # function — here it would have cut the list off at the first open
+    # network, which is the one row nobody would notice was missing.
+    local mark="" lock=" " label row
+    if [ "$ssid" = "$cur_ssid" ]; then
+      mark="  ·  connected"
+    elif saved "$ssid"; then
+      mark="  ·  saved"
+    fi
+    if [ -n "$sec" ]; then
+      lock=$'\U000f033e'
+    fi
+
+    # Built in named pieces rather than one long concatenation. The dense
+    # version had `""$ssid""` in it, which is an UNQUOTED expansion between two
+    # empty strings — an SSID with a space in it became two array elements and
+    # the row after it inherited the wrong action.
+    label="$(bars "$sig")  ${lock}  $(printf '%-26s' "$(trim "$ssid" 24)")${sig}%${mark}"
+    row="${label}${US}connect${US}${ssid}${US}${sec}"
+    entries+=("$row")
+  done < <(scan)
+
+  [ "${#entries[@]}" -gt 0 ] || die "no networks in range"
+
+  if [ -n "$cur_ssid" ]; then
+    entries+=("$(printf '\U000f092b')  Disconnect from ${cur_ssid}${US}disconnect${US}${US}")
+  fi
+  entries+=("$(printf '\U000f092e')  Turn Wi-Fi off${US}toggle${US}${US}")
+
+  local e
+  for e in "${entries[@]}"; do labels+=("${e%%"$US"*}"); done
+  idx="$(printf '%s\n' "${labels[@]}" \
+         | fuzzel --dmenu --index --prompt 'wifi  ' --lines 12 --width 52 2>/dev/null)" || return 0
+  [ -n "${idx:-}" ] || return 0
+
+  IFS="$US" read -r _ action ssid sec <<<"${entries[$idx]}"
+  case "$action" in
+    disconnect) nmcli device disconnect "$dev" >/dev/null 2>&1 || true ;;
+    toggle)     nmcli radio wifi off >/dev/null 2>&1 || true ;;
+    connect)    connect "$ssid" "$sec" ;;
+  esac
+  refresh
+}
+
+# One network per line as "ssid<TAB>signal<TAB>security<TAB>in-use", strongest
+# first, one row per SSID. Without the dedupe a mesh or a dual-band router
+# fills the list with the same name four times.
+scan() {
+  nmcli -t -e yes -f SSID,SIGNAL,SECURITY device wifi list 2>/dev/null \
+    | sed 's/\\:/\x01/g' \
+    | awk -F: -v US="$US" '
+        $1 != "" && $1 != "--" {
+          gsub(/\x01/, ":", $1)
+          if (!($1 in best) || $2+0 > best[$1]+0) { best[$1]=$2; sec[$1]=$3 }
+        }
+        END { for (s in best) printf "%s%s%s%s%s\n", s, US, best[s], US, sec[s] }' \
+    | sort -t"$US" -k2,2nr
+}
+
+saved() { nmcli -t -f NAME connection show 2>/dev/null | grep -qxF "$1"; }
+
+connect() {
+  local ssid="$1" sec="$2" pw out
+  # A saved profile already holds the secret, so activating it is the whole
+  # job — and asking for a password that NetworkManager can supply itself is
+  # how you end up with two profiles for one network.
+  if saved "$ssid"; then
+    if out="$(nmcli connection up id "$ssid" 2>&1)"; then return 0; fi
+    report "$ssid" "$out"; return 1
+  fi
+
+  case "$sec" in
+    *802.1X*|*EAP*)
+      # Certificates, an identity, sometimes an inner method. A one-line
+      # password box cannot express that, and pretending otherwise gets you a
+      # profile that silently never connects.
+      report "$ssid" "enterprise (802.1X) needs a full profile: nm-connection-editor"
+      return 1
+      ;;
+  esac
+
+  if [ -n "$sec" ]; then
+    pw="$(fuzzel --dmenu --password --prompt "$(trim "$ssid" 20) password  " --lines 0 --width 32 2>/dev/null)" || return 0
+    [ -n "${pw:-}" ] || return 0
+    out="$(nmcli device wifi connect "$ssid" password "$pw" 2>&1)" || { report "$ssid" "$out"; return 1; }
+  else
+    out="$(nmcli device wifi connect "$ssid" 2>&1)" || { report "$ssid" "$out"; return 1; }
+  fi
+}
+
+# Failures have to land somewhere the user is already looking. There is no
+# notification daemon running on this machine, so notify-send would be a
+# message into nothing; fuzzel is the surface they just used.
+report() {
+  local msg="${2##*Error: }"
+  printf '%s\n' "  (press Esc)" \
+    | fuzzel --dmenu --index --prompt "$(trim "$1" 18): ${msg%%$'\n'*}  " \
+             --lines 1 --width 64 >/dev/null 2>&1 || true
+}
+
+pick_one() {  # pick_one <prompt> <label> — true if the single row was chosen
+  local out
+  out="$(printf '%s\n' "$2" | fuzzel --dmenu --index --prompt "$1  " --lines 1 --width 32 2>/dev/null)" || return 1
+  [ -n "${out:-}" ]
+}
+
+toggle() {
+  if [ "$(radio)" = "enabled" ]; then nmcli radio wifi off >/dev/null 2>&1 || true
+  else nmcli radio wifi on >/dev/null 2>&1 || true; fi
+  refresh
+}
+
+refresh() { pkill -RTMIN+$SIGNAL waybar 2>/dev/null || true; }
+
+# --- doctor ------------------------------------------------------------------
+# Reports the link and fails only on the state that is a fault rather than a
+# choice: hardware present, radio on, and nothing joined. Wi-Fi switched off on
+# purpose is not a fault, and neither is a desktop with no radio at all.
+check() {
+  local dev cur ssid sig sec
+  dev="$(device)"
+  if [ -z "$dev" ]; then echo "no wifi device"; return 0; fi
+  if [ "$(radio)" != "enabled" ]; then echo "$dev · radio off"; return 0; fi
+  cur="$(current)"
+  if [ -z "$cur" ]; then echo "$dev · on, not connected"; return 1; fi
+  IFS="$US" read -r ssid sig sec <<<"$cur"
+  printf '%s · %s · %s%% · %s\n' "$dev" "$ssid" "$sig" "${sec:-open}"
+}
+
+case "${1:-probe}" in
+  probe)  probe ;;
+  menu)   menu ;;
+  toggle) toggle ;;
+  check)  check ;;
+  *)      die "usage: wifi [probe|menu|toggle|check]" ;;
+esac
