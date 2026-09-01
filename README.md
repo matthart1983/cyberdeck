@@ -315,6 +315,45 @@ gitignored symlink, and a fresh clone falls back to the default.
 
 **Full contract, and the two rules that matter — [`themes/README.md`](themes/README.md).**
 
+### Wallpaper
+
+Two sources, and the generated one stays the default. `wallpaper/generate.py`
+draws from the palette, which means it exists for every theme, costs nothing and
+can never be the wrong colour. What it cannot be is a photograph.
+
+`wallpaper/themed` is the opt-in other half: one picked image per theme.
+
+```sh
+wallpaper/themed list          # the map, and what is cached
+wallpaper/themed fetch         # the active theme
+wallpaper/themed fetch --all   # every theme; a large download
+```
+
+The pairs were scored in CIELAB on three axes — how close the image's overall
+lightness sits to that theme's `CP_BG`, how close its coloured areas sit to its
+accent slots, and how flat it is. **Flatness carries the most weight**, for the
+reason `generate.py`'s own docstring gives: this sits behind tiled windows and
+shows through gaps, so it has to read as atmosphere rather than a poster
+competing with text. The eight picked average a contrast of 22 against a pool
+average of 47.
+
+| Theme | Wallpaper | | Theme | Wallpaper |
+|---|---|---|---|---|
+| `deep-sea` | [`1q22pg`](https://wallhaven.cc/w/1q22pg) | | `terminal-green` | [`gw926d`](https://wallhaven.cc/w/gw926d) |
+| `cyberpunk-neon` | [`856v22`](https://wallhaven.cc/w/856v22) | | `blood-dragon` | [`qrjew7`](https://wallhaven.cc/w/qrjew7) |
+| `ice` | [`k8d8xq`](https://wallhaven.cc/w/k8d8xq) | | `amber-crt` | [`kx1gjd`](https://wallhaven.cc/w/kx1gjd) |
+| `blade` | [`3l6yv3`](https://wallhaven.cc/w/3l6yv3) | | `paper` | [`lyd1jl`](https://wallhaven.cc/w/lyd1jl) |
+
+`install.sh` picks the source: a themed wallpaper if this theme has one cached,
+the generator otherwise. Either way it writes the same three filenames, because
+`~/.local/share/wallpapers/cyberpunk-fw13.png` is the contract between the
+compositor config and whatever drew the image — `config.kdl` spawns `swaybg`
+against that path and should not have to know which one won.
+
+**The images are not in this repo and will not be.** They are other people's
+work and this is a public tree; what is tracked is the map, and the bytes are
+fetched on a machine you own. Same rule as the dock's Claude icon.
+
 ## Palette
 
 The default. `themes/cyberpunk-neon.sh` is the whole of it; `palette.sh` now
@@ -395,7 +434,8 @@ mirror each other, and each holds its own `install.sh` and `bin/rice-doctor`.
 | `linux/vscode.sh` | the editor slot's IDE: VSCodium from Flathub, or VS Code from Microsoft's repo (opt-in) |
 | **root** | |
 | `capture/` | VHS tapes; GIFs land in `capture/out/` (gitignored) |
-| `wallpaper/generate.py` | wallpaper generator (PIL, no numpy) |
+| `wallpaper/generate.py` | wallpaper generator (PIL, no numpy) — the default source |
+| `wallpaper/themed` | the opt-in other source: one picked image per theme, fetched and cropped |
 | `attic/` | anything the installer displaced, under a per-run timestamp (gitignored) |
 
 niri draws its own focus ring, so JankyBorders has no Linux counterpart —

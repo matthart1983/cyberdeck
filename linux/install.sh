@@ -65,18 +65,45 @@ WP_STAMP="$WP_DIR/.cyberdeck-theme"
 for f in cyberpunk-mbp.png cyberpunk-fw13.png cyberpunk-4k.png; do
   if [ ! -f "$WP_DIR/$f" ]; then WP_STALE=1; break; fi
 done
-if [ "$(cat "$WP_STAMP" 2>/dev/null || true)" != "$CP_THEME_SLUG" ]; then
+# Two sources, and the stamp records which one is in place as well as which
+# theme: switching between them without changing theme still has to redraw.
+# wallpaper/themed prints a path when this theme has a photographic wallpaper
+# cached, and nothing when it does not — silence is what selects the generator.
+WP_THEMED="$(D="$D" "$D/wallpaper/themed" path 2>/dev/null || true)"
+if [ -n "$WP_THEMED" ]; then
+  WP_WANT="$CP_THEME_SLUG themed"
+else
+  WP_WANT="$CP_THEME_SLUG generated"
+fi
+if [ "$(cat "$WP_STAMP" 2>/dev/null || true)" != "$WP_WANT" ]; then
   WP_STALE=1
 fi
+
 if [ "$WP_STALE" -eq 0 ]; then
   same "$WP_DIR"
 elif ! python3 -c 'import PIL' 2>/dev/null; then
   warn "python3-pillow not installed — skipped (run linux/packages.sh)"
+elif [ -n "$WP_THEMED" ]; then
+  # Copied into place under the generator's own filenames rather than pointed
+  # at directly. niri spawns `swaybg -i .../cyberpunk-fw13.png`, and that path
+  # is the contract between the compositor config and whatever drew the image —
+  # keeping it means the source can change without config.kdl knowing.
+  mkdir -p "$WP_DIR"
+  wp_ok=1
+  for f in cyberpunk-mbp.png cyberpunk-fw13.png cyberpunk-4k.png; do
+    cp -f "${WP_THEMED%/*}/$CP_THEME_SLUG-$f" "$WP_DIR/$f" 2>/dev/null || wp_ok=0
+  done
+  if [ "$wp_ok" -eq 1 ]; then
+    printf '%s\n' "$WP_WANT" > "$WP_STAMP"
+    chg "$WP_DIR ($CP_THEME_SLUG, themed)"
+  else
+    warn "themed wallpaper incomplete — run wallpaper/themed fetch"
+  fi
 else
   mkdir -p "$WP_DIR"
   if D="$D" python3 "$D/wallpaper/generate.py" "$WP_DIR" >/dev/null 2>&1; then
-    printf '%s\n' "$CP_THEME_SLUG" > "$WP_STAMP"
-    chg "$WP_DIR ($CP_THEME_SLUG)"
+    printf '%s\n' "$WP_WANT" > "$WP_STAMP"
+    chg "$WP_DIR ($CP_THEME_SLUG, generated)"
   else
     warn "generator failed — see wallpaper/generate.py"
   fi

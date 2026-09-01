@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+# Per-theme photographic wallpapers, as an alternative to the generated one.
+#
+#   wallpaper/themed fetch [slug]   fetch and crop for one theme (default: active)
+#   wallpaper/themed fetch --all    every theme, which is a large download
+#   wallpaper/themed list           the map, and what is cached
+#   wallpaper/themed path [slug]    print the cached fw13 file, or nothing
+#
+# generate.py draws a wallpaper from the palette, which is the right default: it
+# exists for every theme, it costs nothing, and it can never be the wrong
+# colour. What it cannot be is a photograph. This is the opt-in other half —
+# one picked image per theme, chosen against that theme's own palette.
+#
+# The pairs were scored in CIELAB on three axes: how close the image's overall
+# lightness sits to the theme's CP_BG, how close its coloured areas sit to that
+# theme's accent slots, and how FLAT it is. Flatness carries the most weight,
+# for the reason generate.py's own docstring gives — this sits behind tiled
+# windows and shows through gaps, so it has to read as atmosphere rather than a
+# poster competing with text. The eight picked average a contrast of 22 against
+# a pool average of 47.
+#
+# The images are NOT in this repo and never will be. They are other people's
+# work, this repo is public, and a dotfiles tree is the wrong place to
+# redistribute somebody's wallpaper. What is tracked is the map below; the
+# bytes land in ~/.local/share and are fetched on a machine you own.
+set -euo pipefail
+
+D="${D:-$HOME/.dotfiles}"
+WP_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/wallpapers"
+CACHE="$WP_DIR/themed"
+UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Firefox/141.0"
+
+# theme -> wallhaven id. Runners-up are in the comment so a swap is one edit.
+#                                                  (runner-up)
+MAP="
+deep-sea        1q22pg   # 2yrml9
+cyberpunk-neon  856v22   # 5g5yq3
+ice             k8d8xq   # 57owv7
+blade           3l6yv3   # m3rmry
+blood-dragon    qrjew7   # gj73dl
+terminal-green  gw926d   # p9jqp9
+amber-crt       kx1gjd   # exo5ow
+paper           lyd1jl   # jxo9lm
+"
+
+# Same three targets generate.py writes, so whichever source is used the files
+# swaybg and the macOS side look for are identical.
+TARGETS="3024x1964:cyberpunk-mbp.png 2256x1504:cyberpunk-fw13.png 3840x2160:cyberpunk-4k.png"
+
+die() { printf 'themed: %s\n' "$1" >&2; exit 1; }
+
+active() {
+  local l="$D/themes/active.sh"
+  if [ -L "$l" ] || [ -f "$l" ]; then
+    basename "$(readlink -f "$l")" .sh
+  else
+    echo "cyberpunk-neon"
+  fi
+}
+
+id_for() { printf '%s\n' "$MAP" | awk -v t="$1" '$1==t{print $2; exit}'; }
+
+# Wallhaven's full-resolution URL is not derivable from the id alone — the
+# extension varies — so it is read off the wallpaper's own page.
+full_url() {
+  curl -sSfL --max-time 25 -A "$UA" "https://wallhaven.cc/w/$1" 2>/dev/null \
+    | grep -oE 'https://w\.wallhaven\.cc/full/[a-z0-9]+/wallhaven-[a-z0-9]+\.(jpg|png)' \
+    | head -1
+}
+
+fetch_one() {
+  local slug="$1" id url tmp
+  id="$(id_for "$slug")"
+  [ -n "$id" ] || die "no wallpaper mapped for theme: $slug"
+
+  mkdir -p "$CACHE"
+  url="$(full_url "$id")" || url=""
+  [ -n "$url" ] || die "$slug: could not resolve the full image for $id"
+
+  tmp="$(mktemp --suffix=.img)"
+  curl -sSfL --max-time 180 -A "$UA" -o "$tmp" "$url" || { rm -f "$tmp"; die "$slug: download failed"; }
+
+  python3 - "$tmp" "$CACHE" "$slug" "$TARGETS" <<'PY'
+import sys, os
+from PIL import Image
+src, cache, slug, targets = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+Image.MAX_IMAGE_PIXELS = None          # these are deliberately enormous
+im = Image.open(src).convert("RGB")
+for spec in targets.split():
+    dim, name = spec.split(":")
+    tw, th = (int(v) for v in dim.split("x"))
+    # Centre-crop to the target aspect, then scale. Never stretch: an image
+    # squeezed to a different aspect is obvious on anything with a straight
+    # line in it, which is most of these.
+    ar, sar = tw / th, im.width / im.height
+    if sar > ar:
+        w = round(im.height * ar); box = ((im.width - w) // 2, 0, (im.width - w) // 2 + w, im.height)
+    else:
+        h = round(im.width / ar);  box = (0, (im.height - h) // 2, im.width, (im.height - h) // 2 + h)
+    im.crop(box).resize((tw, th), Image.LANCZOS).save(f"{cache}/{slug}-{name}", optimize=True)
+PY
+  rm -f "$tmp"
+  printf '  %-16s %s\n' "$slug" "$id"
+}
+
+cmd_fetch() {
+  local what="${1:-}"
+  if [ "$what" = "--all" ]; then
+    printf '%s\n' "$MAP" | awk 'NF{print $1}' | while read -r t; do fetch_one "$t"; done
+  else
+    fetch_one "${what:-$(active)}"
+  fi
+}
+
+cmd_list() {
+  local a; a="$(active)"
+  printf '%s\n' "$MAP" | awk 'NF{print $1, $2}' | while read -r t id; do
+    local mark=" " state="-"
+    # `if`, not `cond && assign`: under `set -e` that form is a statement whose
+    # exit status is the failed condition, and it has bitten this repo twice.
+    if [ "$t" = "$a" ]; then mark="*"; fi
+    if [ -f "$CACHE/$t-cyberpunk-fw13.png" ]; then state="cached"; fi
+    printf ' %s %-16s %-8s %s\n' "$mark" "$t" "$id" "$state"
+  done
+}
+
+# install.sh asks this: a path if there is one, silence if there is not. Silence
+# is how it decides to fall back to the generator.
+cmd_path() {
+  # Two statements, not one `local slug=... p="...$slug..."`: bash does not
+  # guarantee the first assignment is visible to the second's expansion, and
+  # under `set -u` the second one dies on an unbound variable.
+  local slug p
+  slug="${1:-$(active)}"
+  p="$CACHE/$slug-cyberpunk-fw13.png"
+  if [ -f "$p" ]; then printf '%s\n' "$p"; fi
+}
+
+case "${1:-list}" in
+  fetch) shift; cmd_fetch "${1:-}" ;;
+  list)  cmd_list ;;
+  path)  shift; cmd_path "${1:-}" ;;
+  *)     die "usage: themed [fetch [slug|--all]|list|path [slug]]" ;;
+esac
