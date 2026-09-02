@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# The wallpaper — what swaybg is showing, and how to change it.
+#
+#   wallpaper apply   start or restart swaybg on the chosen image  (at login)
+#   wallpaper menu    pick one                                     (a menu row)
+#   wallpaper check   doctor line: the daemon, and what it is showing
+#
+# niri used to spawn swaybg with a path written into config.kdl, which meant
+# the wallpaper was a compositor setting: changing it was an edit to a
+# generated file, and any change made at runtime was gone at the next login.
+# This is the indirection that fixes both — niri spawns THIS, and this reads a
+# one-line state file.
+#
+# The state file holds a bare filename, not a path, and that is deliberate. The
+# wallpapers directory is rebuilt by install.sh from the active palette; a
+# filename survives that, an absolute path into a directory that gets rewritten
+# does not necessarily.
+set -euo pipefail
+# shellcheck source=common/lib-path.sh
+. "$HOME/.dotfiles/common/lib-path.sh"
+
+WP_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/wallpapers"
+STATE="${XDG_STATE_HOME:-$HOME/.local/state}/cyberdeck/wallpaper"
+FALLBACK="cyberpunk-fw13.png"
+
+die() { printf 'wallpaper: %s\n' "$*" >&2; exit 2; }
+
+# Every image the directory actually holds, one per line, newest choice first
+# in the picker only because `chosen` is prepended there rather than sorted.
+available() {
+  find "$WP_DIR" -maxdepth 1 -type f \( -name '*.png' -o -name '*.jpg' -o -name '*.jpeg' \) \
+    -printf '%f\n' 2>/dev/null | sort
+}
+
+chosen() {
+  local want=""
+  [ -r "$STATE" ] && want="$(head -1 "$STATE" 2>/dev/null || true)"
+  # A state file naming an image that has since been deleted is not an error
+  # worth a black screen: fall through to the theme's own wallpaper.
+  if [ -n "$want" ] && [ -f "$WP_DIR/$want" ]; then printf '%s\n' "$want"; return 0; fi
+  if [ -f "$WP_DIR/$FALLBACK" ]; then printf '%s\n' "$FALLBACK"; return 0; fi
+  available | head -1
+}
+
+apply() {
+  local img
+  img="$(chosen)"
+  [ -n "$img" ] || die "no wallpapers in $WP_DIR"
+  command -v swaybg >/dev/null 2>&1 || die "swaybg is not installed"
+  # Start the new one BEFORE killing the old, so the desktop never flashes
+  # through to the compositor's clear colour between the two.
+  setsid swaybg -i "$WP_DIR/$img" -m fill >/dev/null 2>&1 &
+  local new=$!
+  sleep 0.4
+  pkill -x --older 1 -f "^swaybg " 2>/dev/null || true
+  kill -0 "$new" 2>/dev/null || die "swaybg did not start"
+}
+
+menu() {
+  local list cur choice
+  cur="$(chosen)"
+  list="$(available)"
+  [ -n "$list" ] || die "no wallpapers in $WP_DIR"
+  choice="$(printf '%s\n' "$list" \
+    | awk -v cur="$cur" '{ printf "%s %s\n", ($0 == cur ? "*" : " "), $0 }' \
+    | fuzzel --dmenu --prompt 'wallpaper  ' --lines 8 --width 44 2>/dev/null)" || return 0
+  [ -n "${choice:-}" ] || return 0
+  choice="${choice#? }"
+  mkdir -p "$(dirname "$STATE")"
+  printf '%s\n' "$choice" > "$STATE"
+  apply
+}
+
+check() {
+  local img
+  img="$(chosen)"
+  if ! pgrep -x swaybg >/dev/null 2>&1; then
+    printf 'swaybg not running — wallpaper is the compositor clear colour\n'; return 1
+  fi
+  printf '%s · %s available\n' "${img:-unknown}" "$(available | grep -c . || echo 0)"
+}
+
+case "${1:-apply}" in
+  apply) apply ;;
+  menu)  menu ;;
+  check) check ;;
+  *)     die "usage: wallpaper [apply|menu|check]" ;;
+esac

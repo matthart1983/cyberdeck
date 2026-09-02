@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // Cyberpunk rice — niri (Wayland tiling compositor)
 // ~/.dotfiles/linux/niri/config.kdl  ->  ~/.config/niri/config.kdl
-// Palette: see ~/.dotfiles/themes/. Rendered from themes/deep-sea.sh by `theme` — edit the .tmpl, not this.
+// Palette: see ~/.dotfiles/themes/. Rendered from themes/ice.sh by `theme` — edit the .tmpl, not this.
 //
 // This is the Linux stand-in for aerospace/aerospace.toml. Two deliberate
 // divergences from the macOS side, both forced by the platform:
@@ -64,8 +64,8 @@ layout {
     // colours JankyBorders draws on the macOS side.
     focus-ring {
         width 2
-        active-color "#5d86ff"
-        inactive-color "#3b3f9e"
+        active-color "#5ec8ff"
+        inactive-color "#4a6fa5"
     }
     border { off; }
 
@@ -75,11 +75,11 @@ layout {
         softness 24
         spread 2
         offset x=0 y=4
-        color "#5d86ff55"
+        color "#5ec8ff55"
     }
 
     insert-hint {
-        color "#7fd1d655"
+        color "#c9dcea55"
     }
 }
 
@@ -102,7 +102,13 @@ spawn-at-startup "waybar"
 // wrapper is what turns it from a fullscreen overlay into a panel under the
 // bar — see linux/bin/drawer for why those margins have to be computed.
 spawn-at-startup "sh" "-c" "~/.dotfiles/linux/bin/drawer --daemon"
-spawn-at-startup "sh" "-c" "swaybg -i ~/.local/share/wallpapers/cyberpunk-fw13.png -m fill"
+// linux/bin/wallpaper rather than swaybg directly, so which image is
+// showing stops being a compositor setting. It reads a one-line state
+// file, falls back to the theme's own wallpaper when that names
+// something deleted, and is what the desktop menu's Wallpaper row
+// writes to — so a change made at runtime is still there at the next
+// login, which editing a generated config.kdl could never manage.
+spawn-at-startup "sh" "-c" "~/.dotfiles/linux/bin/wallpaper apply"
 // niri ships no polkit authentication agent, so without this every action that
 // needs one — fprintd enrollment, fwupd, dnf5daemon — fails outright with
 // "Not Authorized" rather than prompting for a password.

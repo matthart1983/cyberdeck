@@ -102,7 +102,13 @@ spawn-at-startup "waybar"
 // wrapper is what turns it from a fullscreen overlay into a panel under the
 // bar — see linux/bin/drawer for why those margins have to be computed.
 spawn-at-startup "sh" "-c" "~/.dotfiles/linux/bin/drawer --daemon"
-spawn-at-startup "sh" "-c" "swaybg -i ~/.local/share/wallpapers/cyberpunk-fw13.png -m fill"
+// linux/bin/wallpaper rather than swaybg directly, so which image is
+// showing stops being a compositor setting. It reads a one-line state
+// file, falls back to the theme's own wallpaper when that names
+// something deleted, and is what the desktop menu's Wallpaper row
+// writes to — so a change made at runtime is still there at the next
+// login, which editing a generated config.kdl could never manage.
+spawn-at-startup "sh" "-c" "~/.dotfiles/linux/bin/wallpaper apply"
 // niri ships no polkit authentication agent, so without this every action that
 // needs one — fprintd enrollment, fwupd, dnf5daemon — fails outright with
 // "Not Authorized" rather than prompting for a password.
