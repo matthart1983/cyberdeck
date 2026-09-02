@@ -1,13 +1,13 @@
-# Rendered from themes/deep-sea.sh by `theme` — edit the .tmpl, not this.
+# Rendered from themes/ice.sh by `theme` — edit the .tmpl, not this.
 [theme]
 name = "cyberdeck"
 
 [colors]
-AlertInfo   = "#4fc9a0"
-AlertWarn   = "#d98c4a"
-AlertError  = "#e05a6b"
-Annotation  = "#4a7d86"
-Base        = "#7fd1d6"
-Guidance    = "#3b3f9e"
-Important   = "#5d86ff"
-Title       = "#5d86ff"
+AlertInfo   = "#7fd6b5"
+AlertWarn   = "#d9a066"
+AlertError  = "#ff5c72"
+Annotation  = "#6b8199"
+Base        = "#c9dcea"
+Guidance    = "#4a6fa5"
+Important   = "#5ec8ff"
+Title       = "#5ec8ff"

@@ -1,7 +1,7 @@
 /* ---------------------------------------------------------------------------
    Cyberpunk rice — nwg-drawer
    ~/.dotfiles/linux/nwg-drawer/drawer.css  ->  ~/.config/nwg-drawer/drawer.css
-   Rendered from themes/deep-sea.sh by `theme` — edit the .tmpl, not this.
+   Rendered from themes/ice.sh by `theme` — edit the .tmpl, not this.
 
    The browsable half of the launcher. fuzzel answers "run this thing I can
    name"; this answers "what is on this machine" — a grid with category
@@ -19,15 +19,15 @@
    picking colour up after an upgrade.
    --------------------------------------------------------------------------- */
 
-@define-color bg        #060b16;
-@define-color bg_alt    #0e1729;
-@define-color bg_sel    #142640;
-@define-color border    #1e3a5f;
-@define-color fg        #7fd1d6;
-@define-color fg_dim    #4a7d86;
-@define-color white     #e6f2f5;
-@define-color magenta   #5d86ff;
-@define-color purple    #3b3f9e;
+@define-color bg        #05080d;
+@define-color bg_alt    #0e141d;
+@define-color bg_sel    #142537;
+@define-color border    #1f3a55;
+@define-color fg        #c9dcea;
+@define-color fg_dim    #6b8199;
+@define-color white     #f2f7fb;
+@define-color magenta   #5ec8ff;
+@define-color purple    #4a6fa5;
 
 /* The panel is the bar's card, continued downward: same 8px radius, same 1px
    border, and a touch more opaque than the bar's 90% because a grid of icons
@@ -36,7 +36,7 @@
    The radius only clips to transparent corners because nwg-drawer gives the
    toplevel an RGBA visual — the same reason waybar can round its own window. */
 window {
-  background-color: rgba(6, 11, 22, 0.94);
+  background-color: rgba(5, 8, 13, 0.94);
   color: @white;
   border: 1px solid @border;
   border-radius: 8px;

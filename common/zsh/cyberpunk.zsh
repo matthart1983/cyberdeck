@@ -4,10 +4,10 @@
 # ---------------------------------------------------------------------------
 
 # --- Palette (rendered from the active theme) ------------------------------
-CP_BG="#060b16";      CP_BG_ALT="#0e1729";  CP_FG="#7fd1d6"
-CP_FG_DIM="#4a7d86";  CP_MAGENTA="#5d86ff"; CP_PURPLE="#3b3f9e"
-CP_BLUE="#1e3a5f";    CP_ORANGE="#d98c4a";  CP_RED="#e05a6b"
-CP_YELLOW="#d9c46a";  CP_GREEN="#4fc9a0";   CP_WHITE="#e6f2f5"
+CP_BG="#05080d";      CP_BG_ALT="#0e141d";  CP_FG="#c9dcea"
+CP_FG_DIM="#6b8199";  CP_MAGENTA="#5ec8ff"; CP_PURPLE="#4a6fa5"
+CP_BLUE="#1f3a55";    CP_ORANGE="#d9a066";  CP_RED="#ff5c72"
+CP_YELLOW="#e0d48a";  CP_GREEN="#7fd6b5";   CP_WHITE="#f2f7fb"
 
 # --- powerlevel10k: re-skin the existing "pure" config ---------------------
 # Colours only — segment layout stays exactly as it was configured.
@@ -94,7 +94,7 @@ fi
 # --- autosuggestions (dim cyan) -------------------------------------------
 # Sourced from wherever the platform's package manager put it: Homebrew keeps
 # these under /opt/homebrew, Fedora under /usr/share. First hit wins.
-ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#4a7d86"
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#6b8199"
 for _cp_p in \
   /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh \
   /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh

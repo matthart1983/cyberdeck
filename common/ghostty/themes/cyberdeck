@@ -1,26 +1,26 @@
-# Deep Sea — rendered from themes/deep-sea.sh. Do not edit.
-background = #060b16
-foreground = #7fd1d6
+# Ice — rendered from themes/ice.sh. Do not edit.
+background = #05080d
+foreground = #c9dcea
 
-cursor-color = #5d86ff
-cursor-text = #060b16
+cursor-color = #5ec8ff
+cursor-text = #05080d
 
-selection-background = #1e3a5f
-selection-foreground = #e6f2f5
+selection-background = #1f3a55
+selection-foreground = #f2f7fb
 
-palette = 0=#030710
-palette = 1=#e05a6b
-palette = 2=#4fc9a0
-palette = 3=#d9c46a
-palette = 4=#245c8f
-palette = 5=#5d86ff
-palette = 6=#7fd1d6
-palette = 7=#e6f2f5
-palette = 8=#1e333c
-palette = 9=#eb919d
-palette = 10=#8adcc1
-palette = 11=#e7d99c
-palette = 12=#4f95d4
-palette = 13=#94afff
-palette = 14=#aae1e5
+palette = 0=#020406
+palette = 1=#ff5c72
+palette = 2=#7fd6b5
+palette = 3=#e0d48a
+palette = 4=#2f5f8f
+palette = 5=#5ec8ff
+palette = 6=#c9dcea
+palette = 7=#f2f7fb
+palette = 8=#2c3239
+palette = 9=#ff93a2
+palette = 10=#aae5ce
+palette = 11=#ebe3b1
+palette = 12=#5f95cc
+palette = 13=#95dbff
+palette = 14=#dbe8f1
 palette = 15=#ffffff

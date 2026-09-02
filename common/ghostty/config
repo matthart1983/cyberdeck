@@ -1,6 +1,6 @@
 # Cyberpunk rice — Ghostty
 # Managed in ~/.dotfiles/common/ghostty/config, symlinked to ~/.config/ghostty/config
-# Rendered from themes/deep-sea.sh by `theme` — edit the .tmpl, not this.
+# Rendered from themes/ice.sh by `theme` — edit the .tmpl, not this.
 
 theme = cyberdeck
 
@@ -29,8 +29,8 @@ window-height = 52
 # them either way — BG_ALT is the bar's fill, so bar and titlebar read as the
 # same surface.
 window-theme = ghostty
-window-titlebar-background = #0e1729
-window-titlebar-foreground = #7fd1d6
+window-titlebar-background = #0e141d
+window-titlebar-foreground = #c9dcea
 
 # --- Cursor ----------------------------------------------------------------
 cursor-style = block
@@ -39,7 +39,7 @@ mouse-hide-while-typing = true
 
 # --- Splits: dim what isn't focused ---------------------------------------
 unfocused-split-opacity = 0.72
-unfocused-split-fill = #060b16
+unfocused-split-fill = #05080d
 
 # --- Behaviour -------------------------------------------------------------
 shell-integration = zsh
