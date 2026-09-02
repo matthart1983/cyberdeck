@@ -92,6 +92,59 @@ setw -g window-status-separator ""
 setw -g window-status-bell-style "fg=__CP_RED__,bg=__CP_BG__,bold"
 setw -g window-status-activity-style "fg=__CP_GREEN__,bg=__CP_BG__"
 
+# --- The right button ------------------------------------------------------
+# `mouse on` is why Ghostty's own context menu never appears inside tmux: with
+# mouse reporting enabled tmux consumes button 3 before the terminal sees it,
+# so right-clicking a pane did nothing at all. Ghostty 1.3's
+# right-click-action defaults to context-menu and is correct — it just never
+# gets the event.
+#
+# Turning the mouse off to get the menu back would be the wrong trade; this
+# gives tmux its own instead, on the same button, with the things a pane is
+# actually asked for. display-menu positions at the pointer with -x M -y M.
+#
+# Three menus, because a right-click means something different depending on
+# what is under it — tmux tells them apart itself, and the pane one is the
+# only one anybody hits by accident, so its destructive row sits last and
+# behind a confirm.
+bind-key -n MouseDown3Pane display-menu -T "#[align=centre]#{pane_index}  #{pane_current_command}" -x M -y M \
+  "Copy mode"            [ "copy-mode" \
+  "Paste"                ] "paste-buffer -p" \
+  "" \
+  "Split right"          h "split-window -h -c '#{pane_current_path}'" \
+  "Split down"           v "split-window -v -c '#{pane_current_path}'" \
+  "Zoom"                 z "resize-pane -Z" \
+  "" \
+  "New window"           c "new-window -c '#{pane_current_path}'" \
+  "Rename window"        , "command-prompt -I '#W' 'rename-window %%'" \
+  "" \
+  "Kill pane"            x "confirm-before -p 'kill pane #P? (y/n)' kill-pane"
+
+bind-key -n MouseDown3Status display-menu -T "#[align=centre]#{window_index}  #{window_name}" -x M -y M \
+  "Rename"               , "command-prompt -I '#W' 'rename-window %%'" \
+  "Move left"            < "swap-window -t:-1 \\; select-window -t:-1" \
+  "Move right"           > "swap-window -t:+1 \\; select-window -t:+1" \
+  "" \
+  "New window"           c "new-window" \
+  "" \
+  "Kill window"          X "confirm-before -p 'kill window #W? (y/n)' kill-window"
+
+bind-key -n MouseDown3StatusLeft display-menu -T "#[align=centre]#{session_name}" -x M -y M \
+  "Rename session"       $ "command-prompt -I '#S' 'rename-session %%'" \
+  "New session"          s "new-session" \
+  "Choose session"       w "choose-tree -Zs" \
+  "" \
+  "Detach"               d detach-client \
+  "" \
+  "Kill session"         X "confirm-before -p 'kill session #S? (y/n)' kill-session"
+
+# The menu takes the same palette as everything else, so a right-click inside
+# a terminal and a right-click on the bar above it look like one system.
+set -g menu-style "fg=__CP_FG__,bg=__CP_BG_ALT__"
+set -g menu-selected-style "fg=__CP_BG__,bg=__CP_MAGENTA__,bold"
+set -g menu-border-style "fg=__CP_PURPLE__"
+set -g menu-border-lines rounded
+
 # --- Clock mode ------------------------------------------------------------
 setw -g clock-mode-colour "__CP_MAGENTA__"
 setw -g clock-mode-style 24
