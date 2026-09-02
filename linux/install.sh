@@ -17,9 +17,28 @@ link "$D/common/ghostty/platform-linux.conf" "$HOME/.config/ghostty/platform.con
 link "$D/linux/niri/config.kdl"              "$HOME/.config/niri/config.kdl"
 link "$D/linux/waybar/config.jsonc"          "$HOME/.config/waybar/config.jsonc"
 link "$D/linux/waybar/style.css"             "$HOME/.config/waybar/style.css"
-link "$D/linux/waybar/power.xml"             "$HOME/.config/waybar/power.xml"
+# A directory, not fifteen lines. Every right-click menu is one XML file in
+# here, and a menu added tomorrow should not also need an installer edit —
+# waybar reads them by path out of config.jsonc, so the tree only has to be
+# reachable at the name that file uses.
+link "$D/linux/waybar/menus"                 "$HOME/.config/waybar/menus"
 link "$D/linux/waybar/scripts"               "$HOME/.config/waybar/scripts"
+
+# power.xml became menus/session.xml when the bar grew the rest of its menus.
+# The old symlink points at a file that is no longer there, and a dangling link
+# in ~/.config is the kind of thing that outlives the reason for it — so this
+# clears it, and only if it is still ours to clear.
+_old_menu="$HOME/.config/waybar/power.xml"
+if [ -L "$_old_menu" ] && [ ! -e "$_old_menu" ]; then
+  rm -f "$_old_menu" && chg "removed $_old_menu (now menus/session.xml)"
+fi
 link "$D/linux/nwg-drawer/drawer.css"        "$HOME/.config/nwg-drawer/drawer.css"
+# fuzzel is the rice's second most looked-at surface — every picker and every
+# right-click menu that is not a menu-file comes through it — and it had no
+# config at all until the menus landed, so it rendered in its stock light
+# theme on a dark desktop.
+link "$D/linux/fuzzel/fuzzel.ini"            "$HOME/.config/fuzzel/fuzzel.ini"
+
 # The session's PATH. niri runs under `systemd --user`, so this is what puts
 # ~/.cargo/bin and the rice's own bin dir in front of everything the compositor
 # spawns — read at login, which is why the doctor checks the running session

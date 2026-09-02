@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Cyberpunk rice — the power-profile menu, on custom/power-profile
+  ~/.dotfiles/linux/waybar/menus/profile.xml  ->  ~/.config/waybar/menus/profile.xml
+
+  Three named rows rather than the fuzzel picker the left button raises, and
+  the difference is worth the duplication: the profile list on this machine has
+  been the same three since the daemon was installed, and a static menu shows
+  all three at once where the picker shows a prompt you have to read first.
+
+  The picker stays on the left button anyway, because it is the one that reads
+  the list off the daemon and so is still right on a machine that reports four.
+-->
+<interface>
+  <object class="GtkMenu" id="menu">
+
+    <child>
+      <object class="GtkMenuItem" id="performance">
+        <property name="visible">True</property>
+        <property name="name">performance</property>
+        <property name="label">󰓅   Performance</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="balanced">
+        <property name="visible">True</property>
+        <property name="name">balanced</property>
+        <property name="label">󰾅   Balanced</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="saver">
+        <property name="visible">True</property>
+        <property name="name">saver</property>
+        <property name="label">󰾆   Power saver</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkSeparatorMenuItem" id="sep1">
+        <property name="visible">True</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="pick">
+        <property name="visible">True</property>
+        <property name="name">pick</property>
+        <property name="label">󰍉   Ask the daemon…</property>
+      </object>
+    </child>
+
+  </object>
+</interface>

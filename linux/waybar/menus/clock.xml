@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Cyberpunk rice — the clock menu, on clock
+  ~/.dotfiles/linux/waybar/menus/clock.xml  ->  ~/.config/waybar/menus/clock.xml
+
+  Copying the date is the whole reason this menu exists. It is the single most
+  common thing anyone does with a clock in a bar, it was not possible here at
+  all, and the shape it is wanted in — ISO for a filename, the long form for
+  prose — differs by the time you want it, so all three rows are spelled out
+  rather than guessed at.
+-->
+<interface>
+  <object class="GtkMenu" id="menu">
+
+    <child>
+      <object class="GtkMenuItem" id="iso">
+        <property name="visible">True</property>
+        <property name="name">iso</property>
+        <property name="label">󰃭   Copy the date and time</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="date">
+        <property name="visible">True</property>
+        <property name="name">date</property>
+        <property name="label">󰃰   Copy the date</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="time">
+        <property name="visible">True</property>
+        <property name="name">time</property>
+        <property name="label">󰥔   Copy the time</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkSeparatorMenuItem" id="sep1">
+        <property name="visible">True</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="cal">
+        <property name="visible">True</property>
+        <property name="name">cal</property>
+        <property name="label">󰸗   This month</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkSeparatorMenuItem" id="sep2">
+        <property name="visible">True</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="tz">
+        <property name="visible">True</property>
+        <property name="name">tz</property>
+        <property name="label">󰥔   Time zone…</property>
+      </object>
+    </child>
+
+  </object>
+</interface>

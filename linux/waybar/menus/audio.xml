@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Cyberpunk rice — the audio menu, on wireplumber
+  ~/.dotfiles/linux/waybar/menus/audio.xml  ->  ~/.config/waybar/menus/audio.xml
+
+  Right-click used to open soundwatch, which is the least of what a volume
+  item is asked for. The device rows are the reason this exists: plugging in
+  headphones and having the sound keep coming out of the speakers is a daily
+  annoyance with no surface anywhere on this machine to fix it, and wpctl can
+  in one line.
+
+  soundwatch keeps its place, at the bottom, where the other analysis tools
+  sit in their own menus.
+-->
+<interface>
+  <object class="GtkMenu" id="menu">
+
+    <child>
+      <object class="GtkMenuItem" id="mute">
+        <property name="visible">True</property>
+        <property name="name">mute</property>
+        <property name="label">󰝟   Mute or unmute</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkSeparatorMenuItem" id="sep1">
+        <property name="visible">True</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="output">
+        <property name="visible">True</property>
+        <property name="name">output</property>
+        <property name="label">󰓃   Output device…</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="input">
+        <property name="visible">True</property>
+        <property name="name">input</property>
+        <property name="label">󰍬   Input device…</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkSeparatorMenuItem" id="sep2">
+        <property name="visible">True</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="soundwatch">
+        <property name="visible">True</property>
+        <property name="name">soundwatch</property>
+        <property name="label">󰋋   Open soundwatch</property>
+      </object>
+    </child>
+
+  </object>
+</interface>

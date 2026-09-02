@@ -1,26 +1,26 @@
 /* ---------------------------------------------------------------------------
    Cyberpunk rice — Waybar stylesheet
    ~/.dotfiles/linux/waybar/style.css  ->  ~/.config/waybar/style.css
-   Rendered from themes/deep-sea.sh by `theme` — edit the .tmpl, not this.
+   Rendered from themes/ice.sh by `theme` — edit the .tmpl, not this.
 
    Mirrors sketchybar/colors.sh by hand. GTK CSS has @define-color, so unlike
    the macOS bar this one at least gets named colours instead of raw 0xAARRGGBB
    literals everywhere.
    --------------------------------------------------------------------------- */
 
-@define-color bg        #060b16;
-@define-color bg_alt    #0e1729;
-@define-color border    #1e3a5f;
-@define-color fg        #7fd1d6;
-@define-color fg_dim    #4a7d86;
-@define-color white     #e6f2f5;
-@define-color magenta   #5d86ff;
-@define-color purple    #3b3f9e;
-@define-color blue      #245c8f;
-@define-color orange    #d98c4a;
-@define-color red       #e05a6b;
-@define-color yellow    #d9c46a;
-@define-color green     #4fc9a0;
+@define-color bg        #05080d;
+@define-color bg_alt    #0e141d;
+@define-color border    #1f3a55;
+@define-color fg        #c9dcea;
+@define-color fg_dim    #6b8199;
+@define-color white     #f2f7fb;
+@define-color magenta   #5ec8ff;
+@define-color purple    #4a6fa5;
+@define-color blue      #2f5f8f;
+@define-color orange    #d9a066;
+@define-color red       #ff5c72;
+@define-color yellow    #e0d48a;
+@define-color green     #7fd6b5;
 
 * {
   font-family: "JetBrainsMono Nerd Font", monospace;
@@ -34,7 +34,7 @@
 }
 
 window#waybar {
-  /* ~90% opaque, matching BAR_BG=0xe6060b16 */
+  /* ~90% opaque, matching BAR_BG=0xe605080d */
   background: alpha(@bg, 0.9);
   border: 1px solid @border;
   border-radius: 8px;
@@ -167,6 +167,7 @@ window#waybar.empty #window { background: transparent; }
 #memory,
 #disk,
 #wireplumber,
+#backlight,
 #custom-display,
 #custom-power-profile,
 #battery,
@@ -185,6 +186,11 @@ window#waybar.empty #window { background: transparent; }
    the one thing it has to say at a glance is muted or not, and that is the
    rule below rather than a colour it wears all the time. */
 #wireplumber { color: @white; }
+/* Brightness sits with the hardware items too, and stays white for the same
+   reason volume does: the number says everything it has to say. Note it wears
+   no state class at all — waybar gives the backlight module none, so unlike
+   volume there is no muted-equivalent rule below. */
+#backlight { color: @white; }
 /* White while the panel is at its own resolution, yellow when it is not.
    Driving a 2880-wide panel at 1920 is the one setting in that menu that
    looks like a rendering fault from the desk, so the item says which it is. */
@@ -213,9 +219,13 @@ window#waybar.empty #window { background: transparent; }
 #disk        { color: @white; }
 #clock       { color: @magenta; font-weight: bold; }
 
-/* The volume slider. GTK exposes a GtkScale as four nodes and all four want
-   telling, or the parts you skip arrive wearing Adwaita: the box, the handle,
-   the unfilled trough and the filled highlight.
+/* The two sliders — volume and brightness. One rule with two selectors rather
+   than a copy each, because they are the same control twice and any drift
+   between them would read as a bug in whichever one you looked at second.
+
+   GTK exposes a GtkScale as four nodes and all four want telling, or the parts
+   you skip arrive wearing Adwaita: the box, the handle, the unfilled trough
+   and the filled highlight.
 
    The filled part is @magenta, which on most of these themes is not magenta.
    The slot is accent 1 — it is called magenta because it was, in the palette
@@ -223,13 +233,15 @@ window#waybar.empty #window { background: transparent; }
    it is #5d86ff, a cornflower blue that looks exactly like an unstyled GTK
    widget. Worth knowing before you go hunting for a stylesheet that is not
    being applied. */
-#pulseaudio-slider {
+#pulseaudio-slider,
+#backlight-slider {
   min-width: 84px;
   margin: 3px 6px 3px 4px;
   padding: 0;
 }
 
-#pulseaudio-slider trough {
+#pulseaudio-slider trough,
+#backlight-slider trough {
   min-height: 6px;
   min-width: 84px;
   border-radius: 3px;
@@ -237,7 +249,8 @@ window#waybar.empty #window { background: transparent; }
   border: 1px solid @border;
 }
 
-#pulseaudio-slider highlight {
+#pulseaudio-slider highlight,
+#backlight-slider highlight {
   min-height: 6px;
   border-radius: 3px;
   background-color: @magenta;
@@ -245,7 +258,8 @@ window#waybar.empty #window { background: transparent; }
 
 /* A visible handle, because the thing this item has to say before you touch it
    is "you can drag me". */
-#pulseaudio-slider slider {
+#pulseaudio-slider slider,
+#backlight-slider slider {
   min-width: 11px;
   min-height: 11px;
   border-radius: 6px;
@@ -254,7 +268,8 @@ window#waybar.empty #window { background: transparent; }
   box-shadow: none;
 }
 
-#pulseaudio-slider slider:hover {
+#pulseaudio-slider slider:hover,
+#backlight-slider slider:hover {
   background-color: @magenta;
 }
 
@@ -469,6 +484,63 @@ window#waybar.dock .app.absent {
   to { color: @red; background: @bg_alt; }
 }
 
+/* The desktop surface. Invisible, and still clickable — which took three
+   wrong answers to get right, so the reasoning is here in full.
+
+   The hit area IS the module. A bar's layer-shell window and the plain
+   GtkBoxes it packs (.modules-left/-center/-right) have no GdkWindow and
+   receive no pointer events; only a module, wrapped in its GtkEventBox, does.
+   So a surface the module does not cover is a surface that does not answer,
+   however big the surface is.
+
+   What did not work, and why:
+
+     padding: 3000px    padding sets the widget's minimum, so waybar asked for
+                        a 6008x6018 surface and said so ("Requested height:
+                        1280 is less than the minimum height: 6018 required by
+                        the modules"). A 145MB buffer for a transparent
+                        rectangle.
+
+     "expand": true     the honest-looking answer, and it does nothing here.
+                        waybar packs the three module boxes into the bar with
+                        expand=false, so a module expanding INSIDE .modules-left
+                        expands into a box that is itself only as wide as its
+                        contents. The module stayed the width of its one-space
+                        format — about 8px. A screenshot with the module
+                        painted red showed exactly that: a full-height strip
+                        down the left edge, and every right-click on the rest
+                        of the desktop landing on nothing.
+
+     min-width + min-height
+                        the height is what breaks this one. The status bar
+                        claims a 40px exclusive zone, so a non-exclusive
+                        surface has 1240px to live in; a module demanding 1280
+                        can never be configured and the desktop bar silently
+                        never appears at all.
+
+   min-width alone is the version that holds. Height needs no help — the module
+   already fills it, because GtkBox children fill the cross axis by default.
+   Width has no exclusive zone to collide with, so asking for the output's own
+   width is always satisfiable.
+
+   The number is this output's logical width and is the one thing here that
+   does not adapt: a layer-shell bar has no way to say "fill". rice-doctor
+   compares it against the real output and fails when a wider monitor would
+   leave a dead strip. */
+window#waybar.desktop { background: transparent; }
+window#waybar.desktop #custom-desktop {
+  /* The pointer cursor over the whole desktop is a known cost of this and has
+     no fix here: waybar gives any module with a click handler the pointer
+     cursor, and `cursor` is NOT a valid GTK3 CSS property — setting it is a
+     parse error, and waybar treats a CSS parse error as fatal and exits. It
+     was tried; the bar did not come back. */
+  min-width: 1920px;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  color: transparent;
+}
+
 tooltip {
   background: @bg_alt;
   border: 1px solid @purple;
@@ -476,9 +548,11 @@ tooltip {
 }
 tooltip label { color: @fg; padding: 4px; }
 
-/* The session menu. Waybar renders it as a plain GTK menu, which means it is
-   this sheet's to colour — same @bg_alt on @purple as the tooltip above, so
-   the bar's two popups read as one family. */
+/* The menus. Every bar item has one on its right button now, and waybar renders
+   all of them as plain GTK menus, which means they are this sheet's to colour —
+   same @bg_alt on @purple as the tooltip above, so every popup the bar can
+   raise reads as one family. Nothing below is per-menu: fifteen XML files in
+   linux/waybar/menus share these rules, and a sixteenth is styled by existing. */
 menu {
   background: @bg_alt;
   border: 1px solid @purple;
@@ -501,10 +575,31 @@ menu separator {
   min-height: 1px;
 }
 
-/* The three below the rule end a session, so they answer in red rather than
-   the magenta the safe two get. GtkBuilder gives each item its id as a widget
-   name, which is what these match; if a GTK build ever stops doing that they
-   simply fall back to the magenta above. */
+/* The rows that cannot be undone answer in red rather than the magenta the
+   rest get — the hover is the last thing you see before you commit, and it is
+   worth being a different colour from the row above it.
+   
+   These match on the widget NAME, and every item in linux/waybar/menus carries
+   an explicit <property name="name"> for it. That property is not decoration
+   and it is not the id: GTK3's GtkBuilder stores a buildable id in qdata and
+   does NOT call gtk_widget_set_name with it, so an item that only has an id
+   has no name at all, contributes no `#foo` to its CSS path, and every `#id`
+   selector written against it silently matches nothing. That is what these
+   three did before the bar grew the rest of its menus — the session menu's
+   bottom three have been hovering magenta like everything else. Setting the
+   property is the whole fix; `gtk_widget_path_to_string` on an item now ends
+   `menuitem(poweroff)` rather than `menuitem`.
+   
+   The names are deliberately shared between files, so `closeall` is red in
+   both the workspace menu and the dock one without either being named here.
+   
+   Two of these ask before they act as well — emptying the trash and closing a
+   whole workspace both raise a confirm — and the colour is not a substitute
+   for that. It is for the rest, which act on the click. */
+menu menuitem#close:hover,
+menu menuitem#closeall:hover,
+menu menuitem#forget:hover,
+menu menuitem#trash:hover,
 menu menuitem#suspend:hover,
 menu menuitem#reboot:hover,
 menu menuitem#poweroff:hover { color: @bg; background: @red; }

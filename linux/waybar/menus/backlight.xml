@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Cyberpunk rice — the brightness menu, on backlight
+  ~/.dotfiles/linux/waybar/menus/backlight.xml  ->  ~/.config/waybar/menus/backlight.xml
+
+  Presets rather than more ways to nudge. The slider beside this already does
+  every value there is, and the keys do 5% at a time; what neither does well is
+  get you to a KNOWN level in one action — full for looking at something, half
+  for the desk, dim for the couch and for the battery.
+
+  20% is the dim row and not the slider's 5% floor on purpose: the floor exists
+  so a drag cannot black the panel, and a menu row you pick deliberately should
+  land somewhere you can still read.
+
+  Blank repeats display.xml's row, and it belongs in both. It is the end of the
+  same scale this item runs — the row you want is the row under the pointer,
+  not the one in the menu next door.
+-->
+<interface>
+  <object class="GtkMenu" id="menu">
+
+    <child>
+      <object class="GtkMenuItem" id="full">
+        <property name="visible">True</property>
+        <property name="name">full</property>
+        <property name="label">󰃠   Full</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="half">
+        <property name="visible">True</property>
+        <property name="name">half</property>
+        <property name="label">󰃟   Half</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="dim">
+        <property name="visible">True</property>
+        <property name="name">dim</property>
+        <property name="label">󰃞   Dim</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkSeparatorMenuItem" id="sep1">
+        <property name="visible">True</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="blank">
+        <property name="visible">True</property>
+        <property name="name">blank</property>
+        <property name="label">󰤄   Blank the screens</property>
+      </object>
+    </child>
+
+  </object>
+</interface>

@@ -3,7 +3,9 @@
 #
 #   wifi probe    one waybar item, as JSON        (the bar, every 10s)
 #   wifi menu     pick a network                  (a click)
-#   wifi toggle   radio on/off                    (a right-click)
+#   wifi toggle   radio on/off                    (a menu row)
+#   wifi forget   delete the saved network        (a menu row)
+#   wifi editor   NetworkManager's own dialog     (a menu row)
 #   wifi check    doctor line: radio, link, signal
 #
 # The bar could already tell you a great deal about the network — gateway RTT,
@@ -247,6 +249,36 @@ toggle() {
 
 refresh() { pkill -RTMIN+$SIGNAL waybar 2>/dev/null || true; }
 
+# --- the right-click menu's two rows ----------------------------------------
+# Forgetting is deleting the saved connection profile, not disconnecting: the
+# reason to reach for it is a network that keeps being rejoined automatically
+# when you would rather it were not, and `nmcli device disconnect` leaves the
+# profile in place to do exactly that again at the next scan.
+#
+# Confirmed, and named in the prompt. This is the one destructive thing the
+# wifi item can do, the profile holds the password, and getting it back means
+# typing that password again.
+forget() {
+  local cur ssid
+  cur="$(current)"
+  [ -n "$cur" ] || { report "wifi" "Error: not connected to anything"; return 0; }
+  IFS="$US" read -r ssid _ _ <<<"$cur"
+  if pick_one "forget $(trim "$ssid" 20)?" "Delete the saved network"; then
+    nmcli connection delete id "$ssid" >/dev/null 2>&1 || report "$ssid" "Error: no saved profile"
+    refresh
+  fi
+}
+
+# NetworkManager's own editor, for the settings this bar deliberately does not
+# try to grow into — static addressing, 802.1X, per-connection DNS. The bar
+# answers "which network"; anything past that is a form, and there is already
+# a good one installed.
+editor() {
+  command -v nm-connection-editor >/dev/null 2>&1 \
+    || { report "connection editor" "Error: nm-connection-editor is not installed"; return 0; }
+  setsid nm-connection-editor >/dev/null 2>&1 &
+}
+
 # --- doctor ------------------------------------------------------------------
 # Reports the link and fails only on the state that is a fault rather than a
 # choice: hardware present, radio on, and nothing joined. Wi-Fi switched off on
@@ -266,6 +298,8 @@ case "${1:-probe}" in
   probe)  probe ;;
   menu)   menu ;;
   toggle) toggle ;;
+  forget) forget ;;
+  editor) editor ;;
   check)  check ;;
-  *)      die "usage: wifi [probe|menu|toggle|check]" ;;
+  *)      die "usage: wifi [probe|menu|toggle|forget|editor|check]" ;;
 esac

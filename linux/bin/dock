@@ -4,6 +4,11 @@
 #   dock icon  <slot>   the image the bar draws, and its tooltip  (the bar)
 #   dock probe <slot>   one waybar item, as JSON      (unused by the bar now)
 #   dock open  <slot>   focus it if it is up, else launch it   (a click)
+#   dock new   <slot>   another one, whatever is already up    (a menu row)
+#   dock close <slot>   every window it has, closed            (a menu row)
+#   dock cmd   <slot>   the command this slot resolved to      (a menu row)
+#   dock label <slot>   the slot's human name                  (the menu)
+#   dock count <slot>   how many windows it has open           (the menu)
 #   dock list           every slot and what it resolved to
 #   dock check          doctor lines: resolution, and drift against the bar
 #
@@ -56,7 +61,7 @@ SLOTS=(
   # flatpak install exports a wrapper of that name onto PATH, so `command -v`
   # finds it exactly like any other binary.
   'editor|󰅩|Editor|^[Cc]ode$ ^codium$ ^VSCodium$ ^com\.vscodium\.codium$ ^dev\.zed\.Zed$ ^jetbrains-|code;codium;com.vscodium.codium;zed;rustrover;ghostty -e nvim'
-  'browser|󰖟|Browser|^google-chrome$ ^brave-browser$ ^firefox$|google-chrome;brave-browser;firefox'
+  'browser|󰖟|Browser|^google-chrome$ ^brave-browser$ ^firefox$ ^org\.mozilla\.firefox$|google-chrome;brave-browser;firefox'
   'claude|󰚩|Claude|^claude$|claude-desktop;ghostty -e claude'
   'notes|󰎚|Notes|^obsidian$|obsidian'
   'chat|󰭹|Chat|^Slack$ ^discord$ ^[Ww]hats[Aa]pp|slack;discord;whatsapp-for-linux'
@@ -79,6 +84,16 @@ SLOTS=(
 # writes to. dock-icons/fetch fills that in for Claude Code, whose .desktop
 # file carries no Icon= key at all; drop a PNG in there to override any slot.
 ICON_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/cyberdeck/dock-icons"
+
+# Field separator between spec() and its callers, and deliberately NOT a tab —
+# the same trap, and the same fix, as linux/bin/wifi's picker. Tab is IFS
+# whitespace, so `read` folds a run of them into one delimiter and an EMPTY
+# field simply disappears. The `term` slot has no app-id, so `spec` hands back
+# "<empty>TABghostty"; read with IFS=tab skips the leading run and puts ghostty
+# in the app-id, leaving the command empty. The terminal icon then matched
+# every ghostty window on the machine and spawned nothing. US (0x1f) is not
+# whitespace, so an empty field stays an empty field.
+US=$'\x1f'
 
 die() { printf 'dock: %s\n' "$*" >&2; exit 2; }
 
@@ -244,9 +259,14 @@ probe() {
   fi
 }
 
-# --- open: focus what is up, else launch ------------------------------------
-open_slot() {
-  local line slot label appid cmds cmd id
+# --- what a slot actually is ------------------------------------------------
+# slot -> "app-id alternation<TAB>command", with the terminal-hosted rewrite
+# already applied. Four things need this now — open, new, close and cmd — and
+# the rewrite below is exactly the part that must not drift between them: a
+# `close` that computed the app-id differently from the `open` that spawned the
+# window would find nothing and report the slot as not running.
+spec() {
+  local line slot label appid cmds cmd
   slot="$1"
   line="$(row "$slot")" || die "no such slot: $slot"
   IFS='|' read -r _ _ label appid cmds <<<"$line"
@@ -278,9 +298,30 @@ open_slot() {
       cmd="ghostty --class=com.mitchellh.ghostty-$slot ${cmd#ghostty }"
       ;;
   esac
+  printf '%s%s%s\n' "${appid// /|}" "$US" "$cmd"
+}
+
+# Every window id this slot owns, in niri's creation order. Empty for a slot
+# with no app-id — the bare terminal — and for one that is not running.
+window_ids() {
+  [ -n "$1" ] || return 0
+  command -v niri >/dev/null 2>&1 && command -v jq >/dev/null 2>&1 || return 0
+  niri msg --json windows 2>/dev/null \
+    | jq -r --arg re "$1" '[.[] | select((.app_id // "") | test($re))] | sort_by(.id)[] | .id' \
+    2>/dev/null || true
+}
+
+# --- open: focus what is up, else launch ------------------------------------
+open_slot() {
+  local appid cmd id out
+  # Command substitution rather than `< <(spec ...)`: spec dies on an unknown
+  # slot or an uninstalled application, and a process substitution runs it in a
+  # subshell where that exit reaches nobody — the click would read as a no-op
+  # instead of an error.
+  out="$(spec "$1")" || exit $?
+  IFS="$US" read -r appid cmd <<<"$out"
 
   if [ -n "$appid" ] && command -v niri >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
-    appid="${appid// /|}"
     # Clicking a slot whose window already has focus moves to the NEXT window
     # matching it, so three browser windows cycle instead of the click being a
     # no-op. Ordered by id, which is niri's creation order — stable, unlike
@@ -301,6 +342,70 @@ open_slot() {
 
   # shellcheck disable=SC2086 # word splitting is the point: $cmd is a command
   setsid $cmd >/dev/null 2>&1 &
+}
+
+# --- the right-click menu's three rows --------------------------------------
+# A left click means "give me this application", which is focus-if-up and
+# launch-if-not and cycle-if-several — three behaviours folded into one gesture
+# because one gesture is all a dock icon has. These are the three that gesture
+# cannot separately mean.
+#
+# new: another one, whatever is already running. The bare terminal already
+# behaves this way on a left click, because it has no app-id to focus; this is
+# what makes a second browser window reachable without dropping to a launcher.
+new_slot() {
+  local appid cmd out
+  out="$(spec "$1")" || exit $?
+  IFS="$US" read -r appid cmd <<<"$out"
+  # shellcheck disable=SC2086 # word splitting is the point: $cmd is a command
+  setsid $cmd >/dev/null 2>&1 &
+}
+
+# close: every window of the slot, by id and in one pass. Ids are collected
+# before anything is closed — `close-window` with no id acts on whatever has
+# focus at that moment, and focus moves as windows go, so a loop that re-reads
+# the list closes an arbitrary number of the wrong things.
+#
+# Not confirmed, unlike the workspace-wide version in `ctx`. This closes one
+# application that you named by pointing at its icon, which is the same promise
+# as its own window button; the workspace one closes things you did not name.
+close_slot() {
+  local appid cmd out id n=0
+  out="$(spec "$1")" || exit $?
+  IFS="$US" read -r appid cmd <<<"$out"
+  [ -n "$appid" ] || die "$1: nothing to close — this slot has no app-id"
+  while IFS= read -r id; do
+    [ -n "$id" ] || continue
+    niri msg action close-window --id "$id" >/dev/null 2>&1 && n=$((n + 1)) || true
+  done < <(window_ids "$appid")
+  printf '%s\n' "$n"
+}
+
+# cmd: what this slot resolved to on this machine, which is the one thing the
+# icon cannot show. The menu row pipes it to the clipboard through `ctx`, so the
+# answer to "what does this button actually run" is one right-click and a paste.
+cmd_slot() {
+  local appid cmd out
+  out="$(spec "$1")" || exit $?
+  IFS="$US" read -r appid cmd <<<"$out"
+  printf '%s\n' "$cmd"
+}
+
+# What the fuzzel menu needs to name the thing and say what it will close.
+# Both read the same table and the same app-id rule as everything above, so the
+# menu's counts cannot disagree with what `close` will actually act on.
+label_slot() {
+  local line
+  line="$(row "$1")" || die "no such slot: $1"
+  IFS='|' read -r _ _ label _ _ <<<"$line"
+  printf '%s\n' "$label"
+}
+
+count_slot() {
+  local appid cmd out
+  out="$(spec "$1")" || exit $?
+  IFS="$US" read -r appid cmd <<<"$out"
+  window_ids "$appid" | grep -c . || true
 }
 
 # --- list / check -----------------------------------------------------------
@@ -351,8 +456,13 @@ case "${1:-list}" in
   icon)  [ $# -eq 2 ] || die "usage: dock icon <slot>";  icon "$2" ;;
   probe) [ $# -eq 2 ] || die "usage: dock probe <slot>"; probe "$2" ;;
   open)  [ $# -eq 2 ] || die "usage: dock open <slot>";  open_slot "$2" ;;
+  new)   [ $# -eq 2 ] || die "usage: dock new <slot>";   new_slot "$2" ;;
+  close) [ $# -eq 2 ] || die "usage: dock close <slot>"; close_slot "$2" ;;
+  cmd)   [ $# -eq 2 ] || die "usage: dock cmd <slot>";   cmd_slot "$2" ;;
+  label) [ $# -eq 2 ] || die "usage: dock label <slot>"; label_slot "$2" ;;
+  count) [ $# -eq 2 ] || die "usage: dock count <slot>"; count_slot "$2" ;;
   list)  list ;;
   check) check "${2:-}" ;;
   slots) printf '%s\n' "${SLOTS[@]%%|*}" ;;
-  *)     die "usage: dock [icon <slot>|probe <slot>|open <slot>|list|check|slots]" ;;
+  *)     die "usage: dock [icon|probe|open|new|close|cmd|label|count <slot>|list|check|slots]" ;;
 esac

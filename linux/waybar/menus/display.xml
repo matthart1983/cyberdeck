@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Cyberpunk rice — the display menu, on custom/display
+  ~/.dotfiles/linux/waybar/menus/display.xml  ->  ~/.config/waybar/menus/display.xml
+
+  The picker keeps the left button and the reset keeps its meaning, but the
+  reset is no longer a hidden right-click — it is a row you can read before you
+  commit to it, which matters for the one action on this bar whose effect you
+  cannot see until the screen has already changed.
+-->
+<interface>
+  <object class="GtkMenu" id="menu">
+
+    <child>
+      <object class="GtkMenuItem" id="pick">
+        <property name="visible">True</property>
+        <property name="name">pick</property>
+        <property name="label">󰍹   Scale or mode…</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="reset">
+        <property name="visible">True</property>
+        <property name="name">reset</property>
+        <property name="label">󰑓   Back to what config.kdl asks</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkSeparatorMenuItem" id="sep1">
+        <property name="visible">True</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="blank">
+        <property name="visible">True</property>
+        <property name="name">blank</property>
+        <property name="label">󰤄   Blank the screens</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="shot">
+        <property name="visible">True</property>
+        <property name="name">shot</property>
+        <property name="label">󰹑   Screenshot the screen</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkSeparatorMenuItem" id="sep2">
+        <property name="visible">True</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="copy">
+        <property name="visible">True</property>
+        <property name="name">copy</property>
+        <property name="label">󰅇   Copy the output list</property>
+      </object>
+    </child>
+
+  </object>
+</interface>

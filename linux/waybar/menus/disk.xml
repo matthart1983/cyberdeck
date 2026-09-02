@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Cyberpunk rice — the disk menu, on disk
+  ~/.dotfiles/linux/waybar/menus/disk.xml  ->  ~/.config/waybar/menus/disk.xml
+
+  The one item on the bar that had no click at all. It is also the one whose
+  number you can do least about from a terminal you have not opened yet, which
+  is why diskwatch leads: it is the tool that answers "what is taking the
+  space", and it is already installed for the HUD.
+-->
+<interface>
+  <object class="GtkMenu" id="menu">
+
+    <child>
+      <object class="GtkMenuItem" id="diskwatch">
+        <property name="visible">True</property>
+        <property name="name">diskwatch</property>
+        <property name="label">󰋊   Open diskwatch</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="files">
+        <property name="visible">True</property>
+        <property name="name">files</property>
+        <property name="label">󰉋   Open the file manager</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkSeparatorMenuItem" id="sep1">
+        <property name="visible">True</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="copy">
+        <property name="visible">True</property>
+        <property name="name">copy</property>
+        <property name="label">󰅇   Copy the free space</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="trash">
+        <property name="visible">True</property>
+        <property name="name">trash</property>
+        <property name="label">󰩹   Empty the trash</property>
+      </object>
+    </child>
+
+  </object>
+</interface>

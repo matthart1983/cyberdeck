@@ -39,6 +39,7 @@ SURFACES=(
   "linux/waybar/style.css.tmpl                  linux/waybar/style.css"
   "linux/niri/config.kdl.tmpl                   linux/niri/config.kdl"
   "linux/nwg-drawer/drawer.css.tmpl             linux/nwg-drawer/drawer.css"
+  "linux/fuzzel/fuzzel.ini.tmpl                 linux/fuzzel/fuzzel.ini"
   "macos/sketchybar/colors.sh.tmpl              macos/sketchybar/colors.sh"
   "macos/bin/borders.sh.tmpl                    macos/bin/borders.sh"
   "capture/theme.tape.tmpl                      capture/theme.tape"

@@ -18,8 +18,115 @@
 // plugins simply don't exist here. The two that DO still need scripts are the
 // netwatch-fed ones — link and net — because that data comes from netwatch's
 // Prometheus endpoint, not from the kernel. That was always the point.
+//
+// --- the right button -------------------------------------------------------
+// Every item on both bars has a menu on it. The session button had the only one
+// for a long time, and what that proved is that a bar item can hold more than
+// the one thing a click can mean: it says what it says, a click does the
+// obvious thing, and everything else it could do had nowhere to live but a
+// keybind you have to already know about.
+//
+// Three parts, and they are in three places on purpose:
+//
+//   the SHAPE      linux/waybar/menus/*.xml — rows, order, glyphs, separators.
+//                  Fifteen files, one shared by all twelve dock slots. No
+//                  behaviour in any of them.
+//   the ACTION     "menu-actions" below, beside the item it belongs to, so a
+//                  row and the command it runs cannot be edited apart.
+//   the REST       linux/bin/ctx, for the rows a single command cannot do —
+//                  a list built at click time, a value put on the clipboard,
+//                  or several things in order.
+//
+// Static list or live list is the split that decides which surface a row uses.
+// A menu-file is an XML document read once, so anything whose contents depend
+// on what is plugged in — networks in range, audio devices, an output's modes —
+// stays a fuzzel picker and always did. Everything else is a GTK row, which
+// costs nothing, appears under the pointer rather than in the middle of the
+// screen, and takes the bar's own stylesheet.
+//
+// Every module with a menu also names its own trigger as an EMPTY command —
+// "on-click-right": "" — and that line is load-bearing, not noise. waybar
+// connects a module's button handler only if the config already names one of
+// the on-click* events:
+//
+//   bool hasUserEvents = std::find_if(eventMap_.cbegin(), eventMap_.cend(),
+//       [&config](const auto& e) { return e.first.second != GDK_BUTTON_RELEASE
+//                                         && config[e.second].isString(); }) != ...;
+//   if (enable_click || hasUserEvents) { /* connect handleToggle */ }
+//
+// A bare "menu" key is not in that map. So a module whose only interaction is
+// its menu — disk, battery, clock, the window title — gets no handler at all
+// and the right button does nothing, while the menu-file still loads and every
+// id still matches. The empty string costs nothing at runtime either:
+// handleUserEvent clears an empty format before it would fork, so the trigger
+// arms the handler and spawns no process.
+//
+// Two more that also fail silently: waybar draws NOTHING for an action id that
+// matches no row and logs a missing menu-file at debug level, so `ctx check`
+// compares every id both ways — and now the triggers too — with rice-doctor
+// running it; and a GtkMenuItem needs an explicit name property as well as its
+// id or the stylesheet cannot reach it at all, which style.css explains.
 // ---------------------------------------------------------------------------
 [
+  // =========================================================================
+  // The desktop — a third surface out of the same waybar
+  //
+  // There is no desktop in Wayland. No root window, nothing under the windows
+  // that can be clicked, and niri draws none: the space between your windows
+  // is the compositor's clear colour with swaybg painting over it, and swaybg
+  // takes no input at all. So "right-click the desktop" has nowhere to land.
+  //
+  // This is that surface. Full output, layer "bottom" — above swaybg's
+  // "background" and below every window — transparent, exclusive false so it
+  // reserves not one pixel, and holding a single custom module.
+  //
+  // Why a custom module and not something cheaper: waybar builds menus in
+  // ALabel, and `custom` is an ALabel. That is the whole reason this can be a
+  // real GTK menu when the dock's icons cannot (see linux/bin/ctx).
+  //
+  // Height is the output's, and it has to be a number waybar can anchor to —
+  // there is no "fill". 1280 is this panel's logical height at scale 1.5; a
+  // taller output leaves a strip at the bottom that is not clickable, which is
+  // a cosmetic shortfall rather than a break, and `rice-doctor` says so.
+  //
+  // The module covers the surface through padding rather than any expand
+  // property, the same trick the dock's hover zone uses: padding is inside the
+  // widget, so its event box covers all of it. See #custom-desktop in the
+  // stylesheet.
+  {
+    "name": "desktop",
+    "layer": "bottom",
+    "position": "top",
+    "height": 1280,
+    "exclusive": false,
+    "passthrough": false,
+    "spacing": 0,
+    // Neither signal is this surface's. Both bars share the process, so both
+    // reach here; the dock's hide toggle must not take the desktop with it.
+    "on-sigusr1": "noop",
+
+    // modules-left, not centre: waybar packs the centre box at its natural
+    // size, so a module expanding inside it expands into nothing. The start
+    // box is the one that gets the leftover width.
+    "modules-left": ["custom/desktop"],
+    "modules-center": [],
+    "modules-right": [],
+
+    // fuzzel, not a menu-file, and NOT for the dock's reason. A custom module
+    // is an ALabel, so the menu builds fine — `waybar -l debug` finds
+    // desktop.xml exactly like every other one. It cannot stay on screen: a
+    // GTK menu grabs the keyboard when it pops, wlr-layer-shell only honours
+    // keyboard interactivity on Top and Overlay, and this surface has to be on
+    // Bottom to sit under your windows. The grab fails and the popup is gone
+    // in the frame it arrived. linux/bin/ctx has the long version.
+    "custom/desktop": {
+      "format": " ",
+      "tooltip": false,
+      "expand": true,
+      "on-click-right": "~/.dotfiles/linux/bin/ctx desktop menu"
+    }
+  },
+
   {
     "name": "top",
     // SIGUSR1 is the dock's, not this bar's. Both bars come out of one waybar,
@@ -38,7 +145,7 @@
 
     "modules-left":   ["custom/launcher", "custom/run", "niri/workspaces", "custom/sep", "niri/window"],
     "modules-center": [],
-    "modules-right":  ["custom/wifi", "custom/link", "custom/net", "cpu", "memory", "disk", "pulseaudio/slider", "wireplumber", "custom/display", "custom/power-profile", "battery", "clock", "custom/power"],
+    "modules-right":  ["custom/wifi", "custom/link", "custom/net", "cpu", "memory", "disk", "pulseaudio/slider", "wireplumber", "backlight/slider", "backlight", "custom/display", "custom/power-profile", "battery", "clock", "custom/power"],
 
     // --- Left: the launcher button ------------------------------------------
     // Opens nwg-drawer, not fuzzel: a button is for the times you are looking
@@ -52,7 +159,18 @@
       "format": "󰀻",
       "tooltip": true,
       "tooltip-format": "Browse applications  (Mod+A)",
-      "on-click": "~/.dotfiles/linux/bin/drawer"
+      "on-click": "~/.dotfiles/linux/bin/drawer",
+      "on-click-right": "",
+      "menu": "on-click-right",
+      "menu-file": "$HOME/.config/waybar/menus/deck.xml",
+      "menu-actions": {
+        "apps": "~/.dotfiles/linux/bin/drawer",
+        "run": "pkill fuzzel || fuzzel",
+        "dock": "pkill -USR1 waybar",
+        "reload": "pkill -USR2 waybar",
+        "doctor": "~/.dotfiles/linux/bin/ctx deck doctor",
+        "manual": "~/.dotfiles/linux/bin/ctx deck manual"
+      }
     },
 
     // --- Left: the run button ------------------------------------------------
@@ -81,7 +199,11 @@
         "notes": "󰎚",
         "infra": "󰒋"
       },
-      "on-click": "activate"
+      "on-click": "activate",
+      // fuzzel, not a menu-file, and not by choice — see linux/bin/ctx.
+      // niri/workspaces derives from AModule, and waybar builds menus in
+      // ALabel, so a "menu" key here is read by nothing.
+      "on-click-right": "~/.dotfiles/linux/bin/ctx ws menu"
     },
 
     "custom/sep": {
@@ -92,7 +214,22 @@
     "niri/window": {
       "format": "  {}",
       "max-length": 48,
-      "separate-outputs": true
+      "separate-outputs": true,
+      "on-click-right": "",
+      "menu": "on-click-right",
+      "menu-file": "$HOME/.config/waybar/menus/window.xml",
+      "menu-actions": {
+        "fullscreen": "niri msg action fullscreen-window",
+        "maximize": "niri msg action maximize-column",
+        "float": "niri msg action toggle-window-floating",
+        "tabbed": "niri msg action toggle-column-tabbed-display",
+        "center": "niri msg action center-column",
+        "movews": "~/.dotfiles/linux/bin/ctx win move",
+        "movemon": "niri msg action move-window-to-monitor-next",
+        "shot": "niri msg action screenshot-window",
+        "copy": "~/.dotfiles/linux/bin/ctx win copy",
+        "close": "niri msg action close-window"
+      }
     },
 
     // --- Right: the network you are on --------------------------------------
@@ -121,7 +258,17 @@
       "interval": 10,
       "signal": 10,
       "on-click": "~/.dotfiles/linux/bin/wifi menu",
-      "on-click-right": "~/.dotfiles/linux/bin/wifi toggle"
+      "on-click-right": "",
+      "menu": "on-click-right",
+      "menu-file": "$HOME/.config/waybar/menus/wifi.xml",
+      "menu-actions": {
+        "pick": "~/.dotfiles/linux/bin/wifi menu",
+        "toggle": "~/.dotfiles/linux/bin/wifi toggle",
+        "forget": "~/.dotfiles/linux/bin/wifi forget",
+        "editor": "~/.dotfiles/linux/bin/wifi editor",
+        "address": "~/.dotfiles/linux/bin/ctx net address",
+        "netwatch": "ghostty --class=com.mitchellh.ghostty-netwatch --font-size=11 -e netwatch"
+      }
     },
 
     // --- The two netwatch-fed items -----------------------------------------
@@ -150,14 +297,34 @@
       "exec": "~/.config/waybar/scripts/link.sh",
       "return-type": "json",
       "interval": 5,
-      "on-click": "ghostty --class=com.mitchellh.ghostty-netwatch --font-size=11 -e netwatch"
+      "on-click": "ghostty --class=com.mitchellh.ghostty-netwatch --font-size=11 -e netwatch",
+      "on-click-right": "",
+      "menu": "on-click-right",
+      "menu-file": "$HOME/.config/waybar/menus/net.xml",
+      "menu-actions": {
+        "netwatch": "ghostty --class=com.mitchellh.ghostty-netwatch --font-size=11 -e netwatch",
+        "address": "~/.dotfiles/linux/bin/ctx net address",
+        "public": "~/.dotfiles/linux/bin/ctx net public",
+        "addrs": "~/.dotfiles/linux/bin/ctx net addrs",
+        "reconnect": "~/.dotfiles/linux/bin/ctx net reconnect"
+      }
     },
 
     "custom/net": {
       "exec": "~/.config/waybar/scripts/net.sh",
       "return-type": "json",
       "interval": 2,
-      "on-click": "ghostty --class=com.mitchellh.ghostty-netwatch --font-size=11 -e netwatch"
+      "on-click": "ghostty --class=com.mitchellh.ghostty-netwatch --font-size=11 -e netwatch",
+      "on-click-right": "",
+      "menu": "on-click-right",
+      "menu-file": "$HOME/.config/waybar/menus/net.xml",
+      "menu-actions": {
+        "netwatch": "ghostty --class=com.mitchellh.ghostty-netwatch --font-size=11 -e netwatch",
+        "address": "~/.dotfiles/linux/bin/ctx net address",
+        "public": "~/.dotfiles/linux/bin/ctx net public",
+        "addrs": "~/.dotfiles/linux/bin/ctx net addrs",
+        "reconnect": "~/.dotfiles/linux/bin/ctx net reconnect"
+      }
     },
 
     // --- Kernel-fed items ----------------------------------------------------
@@ -165,7 +332,16 @@
       "format": "󰻠 {usage}%",
       "interval": 3,
       "states": { "warning": 70, "critical": 90 },
-      "on-click": "ghostty -e btop"
+      "on-click": "ghostty -e btop",
+      "on-click-right": "",
+      "menu": "on-click-right",
+      "menu-file": "$HOME/.config/waybar/menus/cpu.xml",
+      "menu-actions": {
+        "btop": "ghostty -e btop",
+        "hud": "~/.dotfiles/linux/bin/dock open hud",
+        "top": "~/.dotfiles/linux/bin/ctx cpu top",
+        "load": "~/.dotfiles/linux/bin/ctx cpu load"
+      }
     },
 
     "memory": {
@@ -173,7 +349,16 @@
       "interval": 5,
       "states": { "warning": 80, "critical": 92 },
       "tooltip-format": "{used:0.1f}G / {total:0.1f}G",
-      "on-click": "ghostty -e btop"
+      "on-click": "ghostty -e btop",
+      "on-click-right": "",
+      "menu": "on-click-right",
+      "menu-file": "$HOME/.config/waybar/menus/memory.xml",
+      "menu-actions": {
+        "btop": "ghostty -e btop",
+        "hud": "~/.dotfiles/linux/bin/dock open hud",
+        "top": "~/.dotfiles/linux/bin/ctx mem top",
+        "copy": "~/.dotfiles/linux/bin/ctx mem usage"
+      }
     },
 
     "disk": {
@@ -181,7 +366,16 @@
       "path": "/",
       "format": "󰋊 {percentage_used}% · {free} free",
       "interval": 300,
-      "states": { "warning": 85, "critical": 93 }
+      "states": { "warning": 85, "critical": 93 },
+      "on-click-right": "",
+      "menu": "on-click-right",
+      "menu-file": "$HOME/.config/waybar/menus/disk.xml",
+      "menu-actions": {
+        "diskwatch": "ghostty --class=com.mitchellh.ghostty-disk --font-size=11 -e diskwatch",
+        "files": "~/.dotfiles/linux/bin/dock open files",
+        "copy": "~/.dotfiles/linux/bin/ctx disk free",
+        "trash": "~/.dotfiles/linux/bin/ctx disk trash"
+      }
     },
 
     // --- Right: volume, as a thing you can actually drag ---------------------
@@ -221,7 +415,7 @@
       "format": "{icon} {volume}%",
       "format-muted": "󰝟 muted",
       "format-icons": ["󰕿", "󰖀", "󰕾"],
-      "tooltip-format": "{node_name}  ·  {volume}%\ndrag the slider to set · click to mute · right-click for soundwatch",
+      "tooltip-format": "{node_name}  ·  {volume}%\ndrag the slider to set · click to mute · right-click for devices",
       // Kept for a mouse, and a threshold so that if one ever is plugged in it
       // steps once per notch. Not the control this item relies on: see the
       // slider above for why.
@@ -229,7 +423,74 @@
       "on-scroll-up": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+ --limit 1.0",
       "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-",
       "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
-      "on-click-right": "ghostty -e soundwatch"
+      "on-click-right": "",
+      "menu": "on-click-right",
+      "menu-file": "$HOME/.config/waybar/menus/audio.xml",
+      "menu-actions": {
+        "mute": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+        "output": "~/.dotfiles/linux/bin/ctx audio output",
+        "input": "~/.dotfiles/linux/bin/ctx audio input",
+        "soundwatch": "ghostty -e soundwatch"
+      }
+    },
+
+    // --- Right: brightness, as a thing you can actually drag -----------------
+    // The same pair as volume, for the same reason, and it is the pair that
+    // matters most on this machine: the panel at full is two to four watts on a
+    // 72Wh battery, which is the largest single number on the bar that a drag
+    // can change. XF86MonBrightnessUp/Down in config.kdl step it by 5%, and
+    // stepping from 100 to 40 is twelve presses of a key you have to look down
+    // to find. This is one gesture.
+    //
+    // No `device`. The battery module names BAT1 explicitly because a laptop
+    // can have two; there is exactly one backlight here (amdgpu_bl1), and
+    // naming it buys nothing while costing a silent blank item the day a kernel
+    // renumbers it to bl0 — which amdgpu has done before.
+    //
+    // No interval either. Unlike custom/display, this one is pushed: waybar's
+    // backlight module holds a udev monitor on the class, so the brightness
+    // keys and this slider move each other with no polling on either side.
+    "backlight/slider": {
+      // Not 0. A slider that can reach the bottom is a slider that can put the
+      // panel fully black, and the way back is a control you can no longer see.
+      // 5% is dim enough to be worth having and bright enough to undo.
+      "min": 5,
+      "max": 100,
+      "orientation": "horizontal"
+    },
+
+    // --- Right: brightness ---------------------------------------------------
+    // The readout beside the slider, and the menu's host — a slider derives
+    // from AModule rather than ALabel, so it can hold no menu whatever the
+    // config says, and `ctx check` knows that rule and enforces it.
+    //
+    // The scroll handlers are spelled out for the reason the wireplumber ones
+    // are: waybar's built-in steps by its own `scroll-step`, config.kdl's
+    // XF86MonBrightness keys step by 5% through brightnessctl, and two
+    // implementations of one rule drift the first time either is edited. The
+    // bar runs the identical brightnessctl the keyboard runs.
+    //
+    // brightnessctl and not a sysfs write: /sys/class/backlight/*/brightness is
+    // root-owned and there is no udev rule granting the video group here, so
+    // the write goes through logind's SetBrightness over D-Bus. brightnessctl
+    // links libsystemd and does exactly that, which is why this needs no
+    // permissions work to function.
+    "backlight": {
+      "format": "{icon} {percent}%",
+      "format-icons": ["󰃞", "󰃟", "󰃠"],
+      "tooltip-format": "Backlight · {percent}%\ndrag the slider to set · right-click for presets",
+      "smooth-scrolling-threshold": 1,
+      "on-scroll-up": "brightnessctl set 5%+",
+      "on-scroll-down": "brightnessctl set 5%-",
+      "on-click-right": "",
+      "menu": "on-click-right",
+      "menu-file": "$HOME/.config/waybar/menus/backlight.xml",
+      "menu-actions": {
+        "full": "brightnessctl set 100%",
+        "half": "brightnessctl set 50%",
+        "dim": "brightnessctl set 20%",
+        "blank": "niri msg action power-off-monitors"
+      }
     },
 
     // --- Right: the display --------------------------------------------------
@@ -254,7 +515,16 @@
       "interval": 5,
       "signal": 8,
       "on-click": "~/.dotfiles/linux/bin/display menu",
-      "on-click-right": "~/.dotfiles/linux/bin/display reset"
+      "on-click-right": "",
+      "menu": "on-click-right",
+      "menu-file": "$HOME/.config/waybar/menus/display.xml",
+      "menu-actions": {
+        "pick": "~/.dotfiles/linux/bin/display menu",
+        "reset": "~/.dotfiles/linux/bin/display reset",
+        "blank": "niri msg action power-off-monitors",
+        "shot": "niri msg action screenshot-screen",
+        "copy": "~/.dotfiles/linux/bin/ctx display outputs"
+      }
     },
 
     // --- Right: the power profile -------------------------------------------
@@ -285,7 +555,15 @@
       "interval": 30,
       "signal": 9,
       "on-click": "~/.dotfiles/linux/bin/power menu",
-      "on-click-right": "~/.dotfiles/linux/bin/power reset"
+      "on-click-right": "",
+      "menu": "on-click-right",
+      "menu-file": "$HOME/.config/waybar/menus/profile.xml",
+      "menu-actions": {
+        "performance": "~/.dotfiles/linux/bin/power set performance",
+        "balanced": "~/.dotfiles/linux/bin/power set balanced",
+        "saver": "~/.dotfiles/linux/bin/power set power-saver",
+        "pick": "~/.dotfiles/linux/bin/power menu"
+      }
     },
 
     "battery": {
@@ -297,14 +575,33 @@
       "format-charging": "󰂄 {capacity}%",
       "format-plugged": "󰚥 {capacity}%",
       "format-icons": ["󰁺", "󰁽", "󰂀", "󰂂", "󰁹"],
-      "tooltip-format": "{timeTo} · {power:0.1f}W"
+      "tooltip-format": "{timeTo} · {power:0.1f}W",
+      "on-click-right": "",
+      "menu": "on-click-right",
+      "menu-file": "$HOME/.config/waybar/menus/battery.xml",
+      "menu-actions": {
+        "saver": "~/.dotfiles/linux/bin/power set power-saver",
+        "balanced": "~/.dotfiles/linux/bin/power set balanced",
+        "copy": "~/.dotfiles/linux/bin/ctx battery detail",
+        "suspend": "systemctl suspend"
+      }
     },
 
     "clock": {
       "interval": 10,
       "format": "󰥔 {:%H:%M}",
       "format-alt": "󰃭 {:%a %d %b}",
-      "tooltip-format": "<tt><small>{calendar}</small></tt>"
+      "tooltip-format": "<tt><small>{calendar}</small></tt>",
+      "on-click-right": "",
+      "menu": "on-click-right",
+      "menu-file": "$HOME/.config/waybar/menus/clock.xml",
+      "menu-actions": {
+        "iso": "~/.dotfiles/linux/bin/ctx clock iso",
+        "date": "~/.dotfiles/linux/bin/ctx clock date",
+        "time": "~/.dotfiles/linux/bin/ctx clock time",
+        "cal": "~/.dotfiles/linux/bin/ctx clock month",
+        "tz": "~/.dotfiles/linux/bin/ctx clock zone"
+      }
     },
 
     // --- Right: the session menu ---------------------------------------------
@@ -320,8 +617,9 @@
       "format": "󰐥",
       "tooltip": true,
       "tooltip-format": "Session",
+      "on-click": "",
       "menu": "on-click",
-      "menu-file": "$HOME/.config/waybar/power.xml",
+      "menu-file": "$HOME/.config/waybar/menus/session.xml",
       "menu-actions": {
         "lock": "swaylock -f",
         "logout": "niri msg action quit",
@@ -451,42 +749,49 @@
     "image#dock-term": {
       "exec": "~/.dotfiles/linux/bin/dock icon term",
       "on-click": "~/.dotfiles/linux/bin/dock open term",
+      "on-click-right": "~/.dotfiles/linux/bin/ctx dock menu term",
       "size": 34, "signal": 7
     },
 
     "image#dock-editor": {
       "exec": "~/.dotfiles/linux/bin/dock icon editor",
       "on-click": "~/.dotfiles/linux/bin/dock open editor",
+      "on-click-right": "~/.dotfiles/linux/bin/ctx dock menu editor",
       "size": 34, "signal": 7
     },
 
     "image#dock-browser": {
       "exec": "~/.dotfiles/linux/bin/dock icon browser",
       "on-click": "~/.dotfiles/linux/bin/dock open browser",
+      "on-click-right": "~/.dotfiles/linux/bin/ctx dock menu browser",
       "size": 34, "signal": 7
     },
 
     "image#dock-claude": {
       "exec": "~/.dotfiles/linux/bin/dock icon claude",
       "on-click": "~/.dotfiles/linux/bin/dock open claude",
+      "on-click-right": "~/.dotfiles/linux/bin/ctx dock menu claude",
       "size": 34, "signal": 7
     },
 
     "image#dock-notes": {
       "exec": "~/.dotfiles/linux/bin/dock icon notes",
       "on-click": "~/.dotfiles/linux/bin/dock open notes",
+      "on-click-right": "~/.dotfiles/linux/bin/ctx dock menu notes",
       "size": 34, "signal": 7
     },
 
     "image#dock-chat": {
       "exec": "~/.dotfiles/linux/bin/dock icon chat",
       "on-click": "~/.dotfiles/linux/bin/dock open chat",
+      "on-click-right": "~/.dotfiles/linux/bin/ctx dock menu chat",
       "size": 34, "signal": 7
     },
 
     "image#dock-files": {
       "exec": "~/.dotfiles/linux/bin/dock icon files",
       "on-click": "~/.dotfiles/linux/bin/dock open files",
+      "on-click-right": "~/.dotfiles/linux/bin/ctx dock menu files",
       "size": 34, "signal": 7
     },
 
@@ -499,18 +804,21 @@
     "image#dock-hud": {
       "exec": "~/.dotfiles/linux/bin/dock icon hud",
       "on-click": "~/.dotfiles/linux/bin/dock open hud",
+      "on-click-right": "~/.dotfiles/linux/bin/ctx dock menu hud",
       "size": 34, "signal": 7
     },
 
     "image#dock-git": {
       "exec": "~/.dotfiles/linux/bin/dock icon git",
       "on-click": "~/.dotfiles/linux/bin/dock open git",
+      "on-click-right": "~/.dotfiles/linux/bin/ctx dock menu git",
       "size": 34, "signal": 7
     },
 
     "image#dock-containers": {
       "exec": "~/.dotfiles/linux/bin/dock icon containers",
       "on-click": "~/.dotfiles/linux/bin/dock open containers",
+      "on-click-right": "~/.dotfiles/linux/bin/ctx dock menu containers",
       "size": 34, "signal": 7
     },
 
@@ -520,12 +828,14 @@
     "image#dock-k8s": {
       "exec": "~/.dotfiles/linux/bin/dock icon k8s",
       "on-click": "~/.dotfiles/linux/bin/dock open k8s",
+      "on-click-right": "~/.dotfiles/linux/bin/ctx dock menu k8s",
       "size": 34, "signal": 7
     },
 
     "image#dock-net": {
       "exec": "~/.dotfiles/linux/bin/dock icon net",
       "on-click": "~/.dotfiles/linux/bin/dock open net",
+      "on-click-right": "~/.dotfiles/linux/bin/ctx dock menu net",
       "size": 34, "signal": 7
     }
   }

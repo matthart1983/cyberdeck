@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Cyberpunk rice — the Wi-Fi menu, on custom/wifi
+  ~/.dotfiles/linux/waybar/menus/wifi.xml  ->  ~/.config/waybar/menus/wifi.xml
+
+  The picker stays on the left button, because joining a network is what this
+  item is for and a menu in front of it would be a click in the way. What moves
+  here is everything the item could not previously say: the radio switch that
+  used to BE the right-click, forgetting a network you no longer want to
+  rejoin, and the editor for the settings this bar deliberately does not try
+  to expose.
+-->
+<interface>
+  <object class="GtkMenu" id="menu">
+
+    <child>
+      <object class="GtkMenuItem" id="pick">
+        <property name="visible">True</property>
+        <property name="name">pick</property>
+        <property name="label">󰤨   Pick a network…</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="toggle">
+        <property name="visible">True</property>
+        <property name="name">toggle</property>
+        <property name="label">󰖩   Turn the radio on or off</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkSeparatorMenuItem" id="sep1">
+        <property name="visible">True</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="forget">
+        <property name="visible">True</property>
+        <property name="name">forget</property>
+        <property name="label">󰅙   Forget this network</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="editor">
+        <property name="visible">True</property>
+        <property name="name">editor</property>
+        <property name="label">󰒓   Connection editor</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkSeparatorMenuItem" id="sep2">
+        <property name="visible">True</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="address">
+        <property name="visible">True</property>
+        <property name="name">address</property>
+        <property name="label">󰩠   Copy this machine’s address</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="netwatch">
+        <property name="visible">True</property>
+        <property name="name">netwatch</property>
+        <property name="label">󰌘   Open netwatch</property>
+      </object>
+    </child>
+
+  </object>
+</interface>

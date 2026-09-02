@@ -811,8 +811,51 @@
           <div class="row"><div class="kseq"><kbd class="accent">net</kbd></div><div class="act">Throughput up and down <em>from netwatch, not /proc/net/dev</em></div></div>
           <div class="row"><div class="kseq"><kbd class="accent">link</kbd></div><div class="act">Gateway RTT, DNS RTT, loss ratio, live connection count <em>click to open netwatch</em></div></div>
           <div class="row"><div class="kseq"><kbd>pulseaudio/slider</kbd></div><div class="act">Volume, as a bar you drag <em>or click a position on it to jump there</em></div></div>
-          <div class="row"><div class="kseq"><kbd>wireplumber</kbd></div><div class="act">The level and the mute state beside it <em>click to mute · right-click opens soundwatch</em></div></div>
+          <div class="row"><div class="kseq"><kbd>wireplumber</kbd></div><div class="act">The level and the mute state beside it <em>click to mute · right-click picks the output or input device</em></div></div>
           <div class="row"><div class="kseq"><kbd>battery · clock</kbd></div><div class="act">BAT1 with time-to-empty and draw in watts, then the clock</div></div>
+        </div>
+
+        <h2>The right button</h2>
+        <p><strong>Everything you can point at has a menu on its right button</strong> — every bar item, every dock icon, the workspace strip, the focused window, the empty desktop, and a pane inside tmux. The session button had the only one for a long time, and what that proved is that a thing on screen can carry more than the one meaning a click has: it says what it says, a click does the obvious thing, and everything else it could do had nowhere to live but a keybind you have to already know.</p>
+        <div class="keys">
+          <div class="row"><div class="kseq"><kbd>󰀻 launcher</kbd></div><div class="act">Browse apps, run a program · show or hide the dock, reload the bar · the doctor, the field manual</div></div>
+          <div class="row"><div class="kseq"><kbd>niri/workspaces</kbd></div><div class="act">Previous workspace · move it up, down, or to the next monitor · close every window here <em>asks first</em></div></div>
+          <div class="row"><div class="kseq"><kbd>niri/window</kbd></div><div class="act">Fullscreen, maximise, float, tab, centre · move to a workspace or the next monitor · screenshot it, copy the title · close</div></div>
+          <div class="row"><div class="kseq"><kbd>󰤨 wifi</kbd></div><div class="act">Pick a network · radio on or off · forget this one · NetworkManager's editor · copy this machine's address</div></div>
+          <div class="row"><div class="kseq"><kbd>link · net</kbd></div><div class="act">netwatch · copy the local or public address · show every address · reconnect</div></div>
+          <div class="row"><div class="kseq"><kbd>cpu · memory</kbd></div><div class="act">btop, the HUD · the busiest or biggest processes, choosing one copies its PID · copy the load or the usage</div></div>
+          <div class="row"><div class="kseq"><kbd>disk</kbd></div><div class="act">diskwatch, the file manager · copy the free space · empty the trash <em>asks first</em></div></div>
+          <div class="row"><div class="kseq"><kbd>wireplumber</kbd></div><div class="act">Mute · <strong>which speakers, which microphone</strong> · soundwatch</div></div>
+          <div class="row"><div class="kseq"><kbd>󰍹 display</kbd></div><div class="act">Scale or mode · back to what config.kdl asks · blank the screens · screenshot · copy the output list</div></div>
+          <div class="row"><div class="kseq"><kbd>power profile</kbd></div><div class="act">Performance, balanced, power saver as three named rows · or ask the daemon for its own list</div></div>
+          <div class="row"><div class="kseq"><kbd>battery</kbd></div><div class="act">Straight to power saver, or back to balanced · copy the detail · suspend</div></div>
+          <div class="row"><div class="kseq"><kbd>󰥔 clock</kbd></div><div class="act">Copy the date and time, the date, or the time · this month · change the time zone</div></div>
+          <div class="row"><div class="kseq"><kbd>󰐥 session</kbd></div><div class="act">Lock, log out · suspend, restart, power off <em>the original, and still the only one on the left button</em></div></div>
+          <div class="row"><div class="kseq"><kbd>any dock icon</kbd></div><div class="act">A new window · the next window · close every window it has · copy the command this slot resolved to <em>fuzzel, with live window counts</em></div></div>
+          <div class="row"><div class="kseq"><kbd>the desktop</kbd></div><div class="act">Terminal here, browse apps, run a program · display, wallpaper · lock, session <em>fuzzel, on a third waybar surface below your windows</em></div></div>
+          <div class="row"><div class="kseq"><kbd>a tmux pane</kbd></div><div class="act">Copy mode, paste · split right/down, zoom · new window, rename · kill pane <em>and its own menus on the status line and the session name</em></div></div>
+        </div>
+
+        <p><strong>Three kinds of menu, and which one you get is not a preference.</strong> Fourteen are <code>GtkMenuItem</code> rows in <code>linux/waybar/menus/*.xml</code>, popping up under the pointer in the bar's own stylesheet. The rest are <strong>fuzzel</strong>, for three separate reasons:</p>
+        <div class="keys">
+          <div class="row"><div class="kseq"><kbd>live list</kbd></div><div class="act">Networks in range, audio devices, an output's modes. A <code>menu-file</code> is a document read once; there is nothing to write into it</div></div>
+          <div class="row"><div class="kseq"><kbd>waybar can't</kbd></div><div class="act"><code>menu</code> lives in waybar's <code>ALabel</code>. Dock slots are <code>image</code> and the workspace strip is <code>niri/workspaces</code> — both <code>AModule</code>, so the menu-file is never opened at all</div></div>
+          <div class="row"><div class="kseq"><kbd>surface can't</kbd></div><div class="act">The desktop sits on the <code>bottom</code> layer, under your windows. A GTK menu grabs the keyboard, and wlr-layer-shell honours that only on <code>top</code> and <code>overlay</code></div></div>
+        </div>
+        <p>fuzzel is a themed surface in its own right now — <code>linux/fuzzel/fuzzel.ini.tmpl</code>, rendered from the palette like the bar is. It had no config at all until these menus landed, which meant the surface the rice leans on hardest was the only one still in its stock light theme.</p>
+
+        <p><code>linux/bin/ctx</code> is the back end for the rows that a single command cannot do: a list built at click time, a value put on the clipboard, or several things in order. Every copy row answers with a one-line fuzzel confirmation, because there is no notification daemon under niri and a clipboard you cannot check without losing what is in it needs to say so.</p>
+
+        <div class="cmds">
+          <div class="cmd"><code>ctx check</code><span>Every action id against every menu file, both ways</span></div>
+          <div class="cmd"><code>ctx clock iso</code><span>What a menu row runs — each one works from a shell too</span></div>
+          <div class="cmd"><code>dock close &lt;slot&gt;</code><span>Close every window a dock slot owns</span></div>
+        </div>
+
+        <div class="note">
+          <span class="tag">Silent</span>
+          <p>Every way this breaks is invisible, which is why <code>ctx check</code> is a <code>rice-doctor</code> line. waybar draws <em>nothing</em> for an action id matching no row, logs a missing <code>menu-file</code> only at debug level, opens no file at all for a module class that cannot host a menu, and — the one that cost the most — wires no button handler unless the config already names an <code>on-click*</code> event, so a module whose only interaction is its menu is simply never listening. That is why every menu module carries its own trigger as an empty string: it arms the handler, and <code>handleUserEvent</code> clears an empty format before it would fork.</p>
+          <p>Two more that bite silently. An item needs an explicit <code>&lt;property name="name"&gt;</code> as well as its <code>id</code> — GTK3's builder keeps the id in qdata and never calls <code>gtk_widget_set_name</code>, so without it no <code>#id</code> selector reaches the row. And the desktop's hit area <em>is</em> its module: <code>expand</code> does nothing there, because waybar packs the module boxes with <code>expand=false</code>, so the module stayed 8px wide and every right-click outside that strip landed on nothing. <code>min-width</code> is what fixes it, and <code>rice-doctor</code> fails if it falls short of the real output.</p>
         </div>
 
         <h2>Driving it</h2>
@@ -838,6 +881,8 @@
           <div class="cmd"><code>dock list</code><span>Every slot, and what it resolved to on this machine</span></div>
           <div class="cmd"><code>dock check</code><span>Resolution count, plus drift between the table and the bar</span></div>
           <div class="cmd"><code>dock open &lt;slot&gt;</code><span>What a click does — focus if it is up, else launch</span></div>
+          <div class="cmd"><code>dock new &lt;slot&gt;</code><span>Another one, whatever is already running</span></div>
+          <div class="cmd"><code>dock cmd &lt;slot&gt;</code><span>The command this slot resolved to</span></div>
           <div class="cmd"><code>pkill -RTMIN+7 waybar</code><span>Re-probe the slots after installing something</span></div>
         </div>
 

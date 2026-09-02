@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Cyberpunk rice — the memory menu, on memory
+  ~/.dotfiles/linux/waybar/menus/memory.xml  ->  ~/.config/waybar/menus/memory.xml
+
+  The same shape as cpu.xml next door, and deliberately so: two items that
+  read the same kind of number should not need two different gestures. Only
+  the process list differs, and only in how it sorts.
+-->
+<interface>
+  <object class="GtkMenu" id="menu">
+
+    <child>
+      <object class="GtkMenuItem" id="btop">
+        <property name="visible">True</property>
+        <property name="name">btop</property>
+        <property name="label">󰍛   Open btop</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="hud">
+        <property name="visible">True</property>
+        <property name="name">hud</property>
+        <property name="label">󰕰   Open the HUD</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkSeparatorMenuItem" id="sep1">
+        <property name="visible">True</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="top">
+        <property name="visible">True</property>
+        <property name="name">top</property>
+        <property name="label">󰈸   Biggest memory users…</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkSeparatorMenuItem" id="sep2">
+        <property name="visible">True</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="copy">
+        <property name="visible">True</property>
+        <property name="name">copy</property>
+        <property name="label">󰅇   Copy the usage</property>
+      </object>
+    </child>
+
+  </object>
+</interface>

@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Cyberpunk rice — the window menu, on niri/window
+  ~/.dotfiles/linux/waybar/menus/window.xml  ->  ~/.config/waybar/menus/window.xml
+
+  niri draws no titlebars, so until now every one of these was a keybind and
+  nothing else — discoverable only from the hotkey overlay. The module already
+  names the focused window; this makes the name a handle.
+
+  Ordered by how often it is wanted and how much it costs to land on by
+  accident: the shape changes first, the moves next, and Close last and alone
+  below a rule, the same rule the session menu uses for its bottom three.
+-->
+<interface>
+  <object class="GtkMenu" id="menu">
+
+    <child>
+      <object class="GtkMenuItem" id="fullscreen">
+        <property name="visible">True</property>
+        <property name="name">fullscreen</property>
+        <property name="label">󰊓   Fullscreen</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="maximize">
+        <property name="visible">True</property>
+        <property name="name">maximize</property>
+        <property name="label">󰊓   Maximise the column</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="float">
+        <property name="visible">True</property>
+        <property name="name">float</property>
+        <property name="label">󰀿   Float</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="tabbed">
+        <property name="visible">True</property>
+        <property name="name">tabbed</property>
+        <property name="label">󰓩   Tab the column</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="center">
+        <property name="visible">True</property>
+        <property name="name">center</property>
+        <property name="label">󰉦   Centre the column</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkSeparatorMenuItem" id="sep1">
+        <property name="visible">True</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="movews">
+        <property name="visible">True</property>
+        <property name="name">movews</property>
+        <property name="label">󰆾   Move to a workspace…</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="movemon">
+        <property name="visible">True</property>
+        <property name="name">movemon</property>
+        <property name="label">󰍹   Move to the next monitor</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkSeparatorMenuItem" id="sep2">
+        <property name="visible">True</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="shot">
+        <property name="visible">True</property>
+        <property name="name">shot</property>
+        <property name="label">󰹑   Screenshot it</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="copy">
+        <property name="visible">True</property>
+        <property name="name">copy</property>
+        <property name="label">󰅇   Copy the title</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkSeparatorMenuItem" id="sep3">
+        <property name="visible">True</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="close">
+        <property name="visible">True</property>
+        <property name="name">close</property>
+        <property name="label">󰅖   Close</property>
+      </object>
+    </child>
+
+  </object>
+</interface>

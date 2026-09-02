@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Cyberpunk rice — the network menu, on custom/link and custom/net
+  ~/.dotfiles/linux/waybar/menus/net.xml  ->  ~/.config/waybar/menus/net.xml
+
+  One file for two modules. link and net are two readings of the same
+  connection — latency and throughput — and a right-click on either is the same
+  question, so giving them separate menus would be two files to keep in step
+  for no gain. Each module names its own actions in config.jsonc; only the
+  shape is shared.
+-->
+<interface>
+  <object class="GtkMenu" id="menu">
+
+    <child>
+      <object class="GtkMenuItem" id="netwatch">
+        <property name="visible">True</property>
+        <property name="name">netwatch</property>
+        <property name="label">󰌘   Open netwatch</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkSeparatorMenuItem" id="sep1">
+        <property name="visible">True</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="address">
+        <property name="visible">True</property>
+        <property name="name">address</property>
+        <property name="label">󰩠   Copy the local address</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="public">
+        <property name="visible">True</property>
+        <property name="name">public</property>
+        <property name="label">󰖟   Copy the public address</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkSeparatorMenuItem" id="sep2">
+        <property name="visible">True</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="addrs">
+        <property name="visible">True</property>
+        <property name="name">addrs</property>
+        <property name="label">󰛳   Show every address</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="reconnect">
+        <property name="visible">True</property>
+        <property name="name">reconnect</property>
+        <property name="label">󰑓   Reconnect</property>
+      </object>
+    </child>
+
+  </object>
+</interface>

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Cyberpunk rice — the battery menu, on battery
+  ~/.dotfiles/linux/waybar/menus/battery.xml  ->  ~/.config/waybar/menus/battery.xml
+
+  A gauge with no click. The two profile rows are the only things that change
+  what the gauge does, which is why they are here rather than a duplicate of
+  the item two places to the left: this is where you are looking when you
+  decide the number is going down too fast.
+-->
+<interface>
+  <object class="GtkMenu" id="menu">
+
+    <child>
+      <object class="GtkMenuItem" id="saver">
+        <property name="visible">True</property>
+        <property name="name">saver</property>
+        <property name="label">󰾆   Switch to power saver</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="balanced">
+        <property name="visible">True</property>
+        <property name="name">balanced</property>
+        <property name="label">󰾅   Back to balanced</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkSeparatorMenuItem" id="sep1">
+        <property name="visible">True</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="copy">
+        <property name="visible">True</property>
+        <property name="name">copy</property>
+        <property name="label">󰅇   Copy the battery detail</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkSeparatorMenuItem" id="sep2">
+        <property name="visible">True</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="suspend">
+        <property name="visible">True</property>
+        <property name="name">suspend</property>
+        <property name="label">󰤄   Suspend</property>
+      </object>
+    </child>
+
+  </object>
+</interface>

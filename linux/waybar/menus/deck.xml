@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Cyberpunk rice — the deck menu, on the launcher button
+  ~/.dotfiles/linux/waybar/menus/deck.xml  ->  ~/.config/waybar/menus/deck.xml
+
+  The launcher button already opens the drawer on a left click. This is the
+  other half of what that button stands for: the bar itself, and the tools
+  that tell you whether it is healthy. Nothing here launches an application —
+  the two rows at the top are the launchers, and they are here because a
+  right-click that cannot reach the left-click's job reads as broken.
+-->
+<interface>
+  <object class="GtkMenu" id="menu">
+
+    <child>
+      <object class="GtkMenuItem" id="apps">
+        <property name="visible">True</property>
+        <property name="name">apps</property>
+        <property name="label">󰀻   Browse applications</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="run">
+        <property name="visible">True</property>
+        <property name="name">run</property>
+        <property name="label">󰍉   Run a program</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkSeparatorMenuItem" id="sep1">
+        <property name="visible">True</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="dock">
+        <property name="visible">True</property>
+        <property name="name">dock</property>
+        <property name="label">󰘔   Show or hide the dock</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="reload">
+        <property name="visible">True</property>
+        <property name="name">reload</property>
+        <property name="label">󰑓   Reload the bar</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkSeparatorMenuItem" id="sep2">
+        <property name="visible">True</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="doctor">
+        <property name="visible">True</property>
+        <property name="name">doctor</property>
+        <property name="label">󰩺   Run the doctor</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkMenuItem" id="manual">
+        <property name="visible">True</property>
+        <property name="name">manual</property>
+        <property name="label">󰈙   Field manual</property>
+      </object>
+    </child>
+
+  </object>
+</interface>

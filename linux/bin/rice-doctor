@@ -128,6 +128,81 @@ else
   fi
 fi
 
+# --- the right-click menus -------------------------------------------------
+# The one part of the bar that fails completely silently. waybar logs a missing
+# menu-file at debug level and draws nothing at all for an action id matching no
+# row, so both failures reach the desk as "right-click does nothing" — with no
+# way to tell which, or on which of twenty-seven modules.
+#
+# `ctx check` reads config.jsonc and every XML it names and reports the drift
+# both ways: an action with no row, and a row with no action. It is the same
+# shape as the dock's table-against-the-bar check next door, and for the same
+# reason — two files that have to agree, and nothing on screen when they stop.
+CTX="$HOME/.dotfiles/linux/bin/ctx"
+if [ ! -x "$CTX" ]; then
+  fail "bar menus" "linux/bin/ctx missing or not executable"
+elif mout=$("$CTX" check 2>&1); then
+  pass "bar menus" "$mout"
+else
+  fail "bar menus" "$(printf '%s' "$mout" | paste -sd'; ' -) —
+                         run 'ctx check'; a re-run of install.sh links menus/"
+fi
+
+# --- the desktop surface ---------------------------------------------------
+# The third waybar surface, and the only one whose failure is invisible: it is
+# transparent by design, so a desktop bar that never came up looks exactly like
+# one that did until you right-click and nothing happens.
+#
+# Two things can be wrong. The surface is missing entirely, or it is smaller
+# than the output — its height is a number in config.jsonc and there is no
+# "fill" for a layer-shell bar, so plugging in a taller monitor leaves a strip
+# along the bottom that is not clickable.
+if ! command -v niri >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
+  : # nothing to say without the compositor's own answer
+elif ! niri msg --json layers 2>/dev/null | jq -e '.[] | select(.namespace == "desktop")' >/dev/null; then
+  fail "desktop" "no 'desktop' layer surface — waybar did not bring it up;
+                         check 'waybar -l info' for the bar named desktop"
+else
+  # Two numbers, both hardcoded, because a layer-shell bar has no "fill": the
+  # surface height in config.jsonc and the module's min-width in style.css.
+  # Either falling short of the real output leaves a strip of desktop that
+  # swallows right-clicks in silence, which is exactly the bug this whole
+  # surface took three attempts to stop having.
+  _dh=$(grep -A8 '"name": "desktop"' "$HOME/.config/waybar/config.jsonc" \
+        | awk -F'[: ,]+' '/"height"/ { print $3; exit }')
+  # -A14, not -A3: there is a comment block between the selector and the
+  # declaration, and a width that silently reads as empty would make this
+  # check pass on a surface that does not cover the screen.
+  _dw=$(grep -A14 '#custom-desktop {' "$HOME/.config/waybar/style.css" \
+        | awk '/min-width/ { gsub(/[^0-9]/, "", $2); print $2; exit }')
+  _oh=$(niri msg --json outputs 2>/dev/null | jq -r 'to_entries[0].value | (.logical.height // empty)')
+  _ow=$(niri msg --json outputs 2>/dev/null | jq -r 'to_entries[0].value | (.logical.width // empty)')
+  _short=""
+  [ -n "${_oh:-}" ] && [ -n "${_dh:-}" ] && [ "$_dh" -lt "$_oh" ] \
+    && _short="height ${_dh} < ${_oh} (raise \"height\" in config.jsonc)"
+  [ -n "${_ow:-}" ] && [ -n "${_dw:-}" ] && [ "$_dw" -lt "$_ow" ] \
+    && _short="${_short:+$_short; }width ${_dw} < ${_ow} (raise #custom-desktop min-width in style.css.tmpl)"
+  if [ -n "$_short" ]; then
+    fail "desktop" "surface does not cover the output — $_short;
+                         the uncovered strip takes right-clicks and drops them"
+  else
+    pass "desktop" "bottom layer · ${_dw:-?}x${_dh:-?} · covers the output"
+  fi
+fi
+
+# --- the wallpaper ---------------------------------------------------------
+# swaybg is spawned through linux/bin/wallpaper so the choice survives a login.
+# Fails only when nothing is painting: an empty desktop is the compositor's
+# clear colour, which reads as a broken session rather than a plain one.
+WP_BIN="$HOME/.dotfiles/linux/bin/wallpaper"
+if [ ! -x "$WP_BIN" ]; then
+  fail "wallpaper" "linux/bin/wallpaper missing or not executable"
+elif wpout=$("$WP_BIN" check 2>&1); then
+  pass "wallpaper" "$wpout"
+else
+  fail "wallpaper" "$wpout — 'wallpaper apply' starts it"
+fi
+
 # --- the display item ------------------------------------------------------
 # Reports what each output is actually being driven at, and fails on the one
 # state that is a fault rather than a preference: a panel running below its own
@@ -377,11 +452,15 @@ else
 fi
 
 # --- theme -----------------------------------------------------------------
-# Sixteen surfaces are rendered from themes/<active>.sh. Hand-editing one is
+# Every templated surface is rendered from themes/<active>.sh. Hand-editing one
+# is
 # the failure this catches: the edit survives until the next `theme` run and
 # then vanishes, which is a miserable thing to debug from the colours alone.
 if theme_out=$("$HOME/.dotfiles/common/bin/theme" --check 2>&1); then
-  pass "theme" "${CP_THEME_NAME:-?} · 16 surfaces match their templates"
+  # Counted, not written down: the number moved the day fuzzel became a
+  # themed surface, and a hardcoded one would have quietly gone stale.
+  _nsurf=$(grep -cE '^\s+"[^"]+\.tmpl\s' "$HOME/.dotfiles/common/bin/theme")
+  pass "theme" "${CP_THEME_NAME:-?} · ${_nsurf:-?} surfaces match their templates"
 else
   fail "theme" "rendered surfaces have drifted from their templates —
                          $(printf '%s' "$theme_out" | sed -n 's/.*drifted: //p' | tr '\n' ' ')

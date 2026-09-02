@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   Cyberpunk rice — the bar's session menu
-  ~/.dotfiles/linux/waybar/power.xml  ->  ~/.config/waybar/power.xml
+  ~/.dotfiles/linux/waybar/menus/session.xml  ->  ~/.config/waybar/menus/session.xml
 
   Structure only. What each item DOES is "menu-actions" in config.jsonc, keyed
   by the ids below, and what each item LOOKS like is style.css — waybar renders
@@ -17,6 +17,7 @@
     <child>
       <object class="GtkMenuItem" id="lock">
         <property name="visible">True</property>
+        <property name="name">lock</property>
         <property name="label">󰌾   Lock</property>
       </object>
     </child>
@@ -24,6 +25,7 @@
     <child>
       <object class="GtkMenuItem" id="logout">
         <property name="visible">True</property>
+        <property name="name">logout</property>
         <property name="label">󰍃   Log out</property>
       </object>
     </child>
@@ -37,6 +39,7 @@
     <child>
       <object class="GtkMenuItem" id="suspend">
         <property name="visible">True</property>
+        <property name="name">suspend</property>
         <property name="label">󰤄   Suspend</property>
       </object>
     </child>
@@ -44,6 +47,7 @@
     <child>
       <object class="GtkMenuItem" id="reboot">
         <property name="visible">True</property>
+        <property name="name">reboot</property>
         <property name="label">󰜉   Restart</property>
       </object>
     </child>
@@ -51,6 +55,7 @@
     <child>
       <object class="GtkMenuItem" id="poweroff">
         <property name="visible">True</property>
+        <property name="name">poweroff</property>
         <property name="label">󰐥   Power off</property>
       </object>
     </child>

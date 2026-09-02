@@ -27,12 +27,12 @@ halves run: macOS 13+ on AeroSpace and SketchyBar, Fedora on niri and Waybar,
 from one palette and one installer.
 
 The parts I would call finished are the ones with tests behind them. The
-palette engine renders 8 themes across 16 surfaces from 47 colour slots, and
+palette engine renders 8 themes across 17 surfaces from 47 colour slots, and
 `test/theme.sh` checks the contract, the drift and the contrast floors on every
 one. The installer writes only on difference, and `test/idempotent.sh` runs the
 real thing twice against a throwaway `$HOME` rather than asserting idempotence
-in a comment. `rice-doctor` is 28 checks on Fedora, each failure carrying its
-own remediation. The field manual is 1,497 lines and covers both platforms from
+in a comment. `rice-doctor` is 32 checks on Fedora, each failure carrying its
+own remediation. The field manual is 1,542 lines and covers both platforms from
 one page.
 
 The honest gaps. **There is no CI** — both suites run by hand, and that is the
@@ -385,7 +385,7 @@ mirror each other, and each holds its own `install.sh` and `bin/rice-doctor`.
 | `themes/active.sh` | gitignored symlink to whichever is in use |
 | `install.sh` | dispatcher — runs `common/` then the platform half |
 | `test/idempotent.sh` | runs the installer twice against a throwaway `$HOME` and fails if the second run writes anything |
-| `test/theme.sh` | renders all 8 themes across all 16 surfaces and checks the contract, the drift and the contrast floors |
+| `test/theme.sh` | renders all 8 themes across all 17 surfaces and checks the contract, the drift and the contrast floors |
 | **`common/`** | |
 | `common/install.sh` | the symlinks and settings both platforms share |
 | `common/lib.sh` | `link` / `copy` / `render` / `seed` — the helpers that make a re-run a no-op |
@@ -550,8 +550,9 @@ was always the part worth having.
 The Fedora bar has one thing macOS's does not: **volume**, as two items that
 read as one — a `pulseaudio/slider` you drag or click a position on, and a
 `wireplumber` readout beside it carrying the level and the mute state. Click
-the readout to mute, right-click it for soundwatch, the same idiom as cpu and
-mem opening btop.
+the readout to mute; right-click it to pick which speakers or which microphone
+the machine is actually using, which is the thing you reach for when the
+headphones went in and the sound did not follow.
 
 The slider is there because **scrolling a bar item is a mouse-wheel gesture and
 this is a laptop.** The obvious build is scroll-to-set — that is what every
@@ -594,12 +595,52 @@ It also has a **power profile** item, immediately left of the battery, because
 that is the knob for the gauge beside it — the one control on the bar that
 changes how fast the number to its right goes down. A speedometer in three
 positions: green needle-left for power saver, white for balanced, orange
-needle-right for performance. Click it for the picker, right-click to go back
-to balanced.
+needle-right for performance. Click it for the picker, or right-click for the three
+profiles named as rows.
 
 This is not the `custom/power` button at the far right, which is the **session**
 menu — lock, log out, power off. Same word, different question, and putting
 them in one popup would mean "Power saver" and "Power off" two rows apart.
+
+**Everything you can point at has a menu on its right button** — every bar
+item, every dock icon, the workspace strip, the focused window, the empty
+desktop, and a pane inside tmux. That session menu used to be the only one.
+
+What is in a menu is what that thing is about and nothing else: the clock
+copies the date in three shapes, the disk item opens diskwatch and empties the
+trash, a dock icon opens another window or closes every window it has, and the
+focused-window item finally gives niri's close, float, fullscreen and
+move-to-workspace a surface that is not a keybind you have to already know.
+
+**Three kinds of menu, and which one you get is not a preference.** Fourteen
+are `GtkMenuItem` rows in `linux/waybar/menus/*.xml` with their commands in
+`menu-actions`, popping up under the pointer in the bar's own stylesheet. The
+rest are `fuzzel`, for three separate reasons worth knowing if you are
+stealing from this:
+
+- **The list only exists at click time** — networks in range, audio devices
+  plugged in, the modes an output reports. A `menu-file` is a static document;
+  there is nothing to write into it.
+- **waybar cannot build one.** `menu` is implemented in waybar's `ALabel`. The
+  dock's slots are `image` modules and the workspace strip is
+  `niri/workspaces`, both `AModule`, so the menu-file is never even opened —
+  it does not appear in `waybar -l debug` at all.
+- **The surface cannot host one.** The desktop is a third waybar surface on the
+  `bottom` layer, under your windows; a GTK menu grabs the keyboard when it
+  pops, and wlr-layer-shell only honours that on `top` and `overlay`.
+
+The back end for everything a single command could not do is `linux/bin/ctx`.
+`ctx check` is a `rice-doctor` line that reads the bar config and every XML it
+names, and fails on all three ways this breaks silently: an action id matching
+no row, a `menu` on a module class that can never build one, and a menu whose
+trigger event is not in the config — waybar only wires a button handler when an
+`on-click*` key is present, so every menu module carries its own trigger as an
+empty string.
+
+**Inside a terminal it is tmux's menu, not Ghostty's.** `mouse on` means tmux
+consumes button 3 before Ghostty sees it, so rather than give up the mouse
+there are three `display-menu`s on that button — pane, window and session —
+wearing the same palette as the bar.
 
 `linux/bin/power` is the whole of it, and it talks D-Bus to
 `net.hadess.PowerProfiles` rather than running `tuned-adm`. Fedora 41 moved the

@@ -1,0 +1,662 @@
+#!/usr/bin/env bash
+# The right-click menus' back end.
+#
+#   ctx win  move|copy|closeall        the focused window        (window.xml)
+#   ctx ws   closeall                  the focused workspace     (workspaces.xml)
+#   ctx net  address|public|addrs|reconnect             (net.xml, wifi.xml)
+#   ctx cpu  top|load                                            (cpu.xml)
+#   ctx mem  top|usage                                        (memory.xml)
+#   ctx disk free|trash                                         (disk.xml)
+#   ctx audio output|input                                     (audio.xml)
+#   ctx display outputs                                      (display.xml)
+#   ctx battery detail                                       (battery.xml)
+#   ctx clock iso|date|time|month|zone                         (clock.xml)
+#   ctx deck doctor|manual                                      (deck.xml)
+#   ctx dock menu <slot>|copy <slot>            the dock, in fuzzel
+#   ctx desktop session|wallpaper                            (desktop.xml)
+#   ctx check                          doctor line: menu drift
+#
+# Every menu in linux/waybar/menus is XML with no behaviour in it: what a row
+# DOES is a command in config.jsonc's menu-actions. Most of those commands are
+# a single line — `niri msg action close-window`, `wpctl set-mute` — and belong
+# there, where the row and the thing it runs sit next to each other and neither
+# can be edited without seeing the other. This file holds the rest: the rows
+# that need a list built at click time, a value put on the clipboard, or more
+# than one thing to happen in order.
+#
+# One script rather than one per item, unlike wifi, display, power and dock
+# beside it. Those four each OWN a bar item — they probe it, draw it, and answer
+# the doctor for it. Nothing here owns anything; these are the loose ends of
+# fifteen menus, and eleven more files in bin/ holding two functions each would
+# be harder to find things in, not easier.
+set -euo pipefail
+
+# waybar is spawned by the compositor, not a login shell — the same reason
+# wifi, display, power and dock all begin this way. Without it `diskwatch`,
+# `netwatch` and `hud` are not on PATH and half these rows read as missing
+# software.
+# shellcheck source=common/lib-path.sh
+. "$HOME/.dotfiles/common/lib-path.sh"
+
+D="$HOME/.dotfiles"
+
+die() { printf 'ctx: %s\n' "$*" >&2; exit 2; }
+
+# --- the two surfaces every row here uses -----------------------------------
+# There is no notification daemon on this machine — org.freedesktop.Notifications
+# has no owner under niri, so notify-send is a message into nothing. fuzzel is
+# the surface the user just clicked through to get here, so a result comes back
+# the same way: one unselectable line, dismissed with Esc or Return.
+#
+# This matters most for the copy rows. "Copy the date" that gives no sign it
+# copied anything is indistinguishable from a menu that did not work, and the
+# clipboard is the one place you cannot look to check without losing what is
+# in it.
+say() {
+  printf '%s\n' "  (press Esc)" \
+    | fuzzel --dmenu --index --prompt "$1  " --lines 1 --width 64 >/dev/null 2>&1 || true
+}
+
+# pick <prompt> [lines] [width] — a list on stdin, the chosen line on stdout.
+# Returns 1 when nothing was chosen, so every caller can `|| return 0` on a
+# dismissed menu rather than treating Esc as an error.
+pick() {
+  local out
+  out="$(fuzzel --dmenu --prompt "$1  " --lines "${2:-12}" --width "${3:-52}" 2>/dev/null)" || return 1
+  [ -n "${out:-}" ] || return 1
+  printf '%s\n' "$out"
+}
+
+# copy <text> <what> — the clipboard, and a line saying so.
+copy() {
+  printf '%s' "$1" | wl-copy 2>/dev/null || { say "no clipboard: wl-copy is not installed"; return 1; }
+  say "copied $2: $1"
+}
+
+# hold <title> <command…> — a terminal that stays up after the command exits.
+# `ghostty -e cal` opens and closes again before the output can be read; every
+# row here that prints rather than launching needs the wait. The class is the
+# dock's convention, so config.kdl's app-id rules and `dock open` see a window
+# they recognise rather than a stray terminal on the term workspace.
+hold() {
+  local title="$1"; shift
+  setsid ghostty --class="com.mitchellh.ghostty-ctx" --title="$title" \
+    -e sh -c "$*"' ; printf "\n  [enter] "; read -r _' >/dev/null 2>&1 &
+}
+
+# --- the focused window ------------------------------------------------------
+win_move() {
+  local list target
+  # Named workspaces read as their name, unnamed ones as their index — the same
+  # two-part identity niri's own `move-column-to-workspace` reference takes, so
+  # the chosen line is passed through unaltered.
+  list="$(niri msg --json workspaces 2>/dev/null \
+          | jq -r 'sort_by(.idx)[] | if (.name // "") == "" then "\(.idx)" else .name end')" \
+    || die "niri is not answering"
+  [ -n "$list" ] || die "no workspaces"
+  target="$(printf '%s\n' "$list" | pick 'move to' 9 32)" || return 0
+  niri msg action move-column-to-workspace "$target" >/dev/null
+}
+
+win_copy() {
+  local t
+  t="$(niri msg --json focused-window 2>/dev/null | jq -r '.title // empty')" || true
+  [ -n "$t" ] || { say "no window is focused"; return 0; }
+  copy "$t" "the title"
+}
+
+# Close every window on the focused workspace. Ids first, then close them one
+# by one: `close-window` with no --id acts on whatever is focused NOW, and focus
+# moves as windows go, so a loop without ids closes an arbitrary number of the
+# wrong things.
+ws_closeall() {
+  local ws ids id n
+  ws="$(niri msg --json workspaces 2>/dev/null | jq -r '.[] | select(.is_focused) | .id')" \
+    || die "niri is not answering"
+  [ -n "$ws" ] || die "no focused workspace"
+  ids="$(niri msg --json windows 2>/dev/null \
+         | jq -r --argjson ws "$ws" '.[] | select(.workspace_id == $ws) | .id')"
+  n="$(printf '%s' "$ids" | grep -c . || true)"
+  [ "${n:-0}" -gt 0 ] || { say "nothing is open here"; return 0; }
+  # Asked for, not assumed. This is the one row in these menus that can lose
+  # unsaved work, and it sits one pixel from "previous workspace".
+  local answer
+  answer="$(printf 'Close %s window%s\nCancel\n' "$n" "$([ "$n" = 1 ] || echo s)" \
+            | pick 'close everything here' 2 40)" || return 0
+  case "$answer" in Close*) ;; *) return 0 ;; esac
+  while IFS= read -r id; do
+    [ -n "$id" ] && niri msg action close-window --id "$id" >/dev/null 2>&1 || true
+  done <<<"$ids"
+}
+
+# --- the network -------------------------------------------------------------
+# The first non-loopback IPv4, which on this machine is the wifi and on a dock
+# is the ethernet. `ip -br` rather than parsing `ip addr`, and the CIDR suffix
+# is kept: pasting 192.168.1.20/24 somewhere that wanted a bare address is a
+# visible mistake, pasting a bare address where the prefix mattered is not.
+net_address() {
+  local a
+  a="$(ip -4 -br addr show scope global 2>/dev/null | awk '$1 != "lo" && $3 != "" { print $3; exit }')"
+  [ -n "$a" ] || { say "no address: this machine is not on a network"; return 0; }
+  copy "$a" "the local address"
+}
+
+net_public() {
+  local a
+  # --max-time, because the row above it answers instantly and this one can
+  # hang forever on a captive portal — the case you are most likely to be
+  # clicking it in.
+  a="$(curl -fsS --max-time 4 https://api.ipify.org 2>/dev/null)" || a=""
+  [ -n "$a" ] || { say "no answer: could not reach the internet"; return 0; }
+  copy "$a" "the public address"
+}
+
+net_addrs() { hold "addresses" "ip -br addr; printf '\n'; ip route"; }
+
+# Down and up on the active connection, which is the fix for the failure the
+# net item is usually showing when you reach for this: a link that is up, has
+# an address, and is passing nothing. `nmcli connection up` on its own does not
+# re-run DHCP on a connection that is already active.
+net_reconnect() {
+  local c
+  c="$(nmcli -t -f NAME,DEVICE connection show --active 2>/dev/null | head -1 | cut -d: -f1)"
+  [ -n "$c" ] || { say "nothing to reconnect: no active connection"; return 0; }
+  nmcli connection down "$c" >/dev/null 2>&1 || true
+  nmcli connection up "$c" >/dev/null 2>&1 || { say "$c: did not come back up"; return 0; }
+  pkill -RTMIN+10 waybar 2>/dev/null || true
+  say "reconnected: $c"
+}
+
+# --- cpu and memory ----------------------------------------------------------
+# The list is the answer, and the PID is what you do next with it, so choosing
+# a row copies the PID rather than acting on the process. Killing from a bar
+# menu is a click away from the workspace switcher; this is not the surface for
+# it, and the terminal that PID is going into is.
+proc_pick() {  # proc_pick <sort key> <column header> <prompt>
+  local line pid
+  line="$(ps -eo pid=,"$1"=,comm= --sort=-"$1" 2>/dev/null | head -12 \
+          | awk -v u="$2" '{ printf "%7s  %6s%s  %s\n", $1, $2, u, $3 }' \
+          | pick "$3" 12 46)" || return 0
+  pid="$(printf '%s' "$line" | awk '{ print $1 }')"
+  copy "$pid" "the pid"
+}
+
+cpu_load() {
+  local l
+  l="$(awk '{ printf "%s %s %s", $1, $2, $3 }' /proc/loadavg)"
+  copy "$l" "the load average"
+}
+
+mem_usage() {
+  local u
+  u="$(free -h --si | awk '/^Mem:/ { printf "%s used of %s, %s available", $3, $2, $7 }')"
+  copy "$u" "the memory usage"
+}
+
+# --- disk --------------------------------------------------------------------
+disk_free() {
+  local f
+  f="$(df -h --output=avail,pcent / | awk 'NR == 2 { printf "%s free (%s used)", $1, $2 }')"
+  copy "$f" "the free space"
+}
+
+# gio rather than rm -rf on ~/.local/share/Trash: the trash spec keeps the files
+# in files/ and their original paths in info/, and deleting one without the
+# other leaves a trash that every file manager then shows as broken entries.
+disk_trash() {
+  local n
+  n="$(gio list trash:/// 2>/dev/null | grep -c . || true)"
+  [ "${n:-0}" -gt 0 ] || { say "the trash is already empty"; return 0; }
+  local answer
+  answer="$(printf 'Delete %s item%s for good\nCancel\n' "$n" "$([ "$n" = 1 ] || echo s)" \
+            | pick 'empty the trash' 2 40)" || return 0
+  case "$answer" in
+    Delete*) gio trash --empty && say "emptied the trash: $n" ;;
+  esac
+}
+
+# --- audio -------------------------------------------------------------------
+# wpctl status rather than pw-dump, and the Audio section only: the same text
+# lists Video devices below in the identical shape, so a match on "Sinks:" alone
+# picks up the webcam's block on a machine with one.
+wpctl_nodes() {  # wpctl_nodes Sinks|Sources -> "id<TAB>marker name"
+  wpctl status 2>/dev/null \
+    | awk -v want="$1:" '
+        /^Audio$/     { audio = 1; next }
+        /^[A-Z]/      { audio = 0 }
+        audio && $0 ~ want { inb = 1; next }
+        audio && /^ [├└]─ / { inb = 0 }
+        inb {
+          line = $0
+          sub(/^[^0-9*]*/, "", line)
+          if (line !~ /^[*0-9]/) next
+          star = (line ~ /^\*/) ? "*" : " "
+          sub(/^\*[ \t]*/, "", line)
+          id = line; sub(/\..*/, "", id)
+          sub(/^[0-9]+\.[ \t]*/, "", line)
+          sub(/[ \t]*\[vol:.*$/, "", line)
+          sub(/[ \t]+$/, "", line)
+          if (id != "" && line != "") printf "%s\t%s %s\n", id, star, line
+        }'
+}
+
+audio_pick() {  # audio_pick Sinks|Sources <prompt> <what>
+  local nodes chosen id
+  nodes="$(wpctl_nodes "$1")"
+  [ -n "$nodes" ] || { say "no $3 to choose from"; return 0; }
+  chosen="$(printf '%s\n' "$nodes" | cut -f2- | pick "$2" 8 56)" || return 0
+  id="$(printf '%s\n' "$nodes" | awk -F'\t' -v c="$chosen" '$2 == c { print $1; exit }')"
+  [ -n "$id" ] || return 0
+  # --default moves every stream that is already playing, not just the next one
+  # to start. Switching output with music playing and having the music stay
+  # where it was is the whole failure this row exists to fix.
+  wpctl set-default "$id" >/dev/null 2>&1 || { say "could not switch $3"; return 0; }
+  # The list carries wpctl's own "this is the default" marker in its first
+  # column so you can see where you are before choosing; the confirmation is
+  # about where you have just landed, and a leading * there reads as part of
+  # the device name.
+  say "$3: ${chosen#? }"
+}
+
+# --- display, battery, clock -------------------------------------------------
+display_outputs() {
+  local o
+  o="$(niri msg --json outputs 2>/dev/null \
+       | jq -r 'to_entries[] | "\(.key) \(.value.current_mode as $i | .value.modes[$i] | "\(.width)x\(.height)@\(.refresh_rate / 1000 | floor)")"' \
+       | paste -sd' · ' -)" || o=""
+  [ -n "$o" ] || { say "niri is not reporting any outputs"; return 0; }
+  copy "$o" "the outputs"
+}
+
+# /sys rather than upower: waybar's battery module reads the same files, so the
+# detail this copies and the percentage beside it cannot disagree.
+#
+# The draw is computed, not read. This Framework reports CHARGE in uAh and
+# CURRENT in uA and has no power_now at all — energy-reporting batteries have
+# power_now and no current_now, and reading only the one this machine lacks is
+# how the row ends up saying "62% · Discharging ·" with nothing after the last
+# separator. waybar's own battery module does the same multiplication for
+# {power}, which is why the two agree.
+battery_detail() {
+  local b="/sys/class/power_supply/BAT1" cap status power
+  [ -d "$b" ] || b="/sys/class/power_supply/BAT0"
+  [ -d "$b" ] || { say "no battery on this machine"; return 0; }
+  cap="$(cat "$b/capacity" 2>/dev/null || echo '?')"
+  status="$(cat "$b/status" 2>/dev/null || echo '?')"
+  if [ -s "$b/power_now" ]; then
+    power="$(awk '{ printf "%.1fW", $1 / 1000000 }' "$b/power_now")"
+  elif [ -s "$b/current_now" ] && [ -s "$b/voltage_now" ]; then
+    power="$(awk 'NR == 1 { i = $1 } NR == 2 { printf "%.1fW", i * $1 / 1000000000000 }' \
+             "$b/current_now" "$b/voltage_now")"
+  else
+    power="draw unknown"
+  fi
+  copy "$cap% · $status · $power" "the battery"
+}
+
+clock_copy() {
+  case "$1" in
+    # ISO with the offset, because the reason to copy a timestamp is to paste
+    # it somewhere that will be read in another timezone.
+    iso)  copy "$(date --iso-8601=seconds)" "the timestamp" ;;
+    date) copy "$(date '+%A %-d %B %Y')" "the date" ;;
+    time) copy "$(date '+%H:%M')" "the time" ;;
+  esac
+}
+
+clock_month() { hold "calendar" "cal -3"; }
+
+# timedatectl asks polkit, and niri has an agent since the polkit commit — so
+# this raises the same authentication dialog GNOME's settings would rather than
+# failing silently the way it used to.
+clock_zone() {
+  local tz
+  tz="$(timedatectl list-timezones 2>/dev/null | pick "$(timedatectl show -p Timezone --value 2>/dev/null)" 14 44)" || return 0
+  timedatectl set-timezone "$tz" >/dev/null 2>&1 \
+    && { pkill -RTMIN+10 waybar 2>/dev/null || true; say "time zone: $tz"; } \
+    || say "could not set the time zone"
+}
+
+# --- the deck ----------------------------------------------------------------
+deck_doctor() { hold "rice-doctor" "rice-doctor"; }
+
+# The published page if there is a browser, the checked-in copy if not — the
+# manual is in the repo either way, and a laptop with no network is exactly when
+# it is wanted.
+deck_manual() {
+  local local_copy="$D/docs/cyberdeck-manual.html"
+  if [ -r "$local_copy" ]; then xdg-open "$local_copy" >/dev/null 2>&1 &
+  else xdg-open "https://matthart1983.github.io/cyberdeck/" >/dev/null 2>&1 & fi
+}
+
+# --- the dock, and the workspace strip ---------------------------------------
+# These two are fuzzel and not GtkMenus, and that is waybar's constraint rather
+# than a preference. `menu`/`menu-file`/`menu-actions` are implemented in
+# ALabel, not AModule:
+#
+#   ALabel::ALabel(...) { ... if (config_["menu"].isString()) { /* GtkBuilder */ } }
+#
+# Every other item on the bar is an ALabel — custom, clock, cpu, battery,
+# wireplumber, niri/window — and gets its popup for free. The dock slots are
+# `image` and the workspace strip is `niri/workspaces`, both of which derive
+# from AModule directly, so waybar never builds a menu for them however the
+# config is written. The menu-file is not even opened: it does not appear in
+# `waybar -l debug` at all, which is how this was finally pinned down.
+#
+# So they get the surface this rice already uses for a list — the same fuzzel
+# the network picker and the mode picker use. The rows are deliberately the
+# same rows the GTK version would have had, in the same order, so the two
+# kinds of menu differ in how they look and not in what they offer.
+
+# A dock slot: the three things a left click cannot separately mean, plus the
+# command. Counts are read live so the close row can say what it will close.
+dock_menu() {
+  local slot="$1" label cmd n rows chosen
+  cmd="$("$D/linux/bin/dock" cmd "$slot" 2>/dev/null)" \
+    || { say "$slot: nothing is installed for this slot"; return 0; }
+  label="$("$D/linux/bin/dock" label "$slot" 2>/dev/null || printf '%s' "$slot")"
+  n="$("$D/linux/bin/dock" count "$slot" 2>/dev/null || echo 0)"
+
+  rows="󰐕   New window"$'\n'
+  if [ "${n:-0}" -gt 0 ]; then
+    rows="$rows""󰖯   Next window ($n open)"$'\n'"󰅖   Close every window ($n)"$'\n'
+  fi
+  rows="$rows""󰅇   Copy the command"
+  chosen="$(printf '%s' "$rows" | pick "$(trim_label "$label")" 4 40)" || return 0
+  case "$chosen" in
+    *"New window")      "$D/linux/bin/dock" new "$slot" ;;
+    *Next*)             "$D/linux/bin/dock" open "$slot" ;;
+    *Close*)            "$D/linux/bin/dock" close "$slot" >/dev/null; say "$label: closed $n" ;;
+    *"Copy the command") copy "$cmd" "the command" ;;
+  esac
+}
+
+trim_label() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
+
+# The workspace strip. Same rows as workspaces.xml would have carried, and the
+# same rule about what they act on: waybar pops one menu for the whole strip
+# and cannot say which pill the pointer was over, so every row is about the
+# FOCUSED workspace.
+ws_menu() {
+  local name chosen
+  name="$(niri msg --json workspaces 2>/dev/null \
+          | jq -r '.[] | select(.is_focused) | (if (.name // "") == "" then "\(.idx)" else .name end)')" || name="?"
+  chosen="$(printf '%s\n' \
+      "󰕍   Previous workspace" \
+      "󰁝   Move this workspace up" \
+      "󰁅   Move this workspace down" \
+      "󰍹   Send it to the next monitor" \
+      "󰅖   Close every window here" \
+    | pick "workspace $name" 5 36)" || return 0
+  case "$chosen" in
+    *Previous*) niri msg action focus-workspace-previous >/dev/null ;;
+    *up)        niri msg action move-workspace-up >/dev/null ;;
+    *down)      niri msg action move-workspace-down >/dev/null ;;
+    *Send*)     niri msg action move-workspace-to-monitor-next >/dev/null ;;
+    *Close*)    ws_closeall ;;
+  esac
+}
+
+# The dock's own three actions live in linux/bin/dock, which owns the slot
+# table. Only the copy comes back here, because the clipboard needs the note
+# that says it happened, and that lives in this file.
+dock_copy() {
+  local cmd
+  cmd="$("$D/linux/bin/dock" cmd "$1" 2>/dev/null)" || { say "$1: nothing is installed for this slot"; return 0; }
+  copy "$cmd" "the command"
+}
+
+# --- the desktop -------------------------------------------------------------
+# fuzzel, and for a different reason from the dock's.
+#
+# The dock's icons cannot have a GtkMenu at all — waybar builds menus in ALabel
+# and an `image` is not one, so the menu-file is never even opened. The desktop
+# module is a `custom`, which IS an ALabel, and its menu-file loads perfectly
+# well: `waybar -l debug` shows desktop.xml found alongside every other one.
+# The menu is built. It just cannot stay on screen.
+#
+# A GTK menu takes a keyboard grab when it pops, and a grab needs the surface
+# under it to be focusable. wlr-layer-shell only honours keyboard
+# interactivity on the Top and Overlay layers; this surface is on Bottom, where
+# it has to be — above swaybg and below every window — so the grab fails and
+# the popup is dismissed in the same frame it appears. Moving the surface up a
+# layer to fix the menu would put the desktop on top of your windows, which is
+# not a desktop any more.
+#
+# fuzzel has no such problem: it is its own layer surface on Overlay with its
+# own focus, which is why every dynamic list in this rice already uses it.
+#
+# One more thing this surface taught, kept because it cost the most: the module
+# is the hit area, and a module that does not cover the surface is a surface
+# that does not answer. style.css has the full account.
+desktop_menu() {
+  local chosen
+  # Leading glyphs, and the same ones the bar's menu-file rows use. fuzzel has
+  # no separators, so the glyph is the only thing carrying the grouping the
+  # GtkMenu got from its rules — and it is what makes a fuzzel list and a bar
+  # menu read as two shapes of one system rather than two menus.
+  chosen="$(printf '%s\n' \
+      "󰆍   Terminal here" \
+      "󰀻   Browse applications" \
+      "󰍉   Run a program" \
+      "󰍹   Display…" \
+      "󰸉   Wallpaper…" \
+      "󰌾   Lock" \
+      "󰐥   Session…" \
+    | pick 'desktop' 7 32)" || return 0
+  case "${chosen#* }" in
+    *"Terminal here")       setsid ghostty >/dev/null 2>&1 & ;;
+    *"Browse applications") "$D/linux/bin/drawer" ;;
+    *"Run a program")       pkill fuzzel || setsid fuzzel >/dev/null 2>&1 & ;;
+    *Display*)              "$D/linux/bin/display" menu ;;
+    *Wallpaper*)            "$D/linux/bin/wallpaper" menu ;;
+    *Lock)                  setsid swaylock -f >/dev/null 2>&1 & ;;
+    *Session*)              desktop_session ;;
+  esac
+}
+
+# The session rows, one level down. It is a picker
+# rather than five more rows because the desktop menu is the one a stray
+# right-click lands in most easily, and "Power off" two rows under "Lock" is
+# how that click ends a session you were in the middle of. The bar's own
+# session button keeps the flat list; it is a 12px target you have to aim at.
+desktop_session() {
+  local choice
+  choice="$(printf '%s\n' "󰍃   Log out" "󰤄   Suspend" "󰜉   Restart" "󰐥   Power off" \
+            | pick 'session' 4 30)" || return 0
+  case "$choice" in
+    *"Log out")   niri msg action quit ;;
+    *Suspend)     systemctl suspend ;;
+    *Restart)     systemctl reboot ;;
+    *"Power off") systemctl poweroff ;;
+  esac
+}
+
+# --- check: the menus, and their drift against the bar ----------------------
+# Two ways these go wrong, and neither shows up as an error — waybar logs a
+# missing menu-file at debug level and simply draws nothing for an action id
+# that matches no menu item. So the failure a user sees is "right-click does
+# nothing", with no clue which of the two it is.
+#
+#   a menu-file that is not there            (a file renamed, or not linked)
+#   an id in one and not the other           (a row with no action, or the
+#                                             reverse: an action nothing runs)
+#   a menu whose trigger is not armed        (the whole menu never opens)
+#
+# That third one cost an afternoon and is worth writing down. waybar connects a
+# module's button handler only when the config already names one of the
+# on-click* events:
+#
+#   bool hasUserEvents = std::find_if(eventMap_.cbegin(), eventMap_.cend(),
+#       [&config](const auto& e) { return e.first.second != GDK_BUTTON_RELEASE &&
+#                                         config[e.second].isString(); }) != ...;
+#   if (enable_click || hasUserEvents) { /* connect handleToggle */ }
+#
+# A bare "menu" key is not in that map, so a module whose ONLY interaction is
+# its menu never gets a handler and the right button does nothing at all. The
+# menu-file still loads, every id still matches, and the doctor was still green
+# — the failure is entirely in the wiring.
+#
+# The fix is one empty string: "on-click-right": "" arms the handler, and
+# AModule::handleUserEvent clears an empty format before forkExec, so nothing
+# is ever spawned. That is why every menu module below carries its own trigger
+# as an empty command, and why this check insists on it.
+check() {
+  python3 - "$D/linux/waybar/config.jsonc" <<'PY'
+import json, os, re, sys, xml.etree.ElementTree as ET
+
+def strip(text):
+    # // outside a string, to end of line. Kept deliberately small: the config
+    # has no /* */ and no // inside any string value, and a real JSONC parser
+    # is a dependency this doctor line does not need.
+    out, in_str, esc = [], False, False
+    i = 0
+    while i < len(text):
+        c = text[i]
+        if in_str:
+            out.append(c)
+            if esc: esc = False
+            elif c == "\\": esc = True
+            elif c == '"': in_str = False
+        elif c == '"':
+            in_str = True; out.append(c)
+        elif c == "/" and i + 1 < len(text) and text[i + 1] == "/":
+            while i < len(text) and text[i] != "\n": i += 1
+            continue
+        else:
+            out.append(c)
+        i += 1
+    return "".join(out)
+
+# waybar implements menu/menu-file/menu-actions in ALabel. A module class that
+# derives from AModule directly never builds one, and says nothing about it —
+# the menu-file is not even opened. These are the ones on this bar; the rule is
+# the module TYPE, not the id.
+def can_menu(name):
+    base = name.split("#")[0]
+    if base.startswith("image"): return False
+    if base.startswith("group/"): return False
+    if base.endswith("/workspaces"): return False
+    if base.endswith("/slider"): return False
+    if base == "tray": return False
+    return True
+
+path = sys.argv[1]
+try:
+    bars = json.loads(strip(open(path).read()))
+except Exception as e:
+    print(f"config.jsonc does not parse: {e}"); sys.exit(1)
+
+problems, menus, rows = [], set(), 0
+for bar in bars:
+    for name, mod in bar.items():
+        if not isinstance(mod, dict) or "menu" not in mod:
+            continue
+        rows += 1
+        f = os.path.expandvars(mod.get("menu-file", ""))
+        if not f:
+            problems.append(f"{name}: menu with no menu-file"); continue
+        menus.add(f)
+        if not os.path.exists(f):
+            problems.append(f"{name}: {f} is not there"); continue
+        try:
+            ids = {c[0].get("id") for c in ET.parse(f).getroot().find("object")
+                   if c[0].get("class") == "GtkMenuItem"}
+        except Exception as e:
+            problems.append(f"{name}: {os.path.basename(f)} does not parse: {e}"); continue
+        if not can_menu(name):
+            problems.append(f"{name}: derives from AModule, not ALabel — waybar "
+                            f"builds no menu for it whatever the config says; "
+                            f"use on-click-right and a fuzzel picker")
+            continue
+        trigger = mod["menu"]
+        if not isinstance(trigger, str):
+            problems.append(f"{name}: menu is not a string")
+        elif trigger not in mod:
+            problems.append(f"{name}: menu opens on '{trigger}' but that event is "
+                            f"not in the config, so waybar wires no handler — "
+                            f"add \"{trigger}\": \"\"")
+        acts = set(mod.get("menu-actions", {}))
+        for missing in sorted(acts - ids):
+            problems.append(f"{name}: action '{missing}' matches no row in {os.path.basename(f)}")
+        for dead in sorted(ids - acts):
+            problems.append(f"{name}: row '{dead}' in {os.path.basename(f)} does nothing")
+
+if problems:
+    for p in problems: print(p)
+    sys.exit(1)
+print(f"{rows} menus · {len(menus)} files · every row wired and armed")
+PY
+}
+
+case "${1:-check}" in
+  win)     case "${2:-}" in
+             move)     win_move ;;
+             copy)     win_copy ;;
+             closeall) ws_closeall ;;
+             *) die "usage: ctx win [move|copy|closeall]" ;;
+           esac ;;
+  ws)      case "${2:-}" in
+             menu)     ws_menu ;;
+             closeall) ws_closeall ;;
+             *) die "usage: ctx ws [menu|closeall]" ;;
+           esac ;;
+  net)     case "${2:-}" in
+             address)   net_address ;;
+             public)    net_public ;;
+             addrs)     net_addrs ;;
+             reconnect) net_reconnect ;;
+             *) die "usage: ctx net [address|public|addrs|reconnect]" ;;
+           esac ;;
+  cpu)     case "${2:-}" in
+             top)  proc_pick pcpu '%' 'busiest' ;;
+             load) cpu_load ;;
+             *) die "usage: ctx cpu [top|load]" ;;
+           esac ;;
+  mem)     case "${2:-}" in
+             top)   proc_pick pmem '%' 'biggest' ;;
+             usage) mem_usage ;;
+             *) die "usage: ctx mem [top|usage]" ;;
+           esac ;;
+  disk)    case "${2:-}" in
+             free)  disk_free ;;
+             trash) disk_trash ;;
+             *) die "usage: ctx disk [free|trash]" ;;
+           esac ;;
+  audio)   case "${2:-}" in
+             output) audio_pick Sinks   'output' 'output' ;;
+             input)  audio_pick Sources 'input'  'input' ;;
+             *) die "usage: ctx audio [output|input]" ;;
+           esac ;;
+  display) case "${2:-}" in
+             outputs) display_outputs ;;
+             *) die "usage: ctx display outputs" ;;
+           esac ;;
+  battery) case "${2:-}" in
+             detail) battery_detail ;;
+             *) die "usage: ctx battery detail" ;;
+           esac ;;
+  clock)   case "${2:-}" in
+             iso|date|time) clock_copy "$2" ;;
+             month)         clock_month ;;
+             zone)          clock_zone ;;
+             *) die "usage: ctx clock [iso|date|time|month|zone]" ;;
+           esac ;;
+  deck)    case "${2:-}" in
+             doctor) deck_doctor ;;
+             manual) deck_manual ;;
+             *) die "usage: ctx deck [doctor|manual]" ;;
+           esac ;;
+  desktop) case "${2:-}" in
+             menu)    desktop_menu ;;
+             session) desktop_session ;;
+             *) die "usage: ctx desktop [menu|session]" ;;
+           esac ;;
+  dock)    case "${2:-}" in
+             menu) dock_menu "${3:?usage: ctx dock menu <slot>}" ;;
+             copy) dock_copy "${3:?usage: ctx dock copy <slot>}" ;;
+             *) die "usage: ctx dock [menu|copy] <slot>" ;;
+           esac ;;
+  check)   check ;;
+  *)       die "usage: ctx [win|ws|net|cpu|mem|disk|audio|display|battery|clock|deck|desktop|dock|check] <action>" ;;
+esac
